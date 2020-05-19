@@ -1,36 +1,44 @@
 #!/usr/bin/env bash
 
-export GOOGLE_USERNAME=eugene@chainalysis.com
-export DEPT_ROLE=engineering-data
+if [ "$DE_AWS_AUTH_ENABLED" != true ]; then
+    return 0
+fi
 
-export AWS_AUTH_PROFILE=org-sso
 export AWS_PROFILE=$AWS_AUTH_PROFILE
 
-export AWS_HELPER_DIR=~/Projects/terraform/util/aws
+export AWS_HELPER_DIR=$PROJECT_DIR/terraform/util/aws
 source $AWS_HELPER_DIR/org-sso-helper.sh
 
+# prints your full identity if authenticated, or fails
 function awsId() {
     local id
     if id=$(aws sts get-caller-identity) 2> /dev/null; then
         echo $id
-        export AWS_CURRENT_ROLE=$id
     else
         return 1
     fi
 }
 
-export DATAENG_DEV=dataeng-dev-admin
-export DATAENG_PROD=data-warehouse-prod-admin
-
+# prints your currently-assumed IAM role if authenticated, or fails
 function awsRole() {
     local id
     if id=$(awsId); then
-        echo $id | jq '.Arn' | awk -F '/' '{ print $2 }'
+        export AWS_CURRENT_ROLE=$(echo $id | jq '.Arn' | awk -F '/' '{ print $2 }')
+        echo $AWS_CURRENT_ROLE
     else
         return 1
     fi
 }
 
+# removes authentication, can be used for testing/resetting
+function deAuth() {
+    cp ~/.aws/credentials ~/.aws/credentials.bak
+    echo "[org-sso]\n" > ~/.aws/credentials
+    awsId
+}
+
+# checks if you're authenticated, triggers authentication if not,
+# and then assumes the provided role
 function aws-auth() {
     if ! awsId > /dev/null; then
         echo "Reauthenticating..."
