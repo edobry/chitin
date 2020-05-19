@@ -1,13 +1,11 @@
 #!/usr/bin/env bash
 
-if [ "$DE_AWS_AUTH_ENABLED" != true ]; then
-    return 0
+if [ "$DE_AWS_AUTH_ENABLED" = true ]; then
+    export AWS_PROFILE=$AWS_AUTH_PROFILE
+
+    export AWS_HELPER_DIR=$PROJECT_DIR/terraform/util/aws
+    source $AWS_HELPER_DIR/org-sso-helper.sh
 fi
-
-export AWS_PROFILE=$AWS_AUTH_PROFILE
-
-export AWS_HELPER_DIR=$PROJECT_DIR/terraform/util/aws
-source $AWS_HELPER_DIR/org-sso-helper.sh
 
 # prints your full identity if authenticated, or fails
 function awsId() {
@@ -48,7 +46,7 @@ function aws-auth() {
     export AWS_PROFILE=$1
 
     local role
-    if [ -z $AWS_CURRENT_ROLE ]; then
+    if [ ! -z $AWS_CURRENT_ROLE ]; then
         role=$AWS_CURRENT_ROLE
     else
         role=$(awsRole)
