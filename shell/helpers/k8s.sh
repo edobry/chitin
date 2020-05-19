@@ -37,6 +37,8 @@ function getToken() {
 
 TF_DIR="$HOME/Projects/terraform"
 TF_DATAENG_DIR="$TF_DIR/env/dataeng-dev"
+# args:
+# example usage: runTF dev bnb-kafka output msk_bootstrap_brokers
 function runTF() {
     cd $TF_DATAENG_DIR/$1 && shift
     terraform $*
@@ -58,10 +60,12 @@ function makeService() {
     helm template $name $EXTERNAL_DIR/service --set name=$name $*
 }
 
+# fetches and pretty-prints the image pull secret
 function getRegcred() {
     kubectl get secret regcred -o=json | jq -r '.data. ".dockerconfigjson"' | base64 -D | jq '.'
 }
 
+# fetches and prints the image pull secret's auth string, for debugging
 function getRegcredAuthString() {
     getRegcred | jq -r ".auths .\"$1\" .auth" | base64 -D
 }
