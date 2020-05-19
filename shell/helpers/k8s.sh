@@ -35,22 +35,15 @@ function getToken() {
     kubectl -n kube-system describe secret $eksAdminSecret | grep 'token:' | awk '{print $2}' | pbcopy
 }
 
-TF_DIR="$HOME/Projects/terraform"
-TF_DATAENG_DIR="$TF_DIR/env/dataeng-dev"
+TF_DIR="$PROJECT_DIR/terraform"
+TF_DATAENG_DIR="$TF_DIR/env/dataeng"
 # args:
 # example usage: runTF dev bnb-kafka output msk_bootstrap_brokers
 function runTF() {
-    cd $TF_DATAENG_DIR/$1 && shift
+    cd $TF_DATAENG_DIR-$1/$2 && shift
     terraform $*
     cd $OLDPWD
 }
-
-# function getMSKBrokers() {
-#     local mskBrokers=$(runTF bnb-kafka output msk_bootstrap_brokers)
-#     echo $mskBrokers
-# }
-
-alias escapeCommas="sed 's/,/\\\,/g'"
 
 HELM_HOME="$PROJECT_DIR/dataeng-pipeline/charts"
 EXTERNAL_DIR="$HELM_HOME/external"
