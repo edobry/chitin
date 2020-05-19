@@ -1,4 +1,3 @@
-
 # add krew to PATH
 export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
 
@@ -21,7 +20,8 @@ function reDeploy() {
     upDeploy $1
 }
 
-DEV_DIR=~/Projects/dataeng-pipeline/dev
+DEV_DIR=$PROJECT_DIR/dataeng-pipeline/dev
+#TODO: randomize
 DEBUG_POD="test-shell"
 function debugPod() {
     k apply -f $DEV_DIR/debugPod.yaml
@@ -43,14 +43,14 @@ function runTF() {
     cd $OLDPWD
 }
 
-function getMSKBrokers() {
-    local mskBrokers=$(runTF bnb-kafka output msk_bootstrap_brokers)
-    echo $mskBrokers
-}
+# function getMSKBrokers() {
+#     local mskBrokers=$(runTF bnb-kafka output msk_bootstrap_brokers)
+#     echo $mskBrokers
+# }
 
 alias escapeCommas="sed 's/,/\\\,/g'"
 
-HELM_HOME="$HOME/Projects/dataeng-pipeline/charts"
+HELM_HOME="$PROJECT_DIR/dataeng-pipeline/charts"
 EXTERNAL_DIR="$HELM_HOME/external"
 function makeService() {
     local name=$1
