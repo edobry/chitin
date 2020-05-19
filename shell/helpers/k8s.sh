@@ -20,14 +20,14 @@ function reDeploy() {
     upDeploy $1
 }
 
-DEV_DIR=$PROJECT_DIR/dataeng-pipeline/dev
-#TODO: randomize
-DEBUG_POD="test-shell"
+DP_DEV_DIR=$PROJECT_DIR/dataeng-pipeline/dev
 function debugPod() {
-    k apply -f $DEV_DIR/debugPod.yaml
-    k wait --for=condition=Ready pod/$DEBUG_POD
-    k exec $DEBUG_POD --container $DEBUG_POD -i --tty -- /bin/bash
-    k delete pods $DEBUG_POD --grace-period=0 --force
+    local debugPodName="test-shell-$(randomString 8)"
+
+    k apply -f $DP_DEV_DIR/debugPod.yaml
+    k wait --for=condition=Ready pod/$debugPodName
+    k exec $debugPodName --container $debugPodName -i --tty -- /bin/bash
+    k delete pods $debugPodName --grace-period=0 --force
 }
 
 function getToken() {
