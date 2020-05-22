@@ -1,15 +1,25 @@
 #!/usr/bin/env bash
 
-export DT_TOOLS_DIR=$PROJECT_DIR/dataeng-tools
+SOURCE_DIR=$(dirname "$0")
+
+if [[ "$0" = /* ]]; then
+    SCRIPT_PATH="$0"
+elif [ ! -z ${BASH_SOURCE[0]} ]; then
+    SCRIPT_PATH="${BASH_SOURCE[0]}"
+else
+    SCRIPT_PATH="$SOURCE_DIR/init.sh"
+fi
+
+SOURCE_DIR="$(dirname $SCRIPT_PATH)"
 
 function loadDir() {
-    for f in $1;
+    for f in "$@";
         do source $f;
     done
 }
 
 # load init scripts
-loadDir $DT_TOOLS_DIR/shell/helpers/init/*.sh
+loadDir $SOURCE_DIR/helpers/init/*.sh
 
 # load helpers
-loadDir $DT_TOOLS_DIR/shell/helpers/*.sh
+loadDir $SOURCE_DIR/helpers/*.sh
