@@ -1,10 +1,19 @@
 #!/usr/bin/env bash
 
 if [ "$DE_AWS_AUTH_ENABLED" = true ]; then
-    export AWS_PROFILE=$AWS_AUTH_PROFILE
+    # set google username if you like
+    #export GOOGLE_USERNAME=@chainalysis.com
+    if [[ -z "${GOOGLE_USERNAME}" ]]; then
+        echo "GOOGLE_USERNAME must be set to your chainalysis email address."
+        exit 1
+    fi
 
-    export AWS_HELPER_DIR=$PROJECT_DIR/terraform/util/aws
-    source $AWS_HELPER_DIR/org-sso-helper.sh
+    export DURATION=43200
+    export AWS_SDK_LOAD_CONFIG=1
+    export AWS_SSO_ORG_ROLE_ARN=arn:aws:iam::${AWS_ORG_IDENTITY_ACCOUNT_ID}:role/${DEPT_ROLE}
+    export AWS_CONFIG_FILE=$PROJECT_DIR/terraform/util/aws/config
+
+    export TF_VAR_aws_sessionname=${GOOGLE_USERNAME}
 fi
 
 # prints your full identity if authenticated, or fails
@@ -31,16 +40,21 @@ function awsRole() {
 # removes authentication, can be used for testing/resetting
 function deAuth() {
     cp ~/.aws/credentials ~/.aws/credentials.bak
-    echo "[org-sso]\n" > ~/.aws/credentials
+    echo "[$AWS_ORG_SSO_PROFILE]\n" > ~/.aws/credentials
     awsId
 }
 
 # checks if you're authenticated, triggers authentication if not,
 # and then assumes the provided role
 function aws-auth() {
+    if [ "$DE_AWS_AUTH_ENABLED" != true ]; then
+        echo "DE AWS Auth disabled, set 'DE_AWS_AUTH_ENABLED=true' to enable"
+        return 1
+    fi
+
     if ! awsId > /dev/null; then
         echo "Reauthenticating..."
-        AWS_PROFILE=$AWS_AUTH_PROFILE gimme-aws-creds
+        AWS_PROFILE=$AWS_ORG_SSO_PROFILE gimme-aws-creds
     fi
 
     export AWS_PROFILE=$1
