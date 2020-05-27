@@ -61,16 +61,6 @@ function getToken() {
 # EVERYTHING BELOW THIS LINE IS WIP
 # ---------------------------------
 
-TF_DIR="$PROJECT_DIR/terraform"
-TF_DATAENG_DIR="$TF_DIR/env/dataeng"
-# args:
-# example usage: runTF dev bnb-kafka output msk_bootstrap_brokers
-function runTF() {
-    cd $TF_DATAENG_DIR-$1/$2 && shift
-    terraform $*
-    cd $OLDPWD
-}
-
 HELM_HOME="$PROJECT_DIR/dataeng-pipeline/charts"
 EXTERNAL_DIR="$HELM_HOME/external"
 function makeService() {
