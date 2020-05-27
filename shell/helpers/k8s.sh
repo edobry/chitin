@@ -2,7 +2,7 @@
 export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
 
 function secretEncode() {
-   echo -n "$1" | base64 | pbcopy
+   echo -n "$1" | base64 | toClip
 }
 
 alias netshoot='kubectl run --generator=run-pod/v1 tmp-shell --rm -i --tty --image nicolaka/netshoot -- /bin/bash'
@@ -46,7 +46,7 @@ function getRegcredAuthString() {
 
 function getToken() {
     local eksAdminSecret="$(kubectl -n kube-system get secret | grep eks-admin | awk '{print $1}')"
-    kubectl -n kube-system describe secret $eksAdminSecret | grep 'token:' | awk '{print $2}' | pbcopy
+    kubectl -n kube-system describe secret $eksAdminSecret | grep 'token:' | awk '{print $2}' | toClip
 }
 
 TF_DIR="$PROJECT_DIR/terraform"
