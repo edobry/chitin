@@ -10,7 +10,7 @@ else
     SCRIPT_PATH="$SOURCE_DIR/init.sh"
 fi
 
-SOURCE_DIR="$(dirname $SCRIPT_PATH)"
+export DT_DIR="$(dirname $SCRIPT_PATH)"
 
 function loadDir() {
     for f in "$@";
@@ -19,7 +19,7 @@ function loadDir() {
 }
 
 # load init scripts
-loadDir $SOURCE_DIR/helpers/init/*.sh
+loadDir $DT_DIR/helpers/init/*.sh
 
 # load helpers
-loadDir $SOURCE_DIR/helpers/*.sh
+loadDir $DT_DIR/helpers/*.sh

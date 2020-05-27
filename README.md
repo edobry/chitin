@@ -6,16 +6,20 @@ may change in the future.
 
 #### Prerequisites
 
-Make sure the following programs are installed on your computer:
-- jq
-- AWS CLI
-- terraform
-- docker
-- kubectl/kubectx
-- helm
+Make sure the following programs are installed on your computer (not every helper
+requires each one, but you may want to install them all to save time):
+- `jq/yq`
+- `aws`
+- `terraform`
+- `docker`
+- `kubectl/kubectx`
+- `helm`
+
+MacOS only:
+- `watch`
 
 Linux only:
- - xclip
+- `xclip`
 
 #### Setup
 
@@ -30,13 +34,46 @@ the line(s) you added in the previous step
 
 ##### AWS
 
-The AWS helper is designed to reduce friction during development, providing
+> Requires: `aws`, `jq`
+
+There are several AWS helper submodules, broken out by service.
+
+###### Auth
+
+The `aws-auth` helper is designed to reduce friction during development, providing
 useful functions for introspecting, and switching between roles, including
 automatically re-authenticating if needed. This shell integration is disabled by default, but you can enable it by setting `DE_AWS_AUTH_ENABLED=true` in step 2
 of the setup. This is recommended, but not required.
 
+Notable functions:
+ - `awsId`: scriptable alias for `aws sts get-caller-identity`
+ - `awsRole`: gets your currently-assumed IAM role
+
+If you enable the shell integration, you can use the following aliases to assume roles:
+ - `aws-dataeng-dev`
+ - `aws-dataeng-prod`
+
+###### SSM
+
+Notable functions:
+ - `getSecureParam`: fetches and decrypts an SSM parameter
+
 ##### K8s
 
+> Requires: `kubectl`, `yq`
+
 The K8s helper provides useful functions for interacting with clusters and various
-associated administrative tasks. To use it, you must ensure that the `dataeng-pipeline`
-repository is available in your `$PROJECT_DIR`.
+associated administrative tasks.
+
+Notable functions:
+ - `debugPod`: launches a debug pod in the cluster preloaded with common networking tools, drops you into its shell when created
+ - `downDeploy/upDeploy/reDeploy`: stop/start/restart a deployment
+ - `secretEncode`: base64-encodes a string for use in a Secret
+
+##### Kafka
+
+> Requires: `docker`
+
+Notable functions:
+- `listTopics`: lists all known topics
+- `readTopic`: reads from a topic at a certain offset
