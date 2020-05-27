@@ -20,14 +20,28 @@ function reDeploy() {
     upDeploy $1
 }
 
-DP_DEV_DIR=$PROJECT_DIR/dataeng-pipeline/dev
+# launches a debug pod in the cluster preloaded with common networking tools,
+# drops you into its shell when created. randomizes the name, and cleans up after
 function debugPod() {
-    local debugPodName="test-shell-$(randomString 8)"
+    local baseName="test-shell"
+    local debugPodName="$baseName-$(randomString 8)"
 
-    k apply -f $DP_DEV_DIR/debugPod.yaml
-    k wait --for=condition=Ready pod/$debugPodName
-    k exec $debugPodName --container $debugPodName -i --tty -- /bin/bash
-    k delete pods $debugPodName --grace-period=0 --force
+    yq w $DT_DIR/helpers/resources/debugPod.yaml "metadata.name" "$debugPodName" \
+        | kubectl apply -f -
+
+    kubectl wait --for=condition=Ready pod/$debugPodName
+    kubectl exec $debugPodName --container "$baseName" -i --tty -- /bin/bash
+    kubectl delete pods $debugPodName --grace-period=0 --force
+}
+
+# fetches and pretty-prints the image pull secret
+function getRegcred() {
+    kubectl get secret regcred -o=json | jq -r '.data. ".dockerconfigjson"' | base64 -D | jq '.'
+}
+
+# fetches and prints the image pull secret's auth string, for debugging
+function getRegcredAuthString() {
+    getRegcred | jq -r ".auths .\"$1\" .auth" | base64 -D
 }
 
 function getToken() {
