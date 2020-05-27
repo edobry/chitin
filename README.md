@@ -1,10 +1,10 @@
-### dataeng-tools
+## dataeng-tools
 
 This repository contains tools and scripts used by Data Engineering, both
 interactively and in scripting. The primary language is currently Bash but this
 may change in the future.
 
-#### Prerequisites
+### Prerequisites
 
 Make sure the following programs are installed on your computer (not every helper
 requires each one, but you may want to install them all to save time):
@@ -21,7 +21,7 @@ MacOS only:
 Linux only:
 - `xclip`
 
-#### Setup
+### Setup
 
 1. Clone (if you have not already) the `chainalysis/terraform` repository
 2. Copy the contents of `chainalysis-env-template.sh` into your profile, however
@@ -30,15 +30,15 @@ and then set your own values
 3. Add `source $PROJECT_DIR/dataeng-tools/shell/init.sh` to your profile, AFTER
 the line(s) you added in the previous step
 
-#### Helpers
+### Helpers
 
-##### AWS
+#### AWS
 
 > Requires: `aws`, `jq`
 
 There are several AWS helper submodules, broken out by service.
 
-###### Auth
+##### Auth
 
 The `aws-auth` helper is designed to reduce friction during development, providing
 useful functions for introspecting, and switching between roles, including
@@ -53,12 +53,12 @@ If you enable the shell integration, you can use the following aliases to assume
  - `aws-dataeng-dev`
  - `aws-dataeng-prod`
 
-###### SSM
+##### SSM
 
 Notable functions:
  - `getSecureParam`: fetches and decrypts an SSM parameter
 
-##### K8s
+#### K8s
 
 > Requires: `kubectl`, `yq`
 
@@ -70,7 +70,7 @@ Notable functions:
  - `downDeploy/upDeploy/reDeploy`: stop/start/restart a deployment
  - `secretEncode`: base64-encodes a string for use in a Secret
 
-##### Kafka
+#### Kafka
 
 > Requires: `docker`
 
