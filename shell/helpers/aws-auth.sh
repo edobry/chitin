@@ -44,6 +44,21 @@ function deAuth() {
     awsId
 }
 
+# checks if you're authenticated with aws
+function checkAuth() {
+    if ! awsId > /dev/null; then
+        echo "Unauthenticated!"
+        return 1
+    fi
+}
+
+function checkAuthAndFail() {
+    if ! checkAuth; then
+        echo "Please authenticate with AWS before rerunning."
+        return 1
+    fi
+}
+
 # checks if you're authenticated, triggers authentication if not,
 # and then assumes the provided role
 function aws-auth() {
@@ -52,8 +67,8 @@ function aws-auth() {
         return 1
     fi
 
-    if ! awsId > /dev/null; then
-        echo "Reauthenticating..."
+    if ! checkAuth; then
+        echo "Authenticating..."
         AWS_PROFILE=$AWS_ORG_SSO_PROFILE gimme-aws-creds
     fi
 
