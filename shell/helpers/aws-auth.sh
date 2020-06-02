@@ -83,5 +83,9 @@ function aws-auth() {
     echo "Assumed role: $role"
 }
 
-alias aws-dataeng-dev='aws-auth $DATAENG_DEV'
-alias aws-dataeng-prod='aws-auth $DATAENG_PROD'
+function aws-dataeng-dev() {
+    aws-auth $DATAENG_DEV
+}
+function aws-dataeng-prod() {
+    aws-auth $DATAENG_PROD
+}

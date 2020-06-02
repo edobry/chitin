@@ -1,4 +1,11 @@
-alias parseStream='jq . -c | jq .'
+function parseStream() {
+    jq . -c | jq .
+}
 
-alias prettyJson="jq '.'"
-alias prettyYaml='yq r -P -'
+function prettyJson() {
+    jq '.'
+}
+
+function prettyYaml() {
+    yq r -P -
+}

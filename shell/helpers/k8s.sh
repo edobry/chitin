@@ -7,7 +7,9 @@ function secretEncode() {
 }
 
 # deprecated older version of the debug pod, only creates, does not manage lifecyle
-alias netshoot='kubectl run --generator=run-pod/v1 tmp-shell --rm -i --tty --image nicolaka/netshoot -- /bin/bash'
+function netshoot() {
+    kubectl run --generator=run-pod/v1 tmp-shell --rm -i --tty --image nicolaka/netshoot -- /bin/bash
+}
 
 # scales down a deployment to 0 replicas, effectively pausing
 # args: deployment name
