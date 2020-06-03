@@ -18,6 +18,26 @@ function loadDir() {
     done
 }
 
+function checkDeps() {
+    local expectedYqVersion="3.3.0"
+    if [[ $(yq --version | awk '{ print $3 }') != $expectedYqVersion ]]; then
+        echo "dataeng-tools - incorrect yq version, '$expectedYqVersion' expected!"
+        return 1
+    fi
+
+    local expectedJqVersion="1.6"
+    if [[ $(jq --version | awk -F '-' '{ print $2 }') != $expectedJqVersion ]]; then
+        echo "dataeng-tools - incorrect jq version, '$expectedJqVersion' expected!"
+        return 1
+    fi
+}
+
+if ! checkDeps; then
+    echo "dataeng-tools - exiting!"
+    return 1
+fi
+
+
 # load init scripts
 loadDir $DT_DIR/helpers/init/*.sh
 

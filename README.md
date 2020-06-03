@@ -8,7 +8,8 @@ may change in the future.
 
 Make sure the following programs are installed on your computer (not every helper
 requires each one, but you may want to install them all to save time):
-- `jq/yq`
+- `jq v1.6` [link](https://github.com/stedolan/jq)
+- `yq v3.3.0` [link](https://github.com/mikefarah/yq)
 - `aws`
 - `terraform`
 - `docker`
