@@ -61,7 +61,7 @@ Notable functions:
 
 #### K8s
 
-> Requires: `kubectl`, `yq`
+> Requires: `kubectl`, `yq`, `jq`, `fzf` (optional)
 
 The K8s helper provides useful functions for interacting with clusters and various
 associated administrative tasks.
@@ -70,11 +70,14 @@ Notable functions:
  - `debugPod`: launches a debug pod in the cluster preloaded with common networking tools, drops you into its shell when created
  - `downDeploy/upDeploy/reDeploy`: stop/start/restart a deployment
  - `secretEncode`: base64-encodes a string for use in a Secret
+ - `rds`: connects to an rds instance from the service name
 
 #### Kafka
 
-> Requires: `docker`
+> Requires: `docker`, `python`
 
 Notable functions:
 - `listTopics`: lists all known topics
 - `readTopic`: reads from a topic at a certain offset
+- `readTopic`: reads from a topic at a certain offset
+- `readKafkaBlock`: reads protobuf encoded blocks

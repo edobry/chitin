@@ -54,10 +54,28 @@ function getRegcredAuthString() {
     getRegcred | jq -r ".auths .\"$1\" .auth" | base64 -D
 }
 
-# fetches the EKS admin token, can be used for authorizing with the dashboard
+dashboardNamespace="kubernetes-dashboard"
+
+# fetches the admin user token, can be used for authorizing with the dashboard
 function getToken() {
-    local eksAdminSecret="$(kubectl -n kube-system get secret | grep eks-admin | awk '{print $1}')"
-    kubectl -n kube-system describe secret $eksAdminSecret | grep 'token:' | awk '{print $2}' | toClip
+    local user="admin-user"
+
+    local adminSecret="$(kubectl -n $dashboardNamespace get secret | grep $user | awk '{print $1}')"
+    kubectl -n $dashboardNamespace describe secret $adminSecret | grep 'token:' | awk '{print $2}' | toClip
+}
+
+function dashboard() {
+    echo "Launching dashboard..."
+    echo "Copying token to clipboard..."
+    getToken
+
+    echo -e "\nOpening URL (might need a refresh):"
+    local url="http://localhost:8001/api/v1/namespaces/$dashboardNamespace/services/https:dashboard-kubernetes-dashboard:https/proxy/"
+    echo -e "\n$url\n"
+
+    openUrl $url
+
+    kubectl proxy
 }
 
 # EVERYTHING BELOW THIS LINE IS WIP
@@ -69,4 +87,8 @@ function makeService() {
     local name=$1
     shift
     helm template $name $EXTERNAL_DIR/service --set name=$name $*
+}
+
+function rds() {
+    $DT_DIR/bin/rds.sh $1 $2
 }
