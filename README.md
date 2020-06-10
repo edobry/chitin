@@ -81,3 +81,12 @@ Notable functions:
 - `readTopic`: reads from a topic at a certain offset
 - `readTopic`: reads from a topic at a certain offset
 - `readKafkaBlock`: reads protobuf encoded blocks
+
+#### Coin Collection
+
+> Requires: `jq`, `psql`, `kubectl`
+> Depend on: `k8s`
+
+Notable functions:
+
+- `resetBackendDb`: pauses an ib-backend, recreates the db, and unpauses
