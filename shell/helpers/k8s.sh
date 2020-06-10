@@ -78,6 +78,10 @@ function dashboard() {
     kubectl proxy
 }
 
+function rds() {
+    $DT_DIR/bin/rds.sh $*
+}
+
 # EVERYTHING BELOW THIS LINE IS WIP
 # ---------------------------------
 
@@ -87,8 +91,4 @@ function makeService() {
     local name=$1
     shift
     helm template $name $EXTERNAL_DIR/service --set name=$name $*
-}
-
-function rds() {
-    $DT_DIR/bin/rds.sh $1 $2
 }
