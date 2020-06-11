@@ -90,3 +90,4 @@ Notable functions:
 Notable functions:
 
 - `resetBackendDb`: pauses an ib-backend, recreates the db, and unpauses
+- `createTransferDbs`: creates a transfer database for each coin name passed in

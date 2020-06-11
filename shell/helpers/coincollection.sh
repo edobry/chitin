@@ -15,3 +15,18 @@ function resetBackendDb() {
     echo -e "\nResuming backend..."
     upDeploy $deploymentName
 }
+
+# creates a transfer database for each coin name passed in
+# args: db service name, coins...
+function createTransferDbs() {
+    local serviceName="$1"
+    shift
+
+    echo "Creating transfer databases for $(echo "$@" | sed 's/ /, /g') in $serviceName..."
+
+    echo $* | awk '{ \
+        for(i=1; i<=NF; i++){ \
+            print "create database "$i "_transfer;" \
+        } \
+    }' | rds $serviceName postgres -e
+}
