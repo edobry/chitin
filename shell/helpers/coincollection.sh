@@ -4,13 +4,19 @@
 function resetBackendDb() {
     local deploymentName="$1"
     local serviceName="$2"
-    local dbName="$3"
+    shift && shift
 
     echo "Pausing backend..."
     downDeploy $deploymentName
 
-    echo -e "\nRecreating DB..."
-    echo "drop database $dbName;" "create database $dbName;"  | rds $serviceName postgres -e
+    echo -e "\nRecreating DBs..."
+
+    echo $* | awk '{ \
+        for(i=1; i<=NF; i++) { \
+            print "drop database " $i ";" \
+            "create database " $i ";" \
+        } \
+    }' | rds $serviceName postgres -e
 
     echo -e "\nResuming backend..."
     upDeploy $deploymentName
@@ -25,8 +31,8 @@ function createTransferDbs() {
     echo "Creating transfer databases for $(echo "$@" | sed 's/ /, /g') in $serviceName..."
 
     echo $* | awk '{ \
-        for(i=1; i<=NF; i++){ \
-            print "create database "$i "_transfer;" \
+        for(i=1; i<=NF; i++) { \
+            print "create database " $i "_transfer;" \
         } \
     }' | rds $serviceName postgres -e
 }
