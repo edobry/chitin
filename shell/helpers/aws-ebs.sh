@@ -37,65 +37,43 @@ function findSnapshot() {
     echo $SNAPSHOT_ID
 }
 
-# creates an EBS volume in the given AZ with the given name
-# args: availability zone name, EBS volume name
+# creates an EBS volume with the given name, either empty or from a snapshot
+# args: availability zone name, EBS volume name, (volume size OR source snapshot identifier)
 function createVolume() {
     AZ_NAME=$1
     VOLUME_NAME=$2
-    VOLUME_SIZE=$3
 
     if [[ -z $VOLUME_NAME ]]; then
         echo "Please supply a volume name!"
         return 1;
     fi
 
-    sizeOpt=""
-    if ! [[ -z $VOLUME_SIZE ]]; then
-        if ! checkNumeric $VOLUME_SIZE; then
-            echo "Please supply a numeric volume size!"
-            return 1
-        fi
-
-        sizeOpt="--size=$VOLUME_SIZE"
-    fi
-
-    if ! checkAZ $AZ_NAME; then return 1; fi
-
-    aws ec2 create-volume \
-        --availability-zone $AZ_NAME \
-        $sizeOpt \
-        --tag-specifications "ResourceType=volume,Tags=[{Key=Name,Value=$VOLUME_NAME}]" \
-        --output=json | jq -r '.VolumeId'
-}
-
-# creates an EBS volume in the given AZ with the given name from the snapshot with the given name
-# args: availability zone name, EBS volume name, EBS snapshot name
-function createVolumeFromSnapshot() {
-    AZ_NAME=$1
-    VOLUME_NAME=$2
+    VOLUME_SIZE=$3
     SNAPSHOT_NAME=$3
 
-    if [[ -z $VOLUME_NAME ]]; then
-        echo "Please supply a volume name!"
-        return 1;
-    fi
+    local sourceOpt=""
+    if ! [[ -z $3 ]]; then
+        if checkNumeric $3; then
+            sourceOpt="--size=$3"
+        else
+            SNAPSHOT_ID=$(findSnapshot $3)
+            if [[ -z $SNAPSHOT_ID ]]; then
+                echo "Snapshot not found!"
+                return 1
+            fi
 
-    if [[ -z $SNAPSHOT_NAME ]]; then
-        echo "Please supply a snapshot name!"
-        return 1;
-    fi
-
-    if ! checkAZ $AZ_NAME; then return 1; fi
-
-    SNAPSHOT_ID=$(findSnapshot $SNAPSHOT_NAME)
-    if [[ -z $SNAPSHOT_ID ]]; then
-        echo "Snapshot not found!"
+            sourceOpt="--snapshot-id=$SNAPSHOT_ID"
+        fi
+    else
+        echo "You must supply either a volume size or source snapshot identifier!"
         return 1
     fi
 
+    if ! checkAZ $AZ_NAME; then return 1; fi
+
     aws ec2 create-volume \
         --availability-zone $AZ_NAME \
-        --snapshot-id $SNAPSHOT_ID \
+        $sourceOpt \
         --tag-specifications "ResourceType=volume,Tags=[{Key=Name,Value=$VOLUME_NAME}]" \
         --output=json | jq -r '.VolumeId'
 }
