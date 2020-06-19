@@ -100,9 +100,19 @@ function findVolumesByName() {
 }
 
 # deletes the EBS volumes with the given name
-# args: EBS volume name
+# args: EBS volume name or id
 function deleteVolume() {
-    VOLUME_IDS=$(findVolumesByName $1)
+    if [[ -z $1 ]]; then
+        echo "Please supply a volume identifier!"
+        return 1;
+    fi
+
+    VOLUME_IDS=$([[ $1 == "vol-"* ]] && echo "$1" || findVolumesByName $1)
+
+    if [[ -z $VOLUME_IDS ]]; then
+        echo "No volume with given name found!"
+        return 1;
+    fi
 
     while IFS= read -r id; do
         echo "Deleting volume $id..."
