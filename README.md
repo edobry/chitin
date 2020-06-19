@@ -65,6 +65,15 @@ Notable functions:
 - `findVolumesByName`: finds the ids of the EBS volumes with the given name
 - `deleteVolume`: deletes the EBS volumes with the given name
 
+##### RDS
+
+Notable functions:
+- `checkRdsSnapshotExistence`: checks the existence of an RDS snapshot with the given name
+- `waitUntilRdsSnapshotReady`: polls the status of the given RDS snapshot until it is available
+- `deleteRdsSnapshot`: waits for the RDS snapshot with the given name to be available, and then deletes it
+- `checkRdsInstanceExistence`: checks the existence of an RDS instance with the given name
+- `snapshotRds`: snapshots the given RDS instance
+
 ##### SSM
 
 Notable functions:
