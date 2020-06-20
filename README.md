@@ -60,9 +60,9 @@ Notable functions:
 - `watchVolumeModificationProgress`: watches an EBS volume currently being modified and reports progress
 - `checkAZ`: checks whether an availability zone with the given name exists
 - `findSnapshot`: finds the id of an EBS snapshot with the given name
-- `createVolume`: creates an EBS volume in the given AZ with the given name
-- `createVolumeFromSnapshot`: creates an EBS volume in the given AZ with the given name from the snapshot with the given name
+- `createVolume`: creates an EBS volume with the given name, either empty or from a snapshot
 - `findVolumesByName`: finds the ids of the EBS volumes with the given name
+- `resizeVolume`: resizes the EBS volume with the given name
 - `deleteVolume`: deletes the EBS volumes with the given name
 
 ##### SSM

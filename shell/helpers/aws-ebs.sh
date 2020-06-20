@@ -37,8 +37,8 @@ function findSnapshot() {
     echo $SNAPSHOT_ID
 }
 
-# creates an EBS volume in the given AZ with the given name
-# args: availability zone name, EBS volume name
+# creates an EBS volume with the given name, either empty or from a snapshot
+# args: availability zone name, EBS volume name, (volume size in GB OR source snapshot identifier)
 function createVolume() {
     AZ_NAME=$1
     VOLUME_NAME=$2
@@ -48,42 +48,32 @@ function createVolume() {
         return 1;
     fi
 
-    if ! checkAZ $AZ_NAME; then return 1; fi
-
-    aws ec2 create-volume \
-        --availability-zone $AZ_NAME \
-        --tag-specifications "ResourceType=volume,Tags=[{Key=Name,Value=$VOLUME_NAME}]" \
-        --output=json | jq -r '.VolumeId'
-}
-
-# creates an EBS volume in the given AZ with the given name from the snapshot with the given name
-# args: availability zone name, EBS volume name, EBS snapshot name
-function createVolumeFromSnapshot() {
-    AZ_NAME=$1
-    VOLUME_NAME=$2
+    VOLUME_SIZE=$3
     SNAPSHOT_NAME=$3
 
-    if [[ -z $VOLUME_NAME ]]; then
-        echo "Please supply a volume name!"
-        return 1;
-    fi
+    local sourceOpt=""
+    if ! [[ -z $3 ]]; then
+        if checkNumeric $3; then
+            sourceOpt="--size=$3"
+        else
+            SNAPSHOT_ID=$(findSnapshot $3)
+            if [[ -z $SNAPSHOT_ID ]]; then
+                echo "Snapshot not found!"
+                return 1
+            fi
 
-    if [[ -z $SNAPSHOT_NAME ]]; then
-        echo "Please supply a snapshot name!"
-        return 1;
-    fi
-
-    if ! checkAZ $AZ_NAME; then return 1; fi
-
-    SNAPSHOT_ID=$(findSnapshot $SNAPSHOT_NAME)
-    if [[ -z $SNAPSHOT_ID ]]; then
-        echo "Snapshot not found!"
+            sourceOpt="--snapshot-id=$SNAPSHOT_ID"
+        fi
+    else
+        echo "You must supply either a volume size or source snapshot identifier!"
         return 1
     fi
 
+    if ! checkAZ $AZ_NAME; then return 1; fi
+
     aws ec2 create-volume \
         --availability-zone $AZ_NAME \
-        --snapshot-id $SNAPSHOT_ID \
+        $sourceOpt \
         --tag-specifications "ResourceType=volume,Tags=[{Key=Name,Value=$VOLUME_NAME}]" \
         --output=json | jq -r '.VolumeId'
 }
@@ -99,10 +89,49 @@ function findVolumesByName() {
     aws ec2 describe-volumes --filters "Name=tag:Name,Values=$1" | jq -r '.Volumes[] | .VolumeId'
 }
 
+# resizes the EBS volume with the given name
+# args: EBS volume name, new size in GB
+function resizeVolume() {
+    if [[ -z $1 ]]; then
+        echo "Please supply a volume identifier!"
+        return 1;
+    fi
+
+    VOLUME_SIZE=$2
+
+    if ! checkNumeric $VOLUME_SIZE; then
+        echo "Please supply a numeric volume size!"
+        return 1
+    fi
+
+    VOLUME_IDS=$([[ $1 == "vol-"* ]] && echo "$1" || findVolumesByName $1)
+
+    if [[ -z $VOLUME_IDS ]]; then
+        echo "No volume with given name found!"
+        return 1;
+    fi
+
+    while IFS= read -r id; do
+        echo "Resizing volume $id..."
+        aws ec2 modify-volume --volume-id $id --size $VOLUME_SIZE
+    done <<< "$VOLUME_IDS"
+
+}
+
 # deletes the EBS volumes with the given name
-# args: EBS volume name
+# args: EBS volume name or id
 function deleteVolume() {
-    VOLUME_IDS=$(findVolumesByName $1)
+    if [[ -z $1 ]]; then
+        echo "Please supply a volume identifier!"
+        return 1;
+    fi
+
+    VOLUME_IDS=$([[ $1 == "vol-"* ]] && echo "$1" || findVolumesByName $1)
+
+    if [[ -z $VOLUME_IDS ]]; then
+        echo "No volume with given name found!"
+        return 1;
+    fi
 
     while IFS= read -r id; do
         echo "Deleting volume $id..."

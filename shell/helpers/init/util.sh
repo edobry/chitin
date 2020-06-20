@@ -6,3 +6,7 @@ function randomString() {
 function escapeCommas(){
     sed 's/,/\\\,/g'
 }
+
+function checkNumeric() {
+    [[ $1 =~ '^[0-9]+$' ]]
+}
