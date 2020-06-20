@@ -62,6 +62,7 @@ Notable functions:
 - `findSnapshot`: finds the id of an EBS snapshot with the given name
 - `createVolume`: creates an EBS volume with the given name, either empty or from a snapshot
 - `findVolumesByName`: finds the ids of the EBS volumes with the given name
+- `resizeVolume`: resizes the EBS volume with the given name
 - `deleteVolume`: deletes the EBS volumes with the given name
 
 ##### SSM
