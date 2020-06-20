@@ -38,7 +38,7 @@ function findSnapshot() {
 }
 
 # creates an EBS volume with the given name, either empty or from a snapshot
-# args: availability zone name, EBS volume name, (volume size OR source snapshot identifier)
+# args: availability zone name, EBS volume name, (volume size in GB OR source snapshot identifier)
 function createVolume() {
     AZ_NAME=$1
     VOLUME_NAME=$2
@@ -87,6 +87,35 @@ function findVolumesByName() {
     fi
 
     aws ec2 describe-volumes --filters "Name=tag:Name,Values=$1" | jq -r '.Volumes[] | .VolumeId'
+}
+
+# resizes the EBS volume with the given name
+# args: EBS volume name, new size in GB
+function resizeVolume() {
+    if [[ -z $1 ]]; then
+        echo "Please supply a volume identifier!"
+        return 1;
+    fi
+
+    VOLUME_SIZE=$2
+
+    if ! checkNumeric $VOLUME_SIZE; then
+        echo "Please supply a numeric volume size!"
+        return 1
+    fi
+
+    VOLUME_IDS=$([[ $1 == "vol-"* ]] && echo "$1" || findVolumesByName $1)
+
+    if [[ -z $VOLUME_IDS ]]; then
+        echo "No volume with given name found!"
+        return 1;
+    fi
+
+    while IFS= read -r id; do
+        echo "Resizing volume $id..."
+        aws ec2 modify-volume --volume-id $id --size $VOLUME_SIZE
+    done <<< "$VOLUME_IDS"
+
 }
 
 # deletes the EBS volumes with the given name
