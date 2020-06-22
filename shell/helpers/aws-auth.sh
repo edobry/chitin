@@ -74,12 +74,7 @@ function aws-auth() {
 
     export AWS_PROFILE=$1
 
-    local role
-    if [ ! -z $AWS_CURRENT_ROLE ]; then
-        role=$AWS_CURRENT_ROLE
-    else
-        role=$(awsRole)
-    fi
+    local role=$(awsRole)
     echo "Assumed role: $role"
 }
 
