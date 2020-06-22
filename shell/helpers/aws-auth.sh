@@ -89,3 +89,6 @@ function aws-dataeng-dev() {
 function aws-dataeng-prod() {
     aws-auth $DATAENG_PROD
 }
+function aws-kafka-prod() {
+    aws-auth $KAFKA_PROD
+}
