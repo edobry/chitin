@@ -91,7 +91,7 @@ Notable functions:
 - `listTopics`: lists all known topics
 - `readTopic`: reads from a topic at a certain offset
 - `resetTopics`: resets an MSK cluster's topics by destroying and recreating using terraform
-- `resetCoinTopic`: resets a `tx-producer-kafka` cluster's coin-specific topics using terraform
+- `resetCoinTopic`: pauses tx-producer, and then resets the MSK cluster's coin-specific topics using terraform
 - `readKafkaBlock`: reads protobuf encoded blocks
 
 #### Coin Collection
