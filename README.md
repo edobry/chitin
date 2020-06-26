@@ -110,6 +110,12 @@ Notable functions:
 > Depend on: `k8s`
 
 Notable functions:
-
 - `resetBackendDb`: pauses an ib-backend, recreates the db, and unpauses
 - `createTransferDbs`: creates a transfer database for each coin name passed in
+
+#### Terraform
+
+> Requires: `terraform`, `jq`
+
+Notable functions:
+- `showDestroys`: generates a terraform plan and shows destructive actions
