@@ -82,6 +82,16 @@ function rds() {
     $DT_DIR/bin/rds.sh $*
 }
 
+# fetches the external url, with port, for a Service with a load balancer configured
+# args: service name
+function getServiceExternalUrl() {
+    local svc=$(kubectl get service $1 -o=json)
+    local hostname=$(echo "$svc" | jq -r '.status.loadBalancer.ingress[0].hostname')
+    local port=$(echo "$svc" | jq -r '.spec.ports[0].port')
+
+    echo "$hostname:$port"
+}
+
 # EVERYTHING BELOW THIS LINE IS WIP
 # ---------------------------------
 

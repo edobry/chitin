@@ -91,6 +91,7 @@ Notable functions:
  - `downDeploy/upDeploy/reDeploy`: stop/start/restart a deployment
  - `secretEncode`: base64-encodes a string for use in a Secret
  - `rds`: connects to an rds instance from the service name
+ - `getServiceExternalUrl`: fetches the external url, with port, for a Service with a load balancer configured
 
 #### Kafka
 
