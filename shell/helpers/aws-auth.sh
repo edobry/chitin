@@ -74,12 +74,7 @@ function aws-auth() {
 
     export AWS_PROFILE=$1
 
-    local role
-    if [ ! -z $AWS_CURRENT_ROLE ]; then
-        role=$AWS_CURRENT_ROLE
-    else
-        role=$(awsRole)
-    fi
+    local role=$(awsRole)
     echo "Assumed role: $role"
 }
 
@@ -88,4 +83,7 @@ function aws-dataeng-dev() {
 }
 function aws-dataeng-prod() {
     aws-auth $DATAENG_PROD
+}
+function aws-kafka-prod() {
+    aws-auth $KAFKA_PROD
 }
