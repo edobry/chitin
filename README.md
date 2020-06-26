@@ -118,4 +118,5 @@ Notable functions:
 > Requires: `terraform`, `jq`
 
 Notable functions:
+- `runTF`: runs the specified terraform command in on a particular module
 - `showDestroys`: generates a terraform plan and shows destructive actions
