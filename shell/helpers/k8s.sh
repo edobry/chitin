@@ -1,6 +1,3 @@
-# add krew to PATH
-export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
-
 # base64-encodes a string for use in a Secret
 function secretEncode() {
    echo -n "$1" | base64 | toClip
