@@ -97,6 +97,7 @@ Notable functions:
  - `secretEncode`: base64-encodes a string for use in a Secret
  - `rds`: connects to an rds instance from the service name
  - `getServiceExternalUrl`: fetches the external url, with port, for a Service with a load balancer configured
+ - `getServiceEndpoint`: fetches the endpoint url for both services and proxies to zen garden
 
 #### Kafka
 

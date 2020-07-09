@@ -43,3 +43,9 @@ loadDir $DT_DIR/helpers/init/*.sh
 
 # load helpers
 loadDir $DT_DIR/helpers/*.sh
+
+# zsh completions only loaded on zsh shells
+if [ -n "$ZSH_VERSION" ]; then
+    loadDir $DT_DIR/helpers/*.zsh
+fi
+
