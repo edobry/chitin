@@ -113,6 +113,7 @@ function getServiceExternalUrl() {
     echo "$hostname:$port"
 }
 
+# fetch the endpoint url for both services and proxies to zen garden
 function getServiceEndpoint() {
     service=$(kubectl describe services $1)
     kind=$(grep "Type:" <<< $service | awk '{print $2}')
