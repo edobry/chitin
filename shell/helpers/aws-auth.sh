@@ -44,7 +44,7 @@ function deAuth() {
     awsId
 }
 
-# checks if you're authenticated with aws
+# checks if you're authenticated
 function checkAuth() {
     if ! awsId > /dev/null; then
         echo "Unauthenticated!"
@@ -52,6 +52,7 @@ function checkAuth() {
     fi
 }
 
+# checks if you're authenticated, or fails. meant to be used as a failfast
 function checkAuthAndFail() {
     if ! checkAuth; then
         echo "Please authenticate with AWS before rerunning."
