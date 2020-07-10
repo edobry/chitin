@@ -67,12 +67,13 @@ function aws-auth() {
         return 1
     fi
 
+    export AWS_PROFILE=$1
+
     if ! checkAuth; then
         echo "Authenticating..."
         AWS_PROFILE=$AWS_ORG_SSO_PROFILE gimme-aws-creds
     fi
 
-    export AWS_PROFILE=$1
 
     local role=$(awsRole)
     echo "Assumed role: $role"
