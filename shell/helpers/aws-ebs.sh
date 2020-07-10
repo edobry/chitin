@@ -90,7 +90,7 @@ function findVolumesByName() {
 }
 
 # resizes the EBS volume with the given name or id
-# args: EBS volume name, new size in GB
+# args: EBS volume identifier, new size in GB
 function resizeVolume() {
     if [[ -z $1 ]]; then
         echo "Please supply a volume identifier!"
