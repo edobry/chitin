@@ -46,12 +46,16 @@ useful functions for introspecting, and switching between roles, including
 automatically re-authenticating if needed. This shell integration is disabled by default, but you can enable it by setting `DE_AWS_AUTH_ENABLED=true` in step 2 of the setup. This is recommended, but not required.
 
 Notable functions:
- - `awsId`: scriptable alias for `aws sts get-caller-identity`
- - `awsRole`: gets your currently-assumed IAM role
+- `awsId`: prints your full identity if authenticated, or fails
+- `awsRole`: prints your currently-assumed IAM role if authenticated, or fails
+- `deAuth`: removes authentication, can be used for testing/resetting
+- `checkAuthAndFail`: checks if you're authenticated, or fails. meant to be used as a failfast
 
-If you enable the shell integration, you can use the following aliases to assume roles:
- - `aws-dataeng-dev`
- - `aws-dataeng-prod`
+If you enable the shell integration, you can use the following functions to assume roles:
+- `aws-auth`: tab-completes known AWS profiles
+- `aws-dataeng-dev`
+- `aws-dataeng-prod`
+- `aws-kafka-prod`
 
 ##### EBS
 
@@ -83,7 +87,7 @@ Notable functions:
 
 ##### Env
 
-The `k9s-env` helper sets up your Kubernetes configuration for working with our EKS environments. It works by adding the `eksconfig.yaml` file to your `KUBECONFIG` environment variable. This shell integration is disabled by default, but you can enable it by setting `DE_K8S_CONFIG_ENABLED=true` in step 2 of the setup. This is recommended, but not required. If you do choose to use it, however, you may want to delete any existing EKS-relevant config from your `~/.kube/config` file, to avoid conflicts.
+The `k8s-env` helper sets up your Kubernetes configuration for working with our EKS environments. It works by adding the `eksconfig.yaml` file to your `KUBECONFIG` environment variable. This shell integration is disabled by default, but you can enable it by setting `DE_K8S_CONFIG_ENABLED=true` in step 2 of the setup. This is recommended, but not required. If you do choose to use it, however, you may want to delete any existing EKS-relevant config from your `~/.kube/config` file, to avoid conflicts.
 
 ##### Helpers
 

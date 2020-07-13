@@ -48,4 +48,3 @@ loadDir $DT_DIR/helpers/*.sh
 if [ -n "$ZSH_VERSION" ]; then
     loadDir $DT_DIR/helpers/*.zsh
 fi
-
