@@ -89,8 +89,8 @@ function findVolumesByName() {
     aws ec2 describe-volumes --filters "Name=tag:Name,Values=$1" | jq -r '.Volumes[] | .VolumeId'
 }
 
-# resizes the EBS volume with the given name
-# args: EBS volume name, new size in GB
+# resizes the EBS volume with the given name or id
+# args: EBS volume identifier, new size in GB
 function resizeVolume() {
     if [[ -z $1 ]]; then
         echo "Please supply a volume identifier!"
@@ -116,6 +116,36 @@ function resizeVolume() {
         aws ec2 modify-volume --volume-id $id --size $VOLUME_SIZE
     done <<< "$VOLUME_IDS"
 
+}
+
+# snapshots the EBS volume with the given name or id
+# args: EBS volume id, EBS snapshot name
+function snapshotVolume() {
+    if [[ -z $1 ]]; then
+        echo "Please supply a volume identifier!"
+        return 1;
+    fi
+
+    SNAPSHOT_NAME=$2
+
+    if [[ -z $SNAPSHOT_NAME ]]; then
+        echo "Please supply a volume name!"
+        return 1;
+    fi
+
+    VOLUME_IDS=$([[ $1 == "vol-"* ]] && echo "$1" || findVolumesByName $1)
+
+    if [[ -z $VOLUME_IDS ]]; then
+        echo "No volume with given name found!"
+        return 1;
+    fi
+
+    while IFS= read -r id; do
+        echo "Snapshotting volume $id..."
+        aws ec2 create-snapshot \
+            --volume-id $id \
+            --tag-specifications "ResourceType=snapshot,Tags=[{Key=Name,Value=$SNAPSHOT_NAME}]"
+    done <<< "$VOLUME_IDS"
 }
 
 # deletes the EBS volumes with the given name

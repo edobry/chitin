@@ -1,9 +1,8 @@
-# add krew to PATH
-export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
+#!/bin/bash
 
 # base64-encodes a string for use in a Secret
 function secretEncode() {
-   echo -n "$1" | base64 | toClip
+    echo -n "$1" | base64 | toClip
 }
 
 # deprecated older version of the debug pod, only creates, does not manage lifecyle
@@ -78,8 +77,30 @@ function dashboard() {
     kubectl proxy
 }
 
+# opens psql connected to an rds db
+# $1: service name of rds instance (ex. postgres-erc20)
+# $2: db name (ex. jsondb), defaults to "postgres"
+# $*: passed through to psql. $2 must be set
+# ex: rds postgres-erc20 jsondb -c "select max(bid) from erc20"
 function rds() {
-    $DT_DIR/bin/rds.sh $*
+    [ -z $1 ] && echo "missing RDS service" && return
+    service=$1
+    shift
+
+    url=$(getServiceEndpoint $service)
+    [ -z $url ] && return;
+    json=$(kubectl get secret $service-user -o json | jq .data)
+    user=$(jq .username -r <<< $json| base64 --decode)
+    password=$(jq .password -r <<< $json | base64 --decode)
+
+    db=${1:-'postgres'}
+    [ $1 ] && shift;
+
+    psql postgres://$user:$password@$url/$db "$*"
+}
+
+function kconfig() {
+    kubectl get pod -o yaml $1 | bat -l yaml
 }
 
 # fetches the external url, with port, for a Service with a load balancer configured
@@ -90,6 +111,21 @@ function getServiceExternalUrl() {
     local port=$(echo "$svc" | jq -r '.spec.ports[0].port')
 
     echo "$hostname:$port"
+}
+
+# fetch the endpoint url for both services and proxies to zen garden
+function getServiceEndpoint() {
+    service=$(kubectl describe services $1)
+    kind=$(grep "Type:" <<< $service | awk '{print $2}')
+    if [[ $kind == 'ClusterIP' ]]; then
+        echo $(grep 'Endpoints' <<< $service | awk '{print $2}')
+        return
+    fi
+    if [ $kind = 'ExternalName' ]; then
+        echo $(grep 'External Name' <<< $service | awk '{print $3}')
+        return
+    fi
+    echo "Unkown service type"
 }
 
 # EVERYTHING BELOW THIS LINE IS WIP
