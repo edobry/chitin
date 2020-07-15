@@ -13,13 +13,13 @@ fi
 export DT_DIR="$(dirname $SCRIPT_PATH)"
 
 function loadDir() {
-    for f in "$@";
-        do source $f;
+    for f in "$@"; do
+        source $f
     done
 }
 
 function checkDeps() {
-    local expectedYqVersion="3.3.0"
+    local expectedYqVersion="3.3.2"
     if [[ $(yq --version | awk '{ print $3 }') != $expectedYqVersion ]]; then
         echo "dataeng-tools - incorrect yq version, '$expectedYqVersion' expected!"
         return 1
@@ -36,7 +36,6 @@ if ! checkDeps; then
     echo "dataeng-tools - exiting!"
     return 1
 fi
-
 
 # load init scripts
 loadDir $DT_DIR/helpers/init/*.sh
