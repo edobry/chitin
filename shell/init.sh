@@ -13,8 +13,8 @@ fi
 export DT_DIR="$(dirname $SCRIPT_PATH)"
 
 function loadDir() {
-    for f in "$@"; do
-        source $f
+    for f in "$@";
+        do source $f;
     done
 }
 
@@ -36,6 +36,7 @@ if ! checkDeps; then
     echo "dataeng-tools - exiting!"
     return 1
 fi
+
 
 # load init scripts
 loadDir $DT_DIR/helpers/init/*.sh
