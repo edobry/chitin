@@ -19,7 +19,7 @@ function loadDir() {
 }
 
 function checkDeps() {
-    local expectedYqVersion="3.3.0"
+    local expectedYqVersion="3.3.2"
     if [[ $(yq --version | awk '{ print $3 }') != $expectedYqVersion ]]; then
         echo "dataeng-tools - incorrect yq version, '$expectedYqVersion' expected!"
         return 1
