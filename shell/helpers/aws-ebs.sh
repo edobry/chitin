@@ -10,6 +10,22 @@ function watchVolumeModificationProgress() {
         | jq '.VolumesModifications[0].Progress' | xargs printf '%s%%\n'"
 }
 
+# watches an EBS volume snapshot currently being created and reports progress
+# args: snapshot name or id
+function watchSnapshotProgress() {
+    if ! checkAuthAndFail; then return 1; fi
+
+    if [[ -z $1 ]]; then
+        echo "Please supply a snapshot identifier!"
+        return 1;
+    fi
+
+    SNAPSHOT_ID=$([[ $1 == "snap-"* ]] && echo "$1" || findSnapshot $1)
+
+    watch -n 30 "aws ec2 describe-snapshots --snapshot-ids $SNAPSHOT_ID \
+        | jq -r '.Snapshots[].Progress'"
+}
+
 # checks whether an availability zone with the given name exists
 # args: availability zone name
 function checkAZ() {
