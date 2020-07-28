@@ -10,3 +10,19 @@ function escapeCommas(){
 function checkNumeric() {
     [[ $1 =~ '^[0-9]+$' ]]
 }
+
+# can be used to check arguments for a specific string
+# args: search target, args...
+# example: if ! argsContain "some string" $*; then exit 1; fi
+function argsContain() {
+    local target="$1"
+    shift
+
+    for i in "$@" ; do
+        if [[ $i == "$target" ]]; then
+            return 0
+        fi
+    done
+
+    return 1
+}
