@@ -2,6 +2,8 @@
 # args: deployment name, db service name, db name...
 # example: resetBackendDb eth-backend-ib-backend postgres-ethereum eth_transfer eth2_transfer...
 function resetBackendDb() {
+    if ! checkAuthAndFail; then return 1; fi
+
     local deploymentName="$1"
     local serviceName="$2"
     shift && shift
@@ -25,6 +27,8 @@ function resetBackendDb() {
 # creates a transfer database for each coin name passed in
 # args: db service name, coins...
 function createTransferDbs() {
+    if ! checkAuthAndFail; then return 1; fi
+
     local serviceName="$1"
     shift
 
@@ -42,6 +46,8 @@ function createTransferDbs() {
 # args: deployment name, (optional) snapshot suffix
 # example: snapshotNodeState eth-node-ethereum pre-upgrade
 function snapshotNodeState() {
+    if ! checkAuthAndFail; then return 1; fi
+
     local deploymentName="$1"
     local snapshotSuffix=${2:-$(randomString 5)}
 
