@@ -125,16 +125,5 @@ function getServiceEndpoint() {
         echo $(grep 'External Name' <<< $service | awk '{print $3}')
         return
     fi
-    echo "Unkown service type"
-}
-
-# EVERYTHING BELOW THIS LINE IS WIP
-# ---------------------------------
-
-HELM_HOME="$PROJECT_DIR/dataeng-pipeline/charts"
-EXTERNAL_DIR="$HELM_HOME/external"
-function makeService() {
-    local name=$1
-    shift
-    helm template $name $EXTERNAL_DIR/service --set name=$name $*
+    echo "Unknown service type"
 }

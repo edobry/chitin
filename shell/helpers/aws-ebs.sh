@@ -145,21 +145,21 @@ function resizeVolume() {
 function snapshotVolume() {
     if ! checkAuthAndFail; then return 1; fi
 
-    if [[ -z $1 ]]; then
+    if [[ -z "$1" ]]; then
         echo "Please supply a volume identifier!"
         return 1;
     fi
 
-    SNAPSHOT_NAME=$2
+    SNAPSHOT_NAME="$2"
 
-    if [[ -z $SNAPSHOT_NAME ]]; then
-        echo "Please supply a volume name!"
+    if [[ -z "$SNAPSHOT_NAME" ]]; then
+        echo "Please supply a snapshot name!"
         return 1;
     fi
 
-    VOLUME_IDS=$([[ $1 == "vol-"* ]] && echo "$1" || findVolumesByName $1)
+    VOLUME_IDS=$([[ "$1" == "vol-"* ]] && echo "$1" || findVolumesByName $1)
 
-    if [[ -z $VOLUME_IDS ]]; then
+    if [[ -z "$VOLUME_IDS" ]]; then
         echo "No volume with given name found!"
         return 1;
     fi
