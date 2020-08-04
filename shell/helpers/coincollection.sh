@@ -65,7 +65,6 @@ function snapshotNodeState() {
     local volumeID=$(kubectl get persistentvolumes $volumeName -o json | jq -r '.spec.awsElasticBlockStore.volumeID')
     echo -e "Snapshotting EBS volume '$volumeID'..."
 
-
     local snapshotName="$deploymentName-snapshot-$snapshotSuffix"
 
     local snapshotID=$(snapshotVolume "$volumeID" "$snapshotName" | tail -n +2 | \
