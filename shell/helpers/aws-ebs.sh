@@ -1,6 +1,8 @@
 # watches an EBS volume currently being modified and reports progress
 # args: volumeId
 function watchVolumeModificationProgress() {
+    if ! checkAuthAndFail; then return 1; fi
+
     if [[ -z $1 ]]; then
         echo "Please supply a volume name!"
         return 1;
@@ -8,6 +10,22 @@ function watchVolumeModificationProgress() {
 
     watch -n 30 "aws ec2 describe-volumes-modifications --volume-id $1 \
         | jq '.VolumesModifications[0].Progress' | xargs printf '%s%%\n'"
+}
+
+# watches an EBS volume snapshot currently being created and reports progress
+# args: snapshot name or id
+function watchSnapshotProgress() {
+    if ! checkAuthAndFail; then return 1; fi
+
+    if [[ -z $1 ]]; then
+        echo "Please supply a snapshot identifier!"
+        return 1;
+    fi
+
+    SNAPSHOT_ID=$([[ $1 == "snap-"* ]] && echo "$1" || findSnapshot $1)
+
+    watch -n 30 "aws ec2 describe-snapshots --snapshot-ids $SNAPSHOT_ID \
+        | jq -r '.Snapshots[].Progress'"
 }
 
 # checks whether an availability zone with the given name exists
@@ -40,6 +58,8 @@ function findSnapshot() {
 # creates an EBS volume with the given name, either empty or from a snapshot
 # args: availability zone name, EBS volume name, (volume size in GB OR source snapshot identifier)
 function createVolume() {
+    if ! checkAuthAndFail; then return 1; fi
+
     AZ_NAME=$1
     VOLUME_NAME=$2
 
@@ -92,6 +112,8 @@ function findVolumesByName() {
 # resizes the EBS volume with the given name or id
 # args: EBS volume identifier, new size in GB
 function resizeVolume() {
+    if ! checkAuthAndFail; then return 1; fi
+
     if [[ -z $1 ]]; then
         echo "Please supply a volume identifier!"
         return 1;
@@ -121,6 +143,8 @@ function resizeVolume() {
 # snapshots the EBS volume with the given name or id
 # args: EBS volume id, EBS snapshot name
 function snapshotVolume() {
+    if ! checkAuthAndFail; then return 1; fi
+
     if [[ -z $1 ]]; then
         echo "Please supply a volume identifier!"
         return 1;
@@ -151,6 +175,8 @@ function snapshotVolume() {
 # deletes the EBS volumes with the given name
 # args: EBS volume name or id
 function deleteVolume() {
+    if ! checkAuthAndFail; then return 1; fi
+
     if [[ -z $1 ]]; then
         echo "Please supply a volume identifier!"
         return 1;

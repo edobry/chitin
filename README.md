@@ -61,6 +61,7 @@ If you enable the shell integration, you can use the following functions to assu
 
 Notable functions:
 - `watchVolumeModificationProgress`: watches an EBS volume currently being modified and reports progress
+- `watchSnapshotProgress`: watches an EBS volume snapshot currently being created and reports progress
 - `checkAZ`: checks whether an availability zone with the given name exists
 - `findSnapshot`: finds the id of an EBS snapshot with the given name
 - `createVolume`: creates an EBS volume with the given name, either empty or from a snapshot
