@@ -113,7 +113,7 @@ Notable functions:
 - `listTopics`: lists all known topics
 - `readTopic`: reads from a topic at a certain offset
 - `resetTopics`: resets an MSK cluster's topics by destroying and recreating using terraform
-- `resetCoinTopic`: pauses tx-producer, and then resets the MSK cluster's coin-specific topics using terraform
+- `resetCoinTopic`: pauses `tx-producer`, and then resets the MSK cluster's coin-specific topics using terraform
 - `readKafkaBlock`: reads protobuf encoded blocks
 
 #### Coin Collection
@@ -122,8 +122,9 @@ Notable functions:
 > Depend on: `k8s`
 
 Notable functions:
-- `resetBackendDb`: pauses an ib-backend, recreates the db, and unpauses
+- `resetBackendDb`: pauses an `ib-backend`, recreates the db, and unpauses
 - `createTransferDbs`: creates a transfer database for each coin name passed in
+- `snapshotNodeState`: pauses a p2p node, snapshots the EBS volume backing it, and unpauses
 
 #### Terraform
 
