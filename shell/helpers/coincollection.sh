@@ -36,3 +36,37 @@ function createTransferDbs() {
         } \
     }' | rds $serviceName postgres -e
 }
+
+
+# pauses a p2p node, snapshots the EBS volume backing it, and unpauses
+# args: deployment name, (optional) snapshot suffix
+# example: snapshotNodeState eth-node-ethereum pre-upgrade
+function snapshotNodeState() {
+    local deploymentName="$1"
+    local snapshotSuffix=${2:-$(randomString 5)}
+
+    echo "Pausing node..."
+    downDeploy "$deploymentName"
+
+    echo -e "\nQuerying volume ID..."
+
+    local claimName=$(kubectl get deployments.apps "$deploymentName" -o json | \
+        jq -r --arg deploymentName "$deploymentName-data" \
+            '.spec.template.spec.volumes[] | select(.name == $deploymentName) | .persistentVolumeClaim.claimName')
+
+    local volumeName=$(kubectl get persistentvolumeclaims "$claimName" -o json | jq -r '.spec.volumeName')
+
+    local volumeID=$(kubectl get persistentvolumes $volumeName -o json | jq -r '.spec.awsElasticBlockStore.volumeID')
+    echo -e "Snapshotting EBS volume '$volumeID'..."
+
+
+    local snapshotName="$deploymentName-snapshot-$snapshotSuffix"
+
+    local snapshotID=$(snapshotVolume "$volumeID" "$snapshotName" | tail -n +2 | \
+        jq -r '.SnapshotId')
+
+    echo "Created snapshot: $snapshotName ($snapshotID)"
+
+    echo -e "\nResuming node..."
+    upDeploy "$deploymentName"
+}
