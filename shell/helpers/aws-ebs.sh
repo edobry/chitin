@@ -69,14 +69,13 @@ function createVolume() {
     fi
 
     VOLUME_SIZE=$3
-    SNAPSHOT_NAME=$3
 
     local sourceOpt=""
     if ! [[ -z $3 ]]; then
         if checkNumeric $3; then
             sourceOpt="--size=$3"
         else
-            SNAPSHOT_ID=$(findSnapshot $3)
+            SNAPSHOT_ID=$([[ "$3" == "snap-"* ]] && echo "$3" || findSnapshot "$3")
             if [[ -z $SNAPSHOT_ID ]]; then
                 echo "Snapshot not found!"
                 return 1
