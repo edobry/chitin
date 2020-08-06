@@ -70,6 +70,21 @@ function checkAuthAndFail() {
     fi
 }
 
+# checks if you're authenticated with a specific account, or fails. meant to be used as a failfast
+function checkAccountAuthAndFail() {
+    if ! checkAuth; then
+        echo "Please authenticate with AWS before rerunning."
+        return 1
+    fi
+
+    local targetAccount="ca-aws-$1"
+
+    if [[ $(awsAccount) != "$targetAccount" ]]; then
+        echo "You are authenticated with the wrong account; please re-authenticate with $targetAccount."
+        return 1
+    fi
+}
+
 # checks if you're authenticated, triggers authentication if not,
 # and then assumes the provided role
 function aws-auth() {
