@@ -80,7 +80,7 @@ function checkAccountAuthAndFail() {
     local targetAccount="ca-aws-$1"
 
     if [[ $(awsAccount) != "$targetAccount" ]]; then
-        echo "You are authenticated with the wrong account; please re-authenticate with $targetAccount."
+        echo "You are authenticated with the wrong account; please re-authenticate with '$targetAccount'."
         return 1
     fi
 }
