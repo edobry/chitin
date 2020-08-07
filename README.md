@@ -47,9 +47,11 @@ automatically re-authenticating if needed. This shell integration is disabled by
 
 Notable functions:
 - `awsId`: prints your full identity if authenticated, or fails
+- `awsAccount`: prints your account alias if authenticated, or fails
 - `awsRole`: prints your currently-assumed IAM role if authenticated, or fails
 - `deAuth`: removes authentication, can be used for testing/resetting
 - `checkAuthAndFail`: checks if you're authenticated, or fails. meant to be used as a failfast
+- `checkAccountAuthAndFail`: checks if you're authenticated with a specific account, or fails. meant to be used as a failfast
 
 If you enable the shell integration, you can use the following functions to assume roles:
 - `aws-auth`: tab-completes known AWS profiles

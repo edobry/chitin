@@ -26,6 +26,16 @@ function awsId() {
     fi
 }
 
+# prints your account alias if authenticated, or fails
+function awsAccount() {
+    local id
+    if id=$(aws iam list-account-aliases | jq -r '.AccountAliases[0]') 2> /dev/null; then
+        echo $id
+    else
+        return 1
+    fi
+}
+
 # prints your currently-assumed IAM role if authenticated, or fails
 function awsRole() {
     local id
@@ -56,6 +66,21 @@ function checkAuth() {
 function checkAuthAndFail() {
     if ! checkAuth; then
         echo "Please authenticate with AWS before rerunning."
+        return 1
+    fi
+}
+
+# checks if you're authenticated with a specific account, or fails. meant to be used as a failfast
+function checkAccountAuthAndFail() {
+    if ! checkAuth; then
+        echo "Please authenticate with AWS before rerunning."
+        return 1
+    fi
+
+    local targetAccount="ca-aws-$1"
+
+    if [[ $(awsAccount) != "$targetAccount" ]]; then
+        echo "You are authenticated with the wrong account; please re-authenticate with '$targetAccount'."
         return 1
     fi
 }
