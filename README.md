@@ -127,6 +127,8 @@ Notable functions:
 - `resetBackendDb`: pauses an `ib-backend`, recreates the db, and unpauses
 - `createTransferDbs`: creates a transfer database for each coin name passed in
 - `snapshotNodeState`: pauses a p2p node, snapshots the EBS volume backing it, and unpauses
+- `getLatestClusterVersion`: finds the latest cluster version by querying S3
+- `upgradeEnvironmentClusterVersion`: upgrades an envrionment's cluster version to either the specified or latest
 
 #### Terraform
 
