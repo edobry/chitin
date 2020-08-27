@@ -1,16 +1,18 @@
 #!/usr/bin/env bash
 
-SOURCE_DIR=$(dirname "$0")
+if [[ -z "$DT_DIR" ]]; then
+    SOURCE_DIR=$(dirname "$0")
 
-if [[ "$0" = /* ]]; then
-    SCRIPT_PATH="$0"
-elif [ ! -z ${BASH_SOURCE[0]} ]; then
-    SCRIPT_PATH="${BASH_SOURCE[0]}"
-else
-    SCRIPT_PATH="$SOURCE_DIR/init.sh"
+    if [[ "$0" = /* ]]; then
+        SCRIPT_PATH="$0"
+    elif [ ! -z ${BASH_SOURCE[0]} ]; then
+        SCRIPT_PATH="${BASH_SOURCE[0]}"
+    else
+        SCRIPT_PATH="$SOURCE_DIR/init.sh"
+    fi
+
+    export DT_DIR="$(dirname $SCRIPT_PATH)"
 fi
-
-export DT_DIR="$(dirname $SCRIPT_PATH)"
 
 function loadDir() {
     for f in "$@";
@@ -32,7 +34,7 @@ function checkDeps() {
     fi
 }
 
-if ! checkDeps; then
+if [[ -z "$IS_DOCKER" ]] && ! checkDeps; then
     echo "dataeng-tools - exiting!"
     return 1
 fi
