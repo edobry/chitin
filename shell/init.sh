@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-if [[ -z "$DT_DIR" ]]; then
+if [[ -z "$IS_DOCKER" ]]; then
     SOURCE_DIR=$(dirname "$0")
 
     if [[ "$0" = /* ]]; then
