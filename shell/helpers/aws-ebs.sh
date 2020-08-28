@@ -22,9 +22,9 @@ function watchSnapshotProgress() {
         return 1;
     fi
 
-    SNAPSHOT_ID=$([[ $1 == "snap-"* ]] && echo "$1" || findSnapshot $1)
+    local snapshotId=$([[ $1 == "snap-"* ]] && echo "$1" || findSnapshot $1)
 
-    watch -n 30 "aws ec2 describe-snapshots --snapshot-ids $SNAPSHOT_ID \
+    watch -n 30 "aws ec2 describe-snapshots --snapshot-ids $snapshotId \
         | jq -r '.Snapshots[].Progress'"
 }
 
@@ -47,12 +47,12 @@ function findSnapshot() {
         return 1;
     fi
 
-    SNAPSHOT_ID=$(aws ec2 describe-snapshots --filters "Name=tag:Name,Values=$1" \
+    local snapshotId=$(aws ec2 describe-snapshots --filters "Name=tag:Name,Values=$1" \
       | jq -r '.Snapshots[0].SnapshotId // empty')
 
-    if [[ -z $SNAPSHOT_ID ]]; then return 1; fi
+    if [[ -z $snapshotId ]]; then return 1; fi
 
-    echo $SNAPSHOT_ID
+    echo $snapshotId
 }
 
 # creates an EBS volume with the given name, either empty or from a snapshot
@@ -60,28 +60,28 @@ function findSnapshot() {
 function createVolume() {
     if ! checkAuthAndFail; then return 1; fi
 
-    AZ_NAME=$1
-    VOLUME_NAME=$2
+    local AZ_NAME="$1"
+    local VOLUME_NAME="$2"
 
     if [[ -z $VOLUME_NAME ]]; then
         echo "Please supply a volume name!"
         return 1;
     fi
 
-    VOLUME_SIZE=$3
+    local VOLUME_SIZE="$3"
 
     local sourceOpt=""
     if ! [[ -z $3 ]]; then
         if checkNumeric $3; then
             sourceOpt="--size=$3"
         else
-            SNAPSHOT_ID=$([[ "$3" == "snap-"* ]] && echo "$3" || findSnapshot "$3")
-            if [[ -z $SNAPSHOT_ID ]]; then
+            local snapshotId=$([[ "$3" == "snap-"* ]] && echo "$3" || findSnapshot "$3")
+            if [[ -z $snapshotId ]]; then
                 echo "Snapshot not found!"
                 return 1
             fi
 
-            sourceOpt="--snapshot-id=$SNAPSHOT_ID"
+            sourceOpt="--snapshot-id=$snapshotId"
         fi
     else
         echo "You must supply either a volume size or source snapshot identifier!"
@@ -164,10 +164,10 @@ function snapshotVolume() {
     fi
 
     while IFS= read -r id; do
-        echo "Snapshotting volume $id..."
         aws ec2 create-snapshot \
             --volume-id $id \
-            --tag-specifications "ResourceType=snapshot,Tags=[{Key=Name,Value=$SNAPSHOT_NAME}]"
+            --tag-specifications "ResourceType=snapshot,Tags=[{Key=Name,Value=$SNAPSHOT_NAME}]" | \
+        jq -r '.SnapshotId'
     done <<< "$VOLUME_IDS"
 }
 
@@ -189,7 +189,7 @@ function deleteVolume() {
     fi
 
     while IFS= read -r id; do
-        echo "Deleting volume $id..."
+        echo "Deleting volume '$id'..."
         aws ec2 delete-volume --volume-id $id
     done <<< "$VOLUME_IDS"
 }
