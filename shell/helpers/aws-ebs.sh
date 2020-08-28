@@ -39,20 +39,47 @@ function checkAZ() {
     fi
 }
 
-# finds the id of an EBS snapshot with the given name
+# finds the ids of EBS snapshots with the given name, in descending-recency order
 # args: EBS snapshot name
-function findSnapshot() {
+function findSnapshots() {
     if [[ -z $1 ]]; then
         echo "Please supply a snapshot name!"
         return 1;
     fi
 
-    local snapshotId=$(aws ec2 describe-snapshots --filters "Name=tag:Name,Values=$1" \
-      | jq -r '.Snapshots[0].SnapshotId // empty')
+    local snapshotIds=$(aws ec2 describe-snapshots --filters "Name=tag:Name,Values=$1")
 
-    if [[ -z $snapshotId ]]; then return 1; fi
+    if [[ -z $snapshotIds ]]; then return 1; fi
 
-    echo $snapshotId
+    echo $snapshotIds | jq -r '.Snapshots | sort_by(.StartTime) | reverse[] | .SnapshotId'
+}
+
+# finds the id of the latest EBS snapshot with the given name
+# args: EBS snapshot name
+function findSnapshot() {
+    findSnapshots "$1" | head -n 1
+}
+
+# deletes all EBS snapshots with the given name
+# args: EBS snapshot identifier
+function deleteSnapshots() {
+    if ! checkAuthAndFail; then return 1; fi
+
+    if [[ -z $1 ]]; then
+        echo "Please supply a snapshot identifier!"
+        return 1;
+    fi
+
+    local snapshotIds=$([[ "$1" == "snap-"* ]] && echo "$1" || findSnapshots "$1")
+    if [[ -z $snapshotIds ]]; then
+        echo "Snapshot not found!"
+        return 1
+    fi
+
+    while IFS= read -r id; do
+        echo "Deleting snapshot '$id'..."
+        aws ec2 delete-snapshot --snapshot-id $id
+    done <<< "$snapshotIds"
 }
 
 # creates an EBS volume with the given name, either empty or from a snapshot
