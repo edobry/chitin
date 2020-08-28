@@ -198,6 +198,26 @@ function snapshotVolume() {
     done <<< "$volumeIds"
 }
 
+# polls the status of the given EBS snapshot until it is available
+# args: EBS snapshot identifier
+function waitUntilSnapshotReady() {
+    if ! checkAuthAndFail; then return 1; fi
+
+    local snapshotId=$([[ "$1" == "snap-"* ]] && echo "$1" || findSnapshot "$1")
+    if [[ -z $snapshotId ]]; then
+        echo "Snapshot not found!"
+        return 1
+    fi
+
+    until aws ec2 describe-snapshots --snapshot-id "$snapshotId" \
+      | jq -r '.Snapshots[0].State' \
+      | grep -qm 1 "completed";
+    do
+        echo "Checking..."
+        sleep 5;
+    done
+
+    echo "Snapshot $1 is available!"
 }
 
 # deletes the EBS volumes with the given name
