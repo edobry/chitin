@@ -103,7 +103,7 @@ Functions:
  - `debugPod`: launches a debug pod in the cluster preloaded with common networking tools, drops you into its shell when created
  - `downDeploy/upDeploy/reDeploy`: stop/start/restart a deployment
  - `secretEncode`: base64-encodes a string for use in a Secret
- - `rds`: connects to an rds instance from the service name
+ - `rds`: connects to an RDS instance from the service name
  - `getServiceExternalUrl`: fetches the external url, with port, for a Service with a load balancer configured
  - `getServiceEndpoint`: fetches the endpoint url for both services and proxies to zen garden
 
@@ -128,7 +128,7 @@ Functions:
 - `createTransferDbs`: creates a transfer database for each coin name passed in
 - `snapshotNodeState`: pauses a p2p node, snapshots the EBS volume backing it, and unpauses
 - `getLatestClusterVersion`: finds the latest cluster version by querying S3
-- `upgradeEnvironmentClusterVersion`: upgrades an envrionment's cluster version to either the specified or latest
+- `upgradeEnvironmentClusterVersion`: upgrades an environment's cluster version to either the specified or latest
 
 #### P2P Nodes
 

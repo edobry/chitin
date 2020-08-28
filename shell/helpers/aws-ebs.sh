@@ -60,15 +60,15 @@ function findSnapshot() {
 function createVolume() {
     if ! checkAuthAndFail; then return 1; fi
 
-    local AZ_NAME="$1"
-    local VOLUME_NAME="$2"
+    local azName="$1"
+    local volumeName="$2"
 
-    if [[ -z $VOLUME_NAME ]]; then
+    if [[ -z $volumeName ]]; then
         echo "Please supply a volume name!"
         return 1;
     fi
 
-    local VOLUME_SIZE="$3"
+    local volumeSize="$3"
 
     local sourceOpt=""
     if ! [[ -z $3 ]]; then
@@ -88,12 +88,12 @@ function createVolume() {
         return 1
     fi
 
-    if ! checkAZ $AZ_NAME; then return 1; fi
+    if ! checkAZ $azName; then return 1; fi
 
     aws ec2 create-volume \
-        --availability-zone $AZ_NAME \
+        --availability-zone $azName \
         $sourceOpt \
-        --tag-specifications "ResourceType=volume,Tags=[{Key=Name,Value=$VOLUME_NAME}]" \
+        --tag-specifications "ResourceType=volume,Tags=[{Key=Name,Value=$volumeName}]" \
         --output=json | jq -r '.VolumeId'
 }
 
@@ -118,24 +118,24 @@ function resizeVolume() {
         return 1;
     fi
 
-    VOLUME_SIZE=$2
+    local volumeSize=$2
 
-    if ! checkNumeric $VOLUME_SIZE; then
+    if ! checkNumeric $volumeSize; then
         echo "Please supply a numeric volume size!"
         return 1
     fi
 
-    VOLUME_IDS=$([[ $1 == "vol-"* ]] && echo "$1" || findVolumesByName $1)
+    local volumeIds=$([[ $1 == "vol-"* ]] && echo "$1" || findVolumesByName $1)
 
-    if [[ -z $VOLUME_IDS ]]; then
+    if [[ -z $volumeIds ]]; then
         echo "No volume with given name found!"
         return 1;
     fi
 
     while IFS= read -r id; do
         echo "Resizing volume $id..."
-        aws ec2 modify-volume --volume-id $id --size $VOLUME_SIZE
-    done <<< "$VOLUME_IDS"
+        aws ec2 modify-volume --volume-id $id --size $volumeSize
+    done <<< "$volumeIds"
 
 }
 
@@ -149,16 +149,16 @@ function snapshotVolume() {
         return 1;
     fi
 
-    SNAPSHOT_NAME="$2"
+    local snapshotName="$2"
 
-    if [[ -z "$SNAPSHOT_NAME" ]]; then
+    if [[ -z "$snapshotName" ]]; then
         echo "Please supply a snapshot name!"
         return 1;
     fi
 
-    VOLUME_IDS=$([[ "$1" == "vol-"* ]] && echo "$1" || findVolumesByName $1)
+    local volumeIds=$([[ "$1" == "vol-"* ]] && echo "$1" || findVolumesByName $1)
 
-    if [[ -z "$VOLUME_IDS" ]]; then
+    if [[ -z "$volumeIds" ]]; then
         echo "No volume with given name found!"
         return 1;
     fi
@@ -166,9 +166,11 @@ function snapshotVolume() {
     while IFS= read -r id; do
         aws ec2 create-snapshot \
             --volume-id $id \
-            --tag-specifications "ResourceType=snapshot,Tags=[{Key=Name,Value=$SNAPSHOT_NAME}]" | \
+            --tag-specifications "ResourceType=snapshot,Tags=[{Key=Name,Value=$snapshotName}]" | \
         jq -r '.SnapshotId'
-    done <<< "$VOLUME_IDS"
+    done <<< "$volumeIds"
+}
+
 }
 
 # deletes the EBS volumes with the given name
@@ -181,9 +183,9 @@ function deleteVolume() {
         return 1;
     fi
 
-    VOLUME_IDS=$([[ $1 == "vol-"* ]] && echo "$1" || findVolumesByName $1)
+    local volumeIds=$([[ $1 == "vol-"* ]] && echo "$1" || findVolumesByName $1)
 
-    if [[ -z $VOLUME_IDS ]]; then
+    if [[ -z $volumeIds ]]; then
         echo "No volume with given name found!"
         return 1;
     fi
@@ -191,5 +193,5 @@ function deleteVolume() {
     while IFS= read -r id; do
         echo "Deleting volume '$id'..."
         aws ec2 delete-volume --volume-id $id
-    done <<< "$VOLUME_IDS"
+    done <<< "$volumeIds"
 }
