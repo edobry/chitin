@@ -35,7 +35,7 @@ function reDeploy() {
 function debugPod() {
     local baseName="debug-pod"
     local debugPodName="$baseName-$(randomString 8)"
-    echo "$debugPodName"
+
     echo -e "\nGenerating '$baseName' manifest..."
     local chartDir=$DT_DIR/../charts/debug-pod
     pushd $chartDir > /dev/null
@@ -45,7 +45,6 @@ function debugPod() {
 
     echo -e "\nDeploying to K8s..."
     local manifests=$(ls dist/*)
-    cat $manifests | yq r -PCd'*' -
     cat $manifests | kubectl apply -f -
     popd > /dev/null
 
