@@ -128,6 +128,8 @@ function getServiceEndpoint() {
     echo "Unknown service type"
 }
 
+# kills all pods for a deployment, useful for forcing a restart during dev
+# args: deployment name
 function killDeploymentPods() {
     local deployment="$1"
 

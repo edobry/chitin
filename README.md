@@ -106,6 +106,7 @@ Notable functions:
  - `rds`: connects to an rds instance from the service name
  - `getServiceExternalUrl`: fetches the external url, with port, for a Service with a load balancer configured
  - `getServiceEndpoint`: fetches the endpoint url for both services and proxies to zen garden
+ - `killDeploymentPods`: kills all pods for a deployment, useful for forcing a restart during dev
 
 #### Kafka
 
