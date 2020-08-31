@@ -127,3 +127,14 @@ function getServiceEndpoint() {
     fi
     echo "Unknown service type"
 }
+
+function killDeploymentPods() {
+    local deployment="$1"
+
+    if [[ -z $deployment ]]; then
+        echo "Please supply a deployment name!"
+        return 1;
+    fi
+
+    kubectl delete pods --selector app.kubernetes.io/instance=$deployment
+}
