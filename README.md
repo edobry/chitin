@@ -138,3 +138,8 @@ Notable functions:
 Notable functions:
 - `runTF`: runs the specified terraform command in on a particular module
 - `showDestroys`: generates a terraform plan and shows destructive actions
+
+#### Network
+
+Functions:
+- `checksumUrl`: downloads a file from a url and checksums it
