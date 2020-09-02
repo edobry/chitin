@@ -7,5 +7,9 @@ function prettyJson() {
 }
 
 function prettyYaml() {
-    yq r -P -
+    yq r -PC -
+}
+
+function prettyYamlMultiple() {
+    yq r -PCd'*' -
 }

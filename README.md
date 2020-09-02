@@ -45,7 +45,7 @@ The `aws-auth` helper is designed to reduce friction during development, providi
 useful functions for introspecting, and switching between roles, including
 automatically re-authenticating if needed. This shell integration is disabled by default, but you can enable it by setting `DE_AWS_AUTH_ENABLED=true` in step 2 of the setup. This is recommended, but not required.
 
-Notable functions:
+Functions:
 - `awsId`: prints your full identity if authenticated, or fails
 - `awsAccount`: prints your account alias if authenticated, or fails
 - `awsRole`: prints your currently-assumed IAM role if authenticated, or fails
@@ -61,7 +61,7 @@ If you enable the shell integration, you can use the following functions to assu
 
 ##### EBS
 
-Notable functions:
+Functions:
 - `watchVolumeModificationProgress`: watches an EBS volume currently being modified and reports progress
 - `watchSnapshotProgress`: watches an EBS volume snapshot currently being created and reports progress
 - `checkAZ`: checks whether an availability zone with the given name exists
@@ -74,7 +74,7 @@ Notable functions:
 
 ##### RDS
 
-Notable functions:
+Functions:
 - `checkRdsSnapshotExistence`: checks the existence of an RDS snapshot with the given name
 - `waitUntilRdsSnapshotReady`: polls the status of the given RDS snapshot until it is available
 - `deleteRdsSnapshot`: waits for the RDS snapshot with the given name to be available, and then deletes it
@@ -83,7 +83,7 @@ Notable functions:
 
 ##### SSM
 
-Notable functions:
+Functions:
  - `getSecureParam`: fetches and decrypts an SSM parameter
 
 #### K8s
@@ -99,11 +99,11 @@ The `k8s-env` helper sets up your Kubernetes configuration for working with our 
 The K8s helper provides useful functions for interacting with clusters and various
 associated administrative tasks.
 
-Notable functions:
+Functions:
  - `debugPod`: launches a debug pod in the cluster preloaded with common networking tools, drops you into its shell when created
  - `downDeploy/upDeploy/reDeploy`: stop/start/restart a deployment
  - `secretEncode`: base64-encodes a string for use in a Secret
- - `rds`: connects to an rds instance from the service name
+ - `rds`: connects to an RDS instance from the service name
  - `getServiceExternalUrl`: fetches the external url, with port, for a Service with a load balancer configured
  - `getServiceEndpoint`: fetches the endpoint url for both services and proxies to zen garden
 
@@ -111,7 +111,7 @@ Notable functions:
 
 > Requires: `docker`, `python`
 
-Notable functions:
+Functions:
 - `listTopics`: lists all known topics
 - `readTopic`: reads from a topic at a certain offset
 - `resetTopics`: resets an MSK cluster's topics by destroying and recreating using terraform
@@ -123,17 +123,25 @@ Notable functions:
 > Requires: `jq`, `psql`, `kubectl`
 > Depend on: `k8s`
 
-Notable functions:
+Functions:
 - `resetBackendDb`: pauses an `ib-backend`, recreates the db, and unpauses
 - `createTransferDbs`: creates a transfer database for each coin name passed in
 - `snapshotNodeState`: pauses a p2p node, snapshots the EBS volume backing it, and unpauses
 - `getLatestClusterVersion`: finds the latest cluster version by querying S3
-- `upgradeEnvironmentClusterVersion`: upgrades an envrionment's cluster version to either the specified or latest
+- `upgradeEnvironmentClusterVersion`: upgrades an environment's cluster version to either the specified or latest
+
+#### P2P Nodes
+
+> Requires: `node`, `kubectl`
+> Depend on: `aws-auth`, `aws-ebs`
+
+Functions:
+- `updateZCashParams`: ensures existence of an up-to-date EBS snapshot containing the latest ZCash encryption parameter files.
 
 #### Terraform
 
 > Requires: `terraform`, `jq`
 
-Notable functions:
+Functions:
 - `runTF`: runs the specified terraform command in on a particular module
 - `showDestroys`: generates a terraform plan and shows destructive actions

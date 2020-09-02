@@ -31,16 +31,36 @@ function reDeploy() {
 
 # launches a debug pod in the cluster preloaded with common networking tools,
 # drops you into its shell when created. randomizes the name, and cleans up after
+# args: all args passed to DebugPod chart
 function debugPod() {
-    local baseName="test-shell"
+    local baseName="debug-pod"
     local debugPodName="$baseName-$(randomString 8)"
 
-    yq w $DT_DIR/helpers/resources/debugPod.yaml "metadata.name" "$debugPodName" \
-        | kubectl apply -f -
+    echo -e "\nGenerating '$baseName' manifest..."
+    local chartDir=$DT_DIR/../charts/debug-pod
+    pushd $chartDir > /dev/null
 
+    npm run compile
+    node main.js --config config.json --name "$debugPodName" $*
+
+    echo -e "\nDeploying to K8s..."
+    local manifests=$(ls dist/*)
+    cat $manifests | kubectl apply -f -
+    popd > /dev/null
+
+    echo -e "\nAwaiting pod creation..."
     kubectl wait --for=condition=Ready pod/$debugPodName
+    if [[ ! $? ]]; then
+        echo -e "\Pod did not start up in time! Exiting..."
+        return 1
+    fi
+
+    echo -e "\n---------------- START POD OUTPUT ----------------"
     kubectl exec $debugPodName --container "$baseName" -i --tty -- /bin/bash
-    kubectl delete pods $debugPodName --grace-period=0 --force
+    echo -e "\n---------------- END POD OUTPUT ----------------"
+
+    echo -e "\nCleaning up pod..."
+    kubectl delete pods $debugPodName --grace-period=10 --wait=true
 }
 
 # fetches and pretty-prints the image pull secret

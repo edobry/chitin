@@ -3,6 +3,11 @@ function randomString() {
     cat /dev/urandom | LC_CTYPE=C tr -dc 'a-z0-9' | fold -w $1 | head -n 1
 }
 
+#creates a randomly named temporary file
+function tempFile() {
+    echo /tmp/$(randomString 10)
+}
+
 function escapeCommas(){
     sed 's/,/\\\,/g'
 }
