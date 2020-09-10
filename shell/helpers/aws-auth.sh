@@ -35,6 +35,15 @@ function awsAccount() {
         return 1
     fi
 }
+# prints your account id if authenticated, or fails
+function awsAccountId() {
+    local id
+    if id=$(awsId | jq -r '.Account') 2> /dev/null; then
+        echo $id
+    else
+        return 1
+    fi
+}
 
 # prints your currently-assumed IAM role if authenticated, or fails
 function awsRole() {
