@@ -136,6 +136,13 @@ function findVolumesByName() {
 }
 
 # lists all EBS volumes in the account, with names
+function listSnapshots() {
+    aws ec2 describe-snapshots --owner-ids $(awsAccountId) | jq -r '.Snapshots | sort_by(.StartTime) | reverse[] |
+        { id: .SnapshotId, tags: ( (.Tags // []) | .[] | [select(.Key=="Name")] // []) } |
+        "\(.id) - \((.tags[] | select(.Key == "Name") | .Value) // "")"'
+}
+
+# lists all EBS volumes in the account, with names
 function listVolumes() {
     aws ec2 describe-volumes | jq -r '.Volumes[] |
         { id: .VolumeId, tags: ( (.Tags // []) | .[] | [select(.Key=="Name")] // []) } |
