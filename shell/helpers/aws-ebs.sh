@@ -135,6 +135,13 @@ function findVolumesByName() {
     aws ec2 describe-volumes --filters "Name=tag:Name,Values=$1" | jq -r '.Volumes[] | .VolumeId'
 }
 
+# lists all EBS volumes in the account, with names
+function listVolumes() {
+    aws ec2 describe-volumes | jq -r '.Volumes[] |
+        { id: .VolumeId, tags: ( (.Tags // []) | .[] | [select(.Key=="Name")] // []) } |
+        "\(.id) - \((.tags[] | select(.Key == "Name") | .Value) // "")"'
+}
+
 # resizes the EBS volume with the given name or id
 # args: EBS volume identifier, new size in GB
 function resizeVolume() {
