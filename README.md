@@ -48,6 +48,7 @@ automatically re-authenticating if needed. This shell integration is disabled by
 Functions:
 - `awsId`: prints your full identity if authenticated, or fails
 - `awsAccount`: prints your account alias if authenticated, or fails
+- `awsAccountId`: prints your account id if authenticated, or fails
 - `awsRole`: prints your currently-assumed IAM role if authenticated, or fails
 - `deAuth`: removes authentication, can be used for testing/resetting
 - `checkAuthAndFail`: checks if you're authenticated, or fails. meant to be used as a failfast
@@ -69,6 +70,7 @@ Functions:
 - `findSnapshot`: finds the id of the latest EBS snapshot with the given name
 - `createVolume`: creates an EBS volume with the given name, either empty or from a snapshot
 - `findVolumesByName`: finds the ids of the EBS volumes with the given name
+- `listSnapshots`: lists all EBS snapshots in the account, with names
 - `listVolumes`: lists all EBS volumes in the account, with names
 - `resizeVolume`: resizes the EBS volume with the given name or id
 - `snapshotVolume`: snapshots the EBS volume with the given name or id
