@@ -135,11 +135,17 @@ function findVolumesByName() {
     aws ec2 describe-volumes --filters "Name=tag:Name,Values=$1" | jq -r '.Volumes[] | .VolumeId'
 }
 
-# lists all EBS volumes in the account, with names
+# lists all EBS snapshots in the account, with names
 function listSnapshots() {
     aws ec2 describe-snapshots --owner-ids $(awsAccountId) | jq -r '.Snapshots | sort_by(.StartTime) | reverse[] |
         { id: .SnapshotId, tags: ( (.Tags // []) | .[] | [select(.Key=="Name")] // []) } |
         "\(.id) - \((.tags[] | select(.Key == "Name") | .Value) // "")"'
+}
+
+# lists all in-progress EBS snapshots in the account, with names
+function listInProgressSnapshots() {
+    aws ec2 describe-snapshots --owner-ids $(awsAccountId) | jq -r '.Snapshots[] |
+        select(.Progress!="100%") | "\(.SnapshotId) - \(.Progress)"'
 }
 
 # lists all EBS volumes in the account, with names

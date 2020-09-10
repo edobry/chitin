@@ -71,6 +71,7 @@ Functions:
 - `createVolume`: creates an EBS volume with the given name, either empty or from a snapshot
 - `findVolumesByName`: finds the ids of the EBS volumes with the given name
 - `listSnapshots`: lists all EBS snapshots in the account, with names
+- `listInProgressSnapshots`: lists all in-progress EBS snapshots in the account, with names
 - `listVolumes`: lists all EBS volumes in the account, with names
 - `resizeVolume`: resizes the EBS volume with the given name or id
 - `snapshotVolume`: snapshots the EBS volume with the given name or id
