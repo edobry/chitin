@@ -64,7 +64,7 @@ function upgradeEnvironmentClusterVersion() {
     if [[ -z "$version" ]]; then
         echo "Fetching latest cluster version..."
         version=$(getLatestClusterVersion)
-        echo "Found: $latestVersion"
+        echo "Found: $version"
     fi
 
     echo "Updating dev ib-backend config..."
