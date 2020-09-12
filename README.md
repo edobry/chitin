@@ -15,6 +15,7 @@ requires each one, but you may want to install them all to save time):
 - `docker`
 - `kubectl/kubectx`
 - `helm`
+- `tsc` [link](https://www.npmjs.com/package/typescript)
 
 MacOS only:
 - `watch`
