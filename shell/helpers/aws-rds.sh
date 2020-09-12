@@ -1,3 +1,8 @@
+# lists all RDS instances in the account, with names
+function listDatabases() {
+    aws rds describe-db-instances | jq -r '.DBInstances[] | .DBInstanceIdentifier'
+}
+
 # checks the existence of an RDS snapshot with the given name
 # args: RDS snapshot name
 function checkRdsSnapshotExistence() {
