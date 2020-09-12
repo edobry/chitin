@@ -106,6 +106,7 @@ Functions:
  - `rds`: connects to an RDS instance from the service name
  - `getServiceExternalUrl`: fetches the external url, with port, for a Service with a load balancer configured
  - `getServiceEndpoint`: fetches the endpoint url for both services and proxies to zen garden
+ - `killDeploymentPods`: kills all pods for a deployment, useful for forcing a restart during dev
 
 #### Kafka
 
@@ -145,3 +146,8 @@ Functions:
 Functions:
 - `runTF`: runs the specified terraform command in on a particular module
 - `showDestroys`: generates a terraform plan and shows destructive actions
+
+#### Network
+
+Functions:
+- `checksumUrl`: downloads a file from a url and checksums it
