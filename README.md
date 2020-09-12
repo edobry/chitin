@@ -145,6 +145,7 @@ Functions:
 - `updateZCashParams`: ensures existence of an up-to-date EBS snapshot containing the latest ZCash encryption parameter files.
 - `createZCashParamsVolume`: creates an EBS volume containing the latest ZCash encryption parameter files
 - `snapshotNodeState`: pauses a p2p node, snapshots the EBS volume backing it, and unpauses
+- `cloneNodeState`: clones an existing node's state by snapshotting and then creating a volume
 
 #### Terraform
 
