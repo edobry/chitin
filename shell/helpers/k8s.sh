@@ -49,6 +49,7 @@ function debugPod() {
     popd > /dev/null
 
     echo -e "\nAwaiting pod creation..."
+    # TODO: fail on timeout
     kubectl wait --for=condition=Ready pod/$debugPodName
     if [[ ! $? ]]; then
         echo -e "\Pod did not start up in time! Exiting..."

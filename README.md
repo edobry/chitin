@@ -49,6 +49,7 @@ automatically re-authenticating if needed. This shell integration is disabled by
 Functions:
 - `awsId`: prints your full identity if authenticated, or fails
 - `awsAccount`: prints your account alias if authenticated, or fails
+- `awsAccountId`: prints your account id if authenticated, or fails
 - `awsRole`: prints your currently-assumed IAM role if authenticated, or fails
 - `deAuth`: removes authentication, can be used for testing/resetting
 - `checkAuthAndFail`: checks if you're authenticated, or fails. meant to be used as a failfast
@@ -66,11 +67,16 @@ Functions:
 - `watchVolumeModificationProgress`: watches an EBS volume currently being modified and reports progress
 - `watchSnapshotProgress`: watches an EBS volume snapshot currently being created and reports progress
 - `checkAZ`: checks whether an availability zone with the given name exists
-- `findSnapshot`: finds the id of an EBS snapshot with the given name
+- `findSnapshots`: finds the ids of EBS snapshots with the given name, in descending-recency order
+- `findSnapshot`: finds the id of the latest EBS snapshot with the given name
 - `createVolume`: creates an EBS volume with the given name, either empty or from a snapshot
-- `snapshotVolume`: snapshots the EBS volume with the given name or id
 - `findVolumesByName`: finds the ids of the EBS volumes with the given name
+- `listSnapshots`: lists all EBS snapshots in the account, with names
+- `listInProgressSnapshots`: lists all in-progress EBS snapshots in the account, with names
+- `listVolumes`: lists all EBS volumes in the account, with names
 - `resizeVolume`: resizes the EBS volume with the given name or id
+- `snapshotVolume`: snapshots the EBS volume with the given name or id
+- `waitUntilSnapshotReady`: polls the status of the given EBS snapshot until it is available
 - `deleteVolume`: deletes the EBS volumes with the given name or id
 
 ##### RDS
@@ -128,7 +134,6 @@ Functions:
 Functions:
 - `resetBackendDb`: pauses an `ib-backend`, recreates the db, and unpauses
 - `createTransferDbs`: creates a transfer database for each coin name passed in
-- `snapshotNodeState`: pauses a p2p node, snapshots the EBS volume backing it, and unpauses
 - `getLatestClusterVersion`: finds the latest cluster version by querying S3
 - `upgradeEnvironmentClusterVersion`: upgrades an environment's cluster version to either the specified or latest
 
@@ -139,6 +144,9 @@ Functions:
 
 Functions:
 - `updateZCashParams`: ensures existence of an up-to-date EBS snapshot containing the latest ZCash encryption parameter files.
+- `createZCashParamsVolume`: creates an EBS volume containing the latest ZCash encryption parameter files
+- `snapshotNodeState`: pauses a p2p node, snapshots the EBS volume backing it, and unpauses
+- `cloneNodeState`: clones an existing node's state by snapshotting and then creating a volume
 
 #### Terraform
 
