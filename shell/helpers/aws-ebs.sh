@@ -155,6 +155,36 @@ function listVolumes() {
         "\(.id) - \((.tags[] | select(.Key == "Name") | .Value) // "")"'
 }
 
+# sets the IOPS for the EBS volume with the given name or id
+# args: EBS volume identifier, new IOPS
+function modifyVolumeIOPS() {
+    if ! checkAuthAndFail; then return 1; fi
+
+    if [[ -z $1 ]]; then
+        echo "Please supply a volume identifier!"
+        return 1;
+    fi
+
+    local volumeIOPS=$2
+
+    if ! checkNumeric $volumeIOPS; then
+        echo "Please supply a numeric IOPS value!"
+        return 1
+    fi
+
+    local volumeIds=$([[ $1 == "vol-"* ]] && echo "$1" || findVolumesByName $1)
+
+    if [[ -z $volumeIds ]]; then
+        echo "No volume with given name found!"
+        return 1;
+    fi
+
+    while IFS= read -r id; do
+        echo "Modifying volume $id..."
+        aws ec2 modify-volume --volume-id $id --volume-type io2 --iops $volumeIOPS
+    done <<< "$volumeIds"
+}
+
 # resizes the EBS volume with the given name or id
 # args: EBS volume identifier, new size in GB
 function resizeVolume() {
