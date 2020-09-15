@@ -4,11 +4,13 @@ function watchVolumeModificationProgress() {
     if ! checkAuthAndFail; then return 1; fi
 
     if [[ -z $1 ]]; then
-        echo "Please supply a volume name!"
+        echo "Please supply a volume identifier!"
         return 1;
     fi
 
-    watch -n 30 "aws ec2 describe-volumes-modifications --volume-id $1 \
+    local volumeIds=$([[ $1 == "vol-"* ]] && echo "$1" || findVolumesByName $1)
+
+    watch -n 30 "aws ec2 describe-volumes-modifications --volume-id $volumeIds \
         | jq '.VolumesModifications[0].Progress' | xargs printf '%s%%\n'"
 }
 
