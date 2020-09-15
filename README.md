@@ -74,6 +74,7 @@ Functions:
 - `listSnapshots`: lists all EBS snapshots in the account, with names
 - `listInProgressSnapshots`: lists all in-progress EBS snapshots in the account, with names
 - `listVolumes`: lists all EBS volumes in the account, with names
+- `modifyVolumeIOPS`: sets the IOPS for the EBS volume with the given name or id
 - `resizeVolume`: resizes the EBS volume with the given name or id
 - `snapshotVolume`: snapshots the EBS volume with the given name or id
 - `waitUntilSnapshotReady`: polls the status of the given EBS snapshot until it is available
