@@ -94,6 +94,13 @@ Functions:
 Functions:
  - `getSecureParam`: fetches and decrypts an SSM parameter
 
+##### MSK
+
+Functions:
+ - `listKafkaClusters`: lists all MSK clusters in the account, with names
+ - `findKafkaClusterArnByName`: finds the ARN of the MSK cluster with the given name
+ - `getKafkaZkConnection`: gets the Zookeeper connection string of the MSK cluster with the given name
+
 #### K8s
 
 ##### Env
