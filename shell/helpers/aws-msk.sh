@@ -38,26 +38,6 @@ function findKafkaClusterByNameJSON() {
     listKafkaClustersJSON | jq -r --arg CLUSTER_NAME "$1" 'select(.ClusterName==$CLUSTER_NAME)'
 }
 
-# gets the Zookeeper connection string of the MSK cluster with the given identifier
-# args: MSK cluster name or ARN
-function getKafkaZkConnection() {
-    if ! checkAuthAndFail; then return 1; fi
-
-    if [[ -z $1 ]]; then
-        echo "Please supply a cluster name!"
-        return 1;
-    fi
-
-    local cluster=$([[ "$1" == "arn:aws:kafka"* ]] && echo "$1" || findKafkaClusterByNameJSON $1)
-
-    if [[ -z "$cluster" ]]; then
-        echo "No cluster with given name found!"
-        return 1;
-    fi
-
-    jq -r '.ZookeeperConnectString' <<< $cluster
-}
-
 # gets the connection string of the MSK cluster with the given identifier
 # args: MSK cluster name or ARN
 function getKafkaConnection() {
@@ -76,4 +56,24 @@ function getKafkaConnection() {
     fi
 
     aws kafka get-bootstrap-brokers --cluster-arn $clusterArn | jq -r '.BootstrapBrokerString'
+}
+
+# gets the Zookeeper connection string of the MSK cluster with the given identifier
+# args: MSK cluster name or ARN
+function getKafkaZkConnection() {
+    if ! checkAuthAndFail; then return 1; fi
+
+    if [[ -z $1 ]]; then
+        echo "Please supply a cluster name!"
+        return 1;
+    fi
+
+    local cluster=$([[ "$1" == "arn:aws:kafka"* ]] && echo "$1" || findKafkaClusterByNameJSON $1)
+
+    if [[ -z "$cluster" ]]; then
+        echo "No cluster with given name found!"
+        return 1;
+    fi
+
+    jq -r '.ZookeeperConnectString' <<< $cluster
 }
