@@ -102,6 +102,11 @@ function aws-auth() {
         return 1
     fi
 
+    if [[ -z $1 ]]; then
+        echo "Please supply a profile name!"
+        return 1;
+    fi
+
     export AWS_PROFILE=$1
 
     if ! checkAuth; then
@@ -122,4 +127,24 @@ function aws-dataeng-prod() {
 }
 function aws-kafka-prod() {
     aws-auth $KAFKA_PROD
+}
+
+# run a command with a specific AWS profile
+# args: profile name
+function withProfile() {
+    local profile="$1"
+    shift
+
+    if [[ -z $profile ]]; then
+        echo "Please supply a profile name!"
+        return 1;
+    fi
+
+    if [[ -z $1 ]]; then
+        echo "Please a command to run!"
+        return 1;
+    fi
+
+    aws-auth $profile
+    $*
 }
