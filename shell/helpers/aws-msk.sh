@@ -1,6 +1,15 @@
 # lists all MSK clusters in the account, with names
 function listKafkaClusters() {
+    if ! checkAuthAndFail; then return 1; fi
+
     listKafkaClustersJSON | jq -r '"\(.ClusterName) - \(.ClusterArn)"'
+}
+
+# lists names of all MSK clusters in the account
+function listKafkaClusterNames() {
+    if ! checkAuthAndFail; then return 1; fi
+
+    listKafkaClustersJSON | jq -r '.ClusterName'
 }
 
 # lists all MSK clusters in the account, with names
@@ -26,7 +35,7 @@ function findKafkaClusterByNameJSON() {
         return 1;
     fi
 
-    listKafkaClustersJSON | jq -r  --arg CLUSTER_NAME "$1" 'select(.ClusterName==$CLUSTER_NAME)'
+    listKafkaClustersJSON | jq -r --arg CLUSTER_NAME "$1" 'select(.ClusterName==$CLUSTER_NAME)'
 }
 
 # gets the Zookeeper connection string of the MSK cluster with the given name
