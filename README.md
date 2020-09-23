@@ -56,10 +56,12 @@ Functions:
 - `checkAccountAuthAndFail`: checks if you're authenticated with a specific account, or fails. meant to be used as a failfast
 
 If you enable the shell integration, you can use the following functions to assume roles:
-- `aws-auth`: tab-completes known AWS profiles
-- `aws-dataeng-dev`
-- `aws-dataeng-prod`
-- `aws-kafka-prod`
+- `aws-auth`: authenticate if needed, and assume a profile
+- `withProfile`: run a command with a specific AWS profile
+- profile shortcuts:
+   - `aws-dataeng-dev`
+   - `aws-dataeng-prod`
+   - `aws-kafka-prod`
 
 ##### EBS
 

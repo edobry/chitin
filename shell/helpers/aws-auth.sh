@@ -102,6 +102,11 @@ function aws-auth() {
         return 1
     fi
 
+    if [[ -z $1 ]]; then
+        echo "Please supply a profile name!"
+        return 1;
+    fi
+
     export AWS_PROFILE=$1
 
     if ! checkAuth; then
