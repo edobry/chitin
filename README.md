@@ -171,3 +171,6 @@ Functions:
 
 Functions:
 - `checksumUrl`: downloads a file from a url and checksums it
+
+### Contributing
+See `CONTRIBUTING.md` for more details about how to contribute.
