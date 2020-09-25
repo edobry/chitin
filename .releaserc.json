@@ -1,8 +1,0 @@
-{
-    "branch": "master",
-    "tagFormat": "v${version}",
-    "verifyConditions": ["@semantic-release/github"],
-    "prepare": [],
-    "publish": ["@semantic-release/github"],
-    "fail": ["@semantic-release/github"]
-}
