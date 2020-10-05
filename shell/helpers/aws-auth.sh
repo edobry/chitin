@@ -134,16 +134,6 @@ function awsAuth() {
 
 alias aws-auth=awsAuth
 
-function aws-dataeng-dev() {
-    aws-auth $DATAENG_DEV
-}
-function aws-dataeng-prod() {
-    aws-auth $DATAENG_PROD
-}
-function aws-kafka-prod() {
-    aws-auth $KAFKA_PROD
-}
-
 # run a command with a specific AWS profile
 # args: profile name
 function withProfile() {
