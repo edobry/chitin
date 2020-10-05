@@ -19,3 +19,9 @@ function prettyYamlMultiple() {
 function readJSON() {
     jq -r "$2" <<< $1
 }
+
+# merges two JSON objects together
+# args: 2 minified json strings
+function mergeJSON() {
+    jq -s 'add' <<< $@
+}
