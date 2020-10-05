@@ -94,9 +94,20 @@ function checkAccountAuthAndFail() {
     fi
 }
 
+function awsOrg() {
+    if [[ -z "$1" ]]; then
+        echo "Please supply an organization name! It must be one of the following:"
+        echo "$KNOWN_AWS_ORGS"
+        return 1;
+    fi
+
+    export DEPT_ROLE="$1"
+    echo "Set AWS organization to: $1"
+}
+
 # checks if you're authenticated, triggers authentication if not,
 # and then assumes the provided role
-function aws-auth() {
+function awsAuth() {
     if [ "$DE_AWS_AUTH_ENABLED" != true ]; then
         echo "DE AWS Auth disabled, set 'DE_AWS_AUTH_ENABLED=true' to enable"
         return 1
@@ -108,10 +119,12 @@ function aws-auth() {
     fi
 
     export AWS_PROFILE=$1
+    export AWS_SSO_ORG_ROLE_ARN=arn:aws:iam::${AWS_ORG_IDENTITY_ACCOUNT_ID}:role/${DEPT_ROLE}
 
     if ! checkAuth; then
         echo "Authenticating..."
-        AWS_PROFILE=$AWS_ORG_SSO_PROFILE gimme-aws-creds
+        AWS_PROFILE=$AWS_ORG_SSO_PROFILE gimme-aws-creds --roles $AWS_SSO_ORG_ROLE_ARN
+
     fi
 
 
@@ -119,15 +132,7 @@ function aws-auth() {
     echo "Assumed role: $role"
 }
 
-function aws-dataeng-dev() {
-    aws-auth $DATAENG_DEV
-}
-function aws-dataeng-prod() {
-    aws-auth $DATAENG_PROD
-}
-function aws-kafka-prod() {
-    aws-auth $KAFKA_PROD
-}
+alias aws-auth=awsAuth
 
 # run a command with a specific AWS profile
 # args: profile name
