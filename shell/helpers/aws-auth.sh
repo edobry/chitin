@@ -94,6 +94,17 @@ function checkAccountAuthAndFail() {
     fi
 }
 
+function awsOrg() {
+    if [[ -z "$1" ]]; then
+        echo "Please supply an organization name! It must be one of the following:"
+        echo "$KNOWN_AWS_ORGS"
+        return 1;
+    fi
+
+    export DEPT_ROLE="$1"
+    echo "Set AWS organization to: $1"
+}
+
 # checks if you're authenticated, triggers authentication if not,
 # and then assumes the provided role
 function awsAuth() {
@@ -108,10 +119,12 @@ function awsAuth() {
     fi
 
     export AWS_PROFILE=$1
+    export AWS_SSO_ORG_ROLE_ARN=arn:aws:iam::${AWS_ORG_IDENTITY_ACCOUNT_ID}:role/${DEPT_ROLE}
 
     if ! checkAuth; then
         echo "Authenticating..."
-        AWS_PROFILE=$AWS_ORG_SSO_PROFILE gimme-aws-creds
+        AWS_PROFILE=$AWS_ORG_SSO_PROFILE gimme-aws-creds --roles $AWS_SSO_ORG_ROLE_ARN
+
     fi
 
 
