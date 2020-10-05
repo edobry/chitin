@@ -96,7 +96,7 @@ function checkAccountAuthAndFail() {
 
 # checks if you're authenticated, triggers authentication if not,
 # and then assumes the provided role
-function aws-auth() {
+function awsAuth() {
     if [ "$DE_AWS_AUTH_ENABLED" != true ]; then
         echo "DE AWS Auth disabled, set 'DE_AWS_AUTH_ENABLED=true' to enable"
         return 1
@@ -118,6 +118,8 @@ function aws-auth() {
     local role=$(awsRole)
     echo "Assumed role: $role"
 }
+
+alias aws-auth=awsAuth
 
 function aws-dataeng-dev() {
     aws-auth $DATAENG_DEV
