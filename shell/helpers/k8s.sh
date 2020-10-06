@@ -121,7 +121,7 @@ function rds() {
 }
 
 function kconfig() {
-    kubectl get pod -o yaml $1 | bat -l yaml
+    kubectl get pod -o yaml $1 | bat -p -l yaml
 }
 
 # fetches the external url, with port, for a Service with a load balancer configured
