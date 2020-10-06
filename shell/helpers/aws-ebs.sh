@@ -14,7 +14,7 @@ function watchVolumeModificationProgress() {
 # watches an EBS volume snapshot currently being created and reports progress
 # args: snapshot name or id
 function watchSnapshotProgress() {
-    if ! checkAuthAndFail; then return 1; fi
+    checkAuthAndFail || return 1
 
     if [[ -z $1 ]]; then
         echo "Please supply a snapshot identifier!"
@@ -30,7 +30,7 @@ function watchSnapshotProgress() {
 # checks whether an availability zone with the given name exists
 # args: availability zone name
 function checkAZ() {
-    if ! checkAuthAndFail; then return 1; fi
+    checkAuthAndFail || return 1
 
     if ! aws ec2 describe-availability-zones --zone-names $1 > /dev/null 2>1; then
         echo "AZ not found!"
@@ -59,7 +59,7 @@ function findSnapshot() {
 # deletes all EBS snapshots with the given name
 # args: EBS snapshot identifier
 function deleteSnapshots() {
-    if ! checkAuthAndFail; then return 1; fi
+    checkAuthAndFail || return 1
 
     requireArg "a snapshot identifier" $1 || return 1
 
@@ -78,7 +78,7 @@ function deleteSnapshots() {
 # creates an EBS volume with the given name, either empty or from a snapshot
 # args: availability zone name, EBS volume name, (volume size in GB OR source snapshot identifier)
 function createVolume() {
-    if ! checkAuthAndFail; then return 1; fi
+    checkAuthAndFail || return 1
 
     local azName="$1"
     local volumeName="$2"
@@ -148,7 +148,7 @@ function listVolumes() {
 # sets the IOPS for the EBS volume with the given name or id
 # args: EBS volume identifier, new IOPS
 function modifyVolumeIOPS() {
-    if ! checkAuthAndFail; then return 1; fi
+    checkAuthAndFail || return 1
 
     requireArg "a volume identifier" $1 || return 1
 
@@ -171,7 +171,7 @@ function modifyVolumeIOPS() {
 # resizes the EBS volume with the given name or id
 # args: EBS volume identifier, new size in GB
 function resizeVolume() {
-    if ! checkAuthAndFail; then return 1; fi
+    checkAuthAndFail || return 1
 
     requireArg "a volume identifier" $1 || return 1
 
@@ -195,7 +195,7 @@ function resizeVolume() {
 # snapshots the EBS volume with the given name or id
 # args: EBS volume id, EBS snapshot name
 function snapshotVolume() {
-    if ! checkAuthAndFail; then return 1; fi
+    checkAuthAndFail || return 1
 
     requireArg "a volume identifier" $1 || return 1
 
@@ -220,7 +220,7 @@ function snapshotVolume() {
 # polls the status of the given EBS snapshot until it is available
 # args: (optional) "quiet", EBS snapshot identifier
 function waitUntilSnapshotReady() {
-    if ! checkAuthAndFail; then return 1; fi
+    checkAuthAndFail || return 1
 
     unset quietMode
     if [[ "$1" == "quiet" ]]; then
@@ -248,7 +248,7 @@ function waitUntilSnapshotReady() {
 # deletes the EBS volumes with the given name
 # args: EBS volume name or id
 function deleteVolume() {
-    if ! checkAuthAndFail; then return 1; fi
+    checkAuthAndFail || return 1
 
     requireArg "a volume identifier" $1 || return 1
 
