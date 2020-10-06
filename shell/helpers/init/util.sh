@@ -31,3 +31,18 @@ function argsContain() {
 
     return 1
 }
+
+function requireArg() {
+    if [[ -z "$2" ]]; then
+        echo "Please supply $1!"
+        return 1;
+    fi
+}
+
+function requireArgOptions() {
+    if [[ -z "$3" ]]; then
+        echo "Please supply $1! It must be one of the following:"
+        echo "$2"
+        return 1;
+    fi
+}
