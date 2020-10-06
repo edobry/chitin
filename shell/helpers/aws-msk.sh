@@ -30,10 +30,7 @@ function findKafkaClusterArnByName() {
 function findKafkaClusterByNameJSON() {
     checkAuthAndFail || return 1
 
-    if [[ -z $1 ]]; then
-        echo "Please supply a cluster name!"
-        return 1;
-    fi
+    requireArg "a cluster name" $1 || return 1
 
     listKafkaClustersJSON | jq -r --arg CLUSTER_NAME "$1" 'select(.ClusterName==$CLUSTER_NAME)'
 }
@@ -43,10 +40,7 @@ function findKafkaClusterByNameJSON() {
 function getKafkaConnection() {
     checkAuthAndFail || return 1
 
-    if [[ -z $1 ]]; then
-        echo "Please supply a cluster name!"
-        return 1;
-    fi
+    requireArg "a cluster name" $1 || return 1
 
     local clusterArn=$([[ "$1" == "arn:aws:kafka"* ]] && echo "$1" || findKafkaClusterArnByName $1)
 
@@ -63,10 +57,7 @@ function getKafkaConnection() {
 function getKafkaZkConnection() {
     checkAuthAndFail || return 1
 
-    if [[ -z $1 ]]; then
-        echo "Please supply a cluster name!"
-        return 1;
-    fi
+    requireArg "a cluster name" $1 || return 1
 
     local cluster=$([[ "$1" == "arn:aws:kafka"* ]] && echo "$1" || findKafkaClusterByNameJSON $1)
 
