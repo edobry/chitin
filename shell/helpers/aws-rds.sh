@@ -6,10 +6,7 @@ function listDatabases() {
 # checks the existence of an RDS snapshot with the given name
 # args: RDS snapshot name
 function checkRdsSnapshotExistence() {
-    if [[ -z $1 ]]; then
-        echo "Please supply a snapshot name!"
-        return 1;
-    fi
+    requireArg "a snapshot name" $1 || return 1
 
     aws rds describe-db-snapshots --db-snapshot-identifier $1 > /dev/null 2>1
 
@@ -54,10 +51,7 @@ function deleteRdsSnapshot() {
 # checks the existence of an RDS instance with the given name
 # args: RDS instance name
 function checkRdsInstanceExistence() {
-    if [[ -z $1 ]]; then
-        echo "Please supply an instance name!"
-        return 1;
-    fi
+    requireArg "an instance name" $1 || return 1
 
     aws rds describe-db-instances --db-instance-identifier $1 > /dev/null 2>1
 
@@ -67,30 +61,23 @@ function checkRdsInstanceExistence() {
 # snapshots the given RDS instance
 # args: RDS instance name, RDS snapshot name
 function snapshotRds() {
-    RDS_NAME=$1
-    SNAPSHOT_NAME=$2
+    requireArg "an RDS instance name" $1 || return 1
+    requireArg "a snapshot name" $2 || return 1
 
-    if [[ -z $RDS_NAME ]]; then
-        echo "Please supply an RDS instance name!"
-        return 1;
-    fi
+    local rdsName=$1
+    local snapshotName=$2
 
-    if [[ -z $SNAPSHOT_NAME ]]; then
-        echo "Please supply a snapshot name!"
-        return 1;
-    fi
-
-    if ! checkRdsInstanceExistence $RDS_NAME; then
+    if ! checkRdsInstanceExistence $rdsName; then
         echo "No RDS instance with the given name exists!"
         return 1
     fi
 
-    if checkRdsSnapshotExistence $SNAPSHOT_NAME; then
+    if checkRdsSnapshotExistence $snapshotName; then
         echo "Snapshot with given name already exists!"
         return 1
     fi
 
     aws rds create-db-snapshot \
-        --db-instance-identifier $RDS_NAME \
-        --db-snapshot-identifier $SNAPSHOT_NAME
+        --db-instance-identifier $rdsName \
+        --db-snapshot-identifier $snapshotName
 }
