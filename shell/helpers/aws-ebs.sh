@@ -1,12 +1,9 @@
 # watches an EBS volume currently being modified and reports progress
 # args: volumeId
 function watchVolumeModificationProgress() {
-    if ! checkAuthAndFail; then return 1; fi
+    checkAuthAndFail || return 1
 
-    if [[ -z $1 ]]; then
-        echo "Please supply a volume identifier!"
-        return 1;
-    fi
+    requireArg "a volume identifier" $1 || return 1
 
     local volumeIds=$([[ $1 == "vol-"* ]] && echo "$1" || findVolumesByName $1)
 
@@ -44,10 +41,7 @@ function checkAZ() {
 # finds the ids of EBS snapshots with the given name, in descending-recency order
 # args: EBS snapshot name
 function findSnapshots() {
-    if [[ -z $1 ]]; then
-        echo "Please supply a snapshot name!"
-        return 1;
-    fi
+    requireArg "a snapshot name" $1 || return 1
 
     local snapshotIds=$(aws ec2 describe-snapshots --filters "Name=tag:Name,Values=$1")
 
@@ -67,10 +61,7 @@ function findSnapshot() {
 function deleteSnapshots() {
     if ! checkAuthAndFail; then return 1; fi
 
-    if [[ -z $1 ]]; then
-        echo "Please supply a snapshot identifier!"
-        return 1;
-    fi
+    requireArg "a snapshot identifier" $1 || return 1
 
     local snapshotIds=$([[ "$1" == "snap-"* ]] && echo "$1" || findSnapshots "$1")
     if [[ -z $snapshotIds ]]; then
@@ -129,10 +120,7 @@ function createVolume() {
 # finds the ids of the EBS volumes with the given name
 # args: EBS volume name
 function findVolumesByName() {
-    if [[ -z $1 ]]; then
-        echo "Please supply a volume name!"
-        return 1;
-    fi
+    requireArg "a volume name" $1 || return 1
 
     aws ec2 describe-volumes --filters "Name=tag:Name,Values=$1" | jq -r '.Volumes[] | .VolumeId'
 }
@@ -162,17 +150,10 @@ function listVolumes() {
 function modifyVolumeIOPS() {
     if ! checkAuthAndFail; then return 1; fi
 
-    if [[ -z $1 ]]; then
-        echo "Please supply a volume identifier!"
-        return 1;
-    fi
+    requireArg "a volume identifier" $1 || return 1
 
+    requireNumericArg "IOPS value" $2 || return 1
     local volumeIOPS=$2
-
-    if ! checkNumeric $volumeIOPS; then
-        echo "Please supply a numeric IOPS value!"
-        return 1
-    fi
 
     local volumeIds=$([[ $1 == "vol-"* ]] && echo "$1" || findVolumesByName $1)
 
@@ -192,17 +173,10 @@ function modifyVolumeIOPS() {
 function resizeVolume() {
     if ! checkAuthAndFail; then return 1; fi
 
-    if [[ -z $1 ]]; then
-        echo "Please supply a volume identifier!"
-        return 1;
-    fi
+    requireArg "a volume identifier" $1 || return 1
 
+    requireNumericArg "volume size" $2 || return 1
     local volumeSize=$2
-
-    if ! checkNumeric $volumeSize; then
-        echo "Please supply a numeric volume size!"
-        return 1
-    fi
 
     local volumeIds=$([[ $1 == "vol-"* ]] && echo "$1" || findVolumesByName $1)
 
@@ -223,17 +197,10 @@ function resizeVolume() {
 function snapshotVolume() {
     if ! checkAuthAndFail; then return 1; fi
 
-    if [[ -z "$1" ]]; then
-        echo "Please supply a volume identifier!"
-        return 1;
-    fi
+    requireArg "a volume identifier" $1 || return 1
 
+    requireArg "a snapshot name" $2 || return 1
     local snapshotName="$2"
-
-    if [[ -z "$snapshotName" ]]; then
-        echo "Please supply a snapshot name!"
-        return 1;
-    fi
 
     local volumeIds=$([[ "$1" == "vol-"* ]] && echo "$1" || findVolumesByName $1)
 
@@ -283,10 +250,7 @@ function waitUntilSnapshotReady() {
 function deleteVolume() {
     if ! checkAuthAndFail; then return 1; fi
 
-    if [[ -z $1 ]]; then
-        echo "Please supply a volume identifier!"
-        return 1;
-    fi
+    requireArg "a volume identifier" $1 || return 1
 
     local volumeIds=$([[ $1 == "vol-"* ]] && echo "$1" || findVolumesByName $1)
 

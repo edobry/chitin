@@ -34,14 +34,21 @@ function argsContain() {
 
 function requireArg() {
     if [[ -z "$2" ]]; then
-        echo "Please supply $1!"
+        echo "Please supply ${1:-a value}!"
         return 1;
+    fi
+}
+
+function requireNumericArg() {
+    if [[ -z "$2" ]] || ! checkNumeric $2; then
+        echo "Please supply a numeric ${1:-value}!"
+        return 1
     fi
 }
 
 function requireArgOptions() {
     if [[ -z "$3" ]]; then
-        echo "Please supply $1! It must be one of the following:"
+        echo "Please supply ${1:-a value}! It must be one of the following:"
         echo "$2"
         return 1;
     fi
