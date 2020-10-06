@@ -1,20 +1,20 @@
 # lists all MSK clusters in the account, with names
 function listKafkaClusters() {
-    if ! checkAuthAndFail; then return 1; fi
+    checkAuthAndFail || return 1
 
     listKafkaClustersJSON | jq -r '"\(.ClusterName) - \(.ClusterArn)"'
 }
 
 # lists names of all MSK clusters in the account
 function listKafkaClusterNames() {
-    if ! checkAuthAndFail; then return 1; fi
+    checkAuthAndFail || return 1
 
     listKafkaClustersJSON | jq -r '.ClusterName'
 }
 
 # lists all MSK clusters in the account, with names
 function listKafkaClustersJSON() {
-    if ! checkAuthAndFail; then return 1; fi
+    checkAuthAndFail || return 1
 
     aws kafka list-clusters | jq -r '.ClusterInfoList[]'
 }
@@ -28,7 +28,7 @@ function findKafkaClusterArnByName() {
 # finds the MSK cluster with the given name
 # args: MSK cluster name
 function findKafkaClusterByNameJSON() {
-    if ! checkAuthAndFail; then return 1; fi
+    checkAuthAndFail || return 1
 
     if [[ -z $1 ]]; then
         echo "Please supply a cluster name!"
@@ -41,7 +41,7 @@ function findKafkaClusterByNameJSON() {
 # gets the connection string of the MSK cluster with the given identifier
 # args: MSK cluster name or ARN
 function getKafkaConnection() {
-    if ! checkAuthAndFail; then return 1; fi
+    checkAuthAndFail || return 1
 
     if [[ -z $1 ]]; then
         echo "Please supply a cluster name!"
@@ -61,7 +61,7 @@ function getKafkaConnection() {
 # gets the Zookeeper connection string of the MSK cluster with the given identifier
 # args: MSK cluster name or ARN
 function getKafkaZkConnection() {
-    if ! checkAuthAndFail; then return 1; fi
+    checkAuthAndFail || return 1
 
     if [[ -z $1 ]]; then
         echo "Please supply a cluster name!"
