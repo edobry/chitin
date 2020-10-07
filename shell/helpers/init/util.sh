@@ -50,7 +50,7 @@ function requireArgOptions() {
 }
 
 function requireArgWithCheck() {
-    if [[ -z "$2" ]] || ! eval "$3 $2"; then
+    if [[ -z "$2" ]] || ! eval "$3 '$2'"; then
         echo "Please supply ${4}${1:-a value}!"
         return 1
     fi
