@@ -16,10 +16,7 @@ function watchVolumeModificationProgress() {
 function watchSnapshotProgress() {
     checkAuthAndFail || return 1
 
-    if [[ -z $1 ]]; then
-        echo "Please supply a snapshot identifier!"
-        return 1;
-    fi
+    requireArg "a snapshot identifier" $1 || return 1
 
     local snapshotId=$([[ $1 == "snap-"* ]] && echo "$1" || findSnapshot $1)
 
@@ -80,32 +77,25 @@ function deleteSnapshots() {
 function createVolume() {
     checkAuthAndFail || return 1
 
+    requireArg "a volume name" $2 || return 1
+
     local azName="$1"
     local volumeName="$2"
 
-    if [[ -z $volumeName ]]; then
-        echo "Please supply a volume name!"
-        return 1;
-    fi
+    requireArg "a volume size or source snapshot identifier" $3 || return 1
+    local sourceArg="$3"
 
-    local volumeSize="$3"
-
-    local sourceOpt=""
-    if ! [[ -z $3 ]]; then
-        if checkNumeric $3; then
-            sourceOpt="--size=$3"
-        else
-            local snapshotId=$([[ "$3" == "snap-"* ]] && echo "$3" || findSnapshot "$3")
-            if [[ -z $snapshotId ]]; then
-                echo "Snapshot not found!"
-                return 1
-            fi
-
-            sourceOpt="--snapshot-id=$snapshotId"
-        fi
+    local sourceOpt
+    if checkNumeric $sourceArg; then
+        sourceOpt="--size=$sourceArg"
     else
-        echo "You must supply either a volume size or source snapshot identifier!"
-        return 1
+        local snapshotId=$([[ "$sourceArg" == "snap-"* ]] && echo "$sourceArg" || findSnapshot "$sourceArg")
+        if [[ -z $snapshotId ]]; then
+            echo "Snapshot not found!"
+            return 1
+        fi
+
+        sourceOpt="--snapshot-id=$snapshotId"
     fi
 
     if ! checkAZ $azName; then return 1; fi
@@ -155,7 +145,7 @@ function modifyVolumeIOPS() {
     requireNumericArg "IOPS value" $2 || return 1
     local volumeIOPS=$2
 
-    local volumeIds=$([[ $1 == "vol-"* ]] && echo "$1" || findVolumesByName $1)
+    local volumeIds=$([[ "$1" == "vol-"* ]] && echo "$1" || findVolumesByName "$1")
 
     if [[ -z $volumeIds ]]; then
         echo "No volume with given name found!"
@@ -252,7 +242,7 @@ function deleteVolume() {
 
     requireArg "a volume identifier" $1 || return 1
 
-    local volumeIds=$([[ $1 == "vol-"* ]] && echo "$1" || findVolumesByName $1)
+    local volumeIds=$([[ "$1" == "vol-"* ]] && echo "$1" || findVolumesByName "$1")
 
     if [[ -z $volumeIds ]]; then
         echo "No volume with given name found!"
