@@ -24,6 +24,10 @@ function watchSnapshotProgress() {
         | jq -r '.Snapshots[].Progress'"
 }
 
+function listAZs() {
+    aws ec2 describe-availability-zones | jq -r '.AvailabilityZones[] | .ZoneName'
+}
+
 # checks whether an availability zone with the given name exists
 # args: availability zone name
 function checkAZ() {
@@ -33,6 +37,10 @@ function checkAZ() {
         echo "AZ not found!"
         return 1
     fi
+}
+
+function requireAZ() {
+    requireArgOptions "availability zone" "$1" $(listAZs)
 }
 
 # finds the ids of EBS snapshots with the given name, in descending-recency order
@@ -98,7 +106,8 @@ function createVolume() {
         sourceOpt="--snapshot-id=$snapshotId"
     fi
 
-    if ! checkAZ $azName; then return 1; fi
+    # make the more expensive checks later
+    requireAZ $azName || return 1
 
     aws ec2 create-volume \
         --availability-zone $azName \

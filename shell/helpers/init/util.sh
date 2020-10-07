@@ -33,23 +33,25 @@ function argsContain() {
 }
 
 function requireArg() {
-    if [[ -z "$2" ]]; then
-        echo "Please supply ${1:-a value}!"
-        return 1;
-    fi
+    requireArgWithCheck "$1" "$2" true ""
 }
 
 function requireNumericArg() {
-    if [[ -z "$2" ]] || ! checkNumeric $2; then
-        echo "Please supply a numeric ${1:-value}!"
+    requireArgWithCheck "$1" "$2" checkNumeric "a numeric "
+}
+
+function requireArgOptions() {
+    if [[ -z "$2" ]] || ! (argsContain $2 ${*:3}); then
+        echo "Please supply a valid ${1:-a value}!"
+        echo "It must be one of the following:"
+        echo ${*:3} | tr " " '\n'
         return 1
     fi
 }
 
-function requireArgOptions() {
-    if [[ -z "$3" ]]; then
-        echo "Please supply ${1:-a value}! It must be one of the following:"
-        echo "$2"
-        return 1;
+function requireArgWithCheck() {
+    if [[ -z "$2" ]] || ! eval "$3 $2"; then
+        echo "Please supply ${4}${1:-a value}!"
+        return 1
     fi
 }
