@@ -31,3 +31,27 @@ function argsContain() {
 
     return 1
 }
+
+function requireArg() {
+    requireArgWithCheck "$1" "$2" true ""
+}
+
+function requireNumericArg() {
+    requireArgWithCheck "$1" "$2" checkNumeric "a numeric "
+}
+
+function requireArgOptions() {
+    if [[ -z "$2" ]] || ! (argsContain $2 ${*:3}); then
+        echo "Please supply a valid ${1:-a value}!"
+        echo "It must be one of the following:"
+        echo ${*:3} | tr " " '\n'
+        return 1
+    fi
+}
+
+function requireArgWithCheck() {
+    if [[ -z "$2" ]] || ! eval "$3 $2"; then
+        echo "Please supply ${4}${1:-a value}!"
+        return 1
+    fi
+}
