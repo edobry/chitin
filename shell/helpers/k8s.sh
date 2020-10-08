@@ -1,7 +1,7 @@
-#!/bin/bash
-
 # base64-encodes a string for use in a Secret
 function secretEncode() {
+    requireArg "a secret" $1 || return 1
+
     echo -n "$1" | base64 | toClip
 }
 
@@ -13,18 +13,22 @@ function netshoot() {
 # scales down a deployment to 0 replicas, effectively pausing
 # args: deployment name
 function downDeploy() {
+    requireArg "a deployment name" $1 || return 1
     kubectl scale deployment $1 --replicas=0
 }
 
 # scales a previously-paused deployment back up to 1 replica
 # args: deployment name
 function upDeploy() {
+    requireArg "a deployment name" $1 || return 1
     kubectl scale deployment $1 --replicas=1
 }
 
 # cycles a deployment, useful when you want to trigger a restart
 # args: deployment name
 function reDeploy() {
+    requireArg "a deployment name" $1 || return 1
+
     downDeploy $1
     upDeploy $1
 }
@@ -104,29 +108,32 @@ function dashboard() {
 # $*: passed through to psql. $2 must be set
 # ex: rds postgres-erc20 jsondb -c "select max(bid) from erc20"
 function rds() {
-    [ -z $1 ] && echo "missing RDS service" && return
-    service=$1
+    requireArg "a DB service name" $1 || return 1
+    local service=$1
     shift
 
-    url=$(getServiceEndpoint $service)
+    local url=$(getServiceEndpoint $service)
     [ -z $url ] && return;
-    json=$(kubectl get secret $service-user -o json | jq .data)
-    user=$(jq .username -r <<< $json| base64 --decode)
-    password=$(jq .password -r <<< $json | base64 --decode)
+    local json=$(kubectl get secret $service-user -o json | jq .data)
+    local user=$(jq .username -r <<< $json| base64 --decode)
+    local password=$(jq .password -r <<< $json | base64 --decode)
 
-    db=${1:-'postgres'}
+    local db=${1:-'postgres'}
     [ $1 ] && shift;
 
     psql postgres://$user:$password@$url/$db "$*"
 }
 
 function kconfig() {
+    requireArg "a pod name" $1 || return 1
     kubectl get pod -o yaml $1 | bat -p -l yaml
 }
 
 # fetches the external url, with port, for a Service with a load balancer configured
 # args: service name
 function getServiceExternalUrl() {
+    requireArg "a service name" $1 || return 1
+
     local svc=$(kubectl get service $1 -o=json)
     local hostname=$(echo "$svc" | jq -r '.status.loadBalancer.ingress[0].hostname')
     local port=$(echo "$svc" | jq -r '.spec.ports[0].port')
@@ -136,6 +143,8 @@ function getServiceExternalUrl() {
 
 # fetch the endpoint url for both services and proxies to zen garden
 function getServiceEndpoint() {
+    requireArg "a service name" $1 || return 1
+
     service=$(kubectl describe services $1)
     kind=$(grep "Type:" <<< $service | awk '{print $2}')
     if [[ $kind == 'ClusterIP' ]]; then
@@ -152,12 +161,8 @@ function getServiceEndpoint() {
 # kills all pods for a deployment, useful for forcing a restart during dev
 # args: deployment name
 function killDeploymentPods() {
+    requireArg "a deployment name" $1 || return 1
     local deployment="$1"
-
-    if [[ -z $deployment ]]; then
-        echo "Please supply a deployment name!"
-        return 1;
-    fi
 
     kubectl delete pods --selector app.kubernetes.io/instance=$deployment
 }

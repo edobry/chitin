@@ -81,11 +81,9 @@ function checkAuthAndFail() {
 
 # checks if you're authenticated with a specific account, or fails. meant to be used as a failfast
 function checkAccountAuthAndFail() {
-    if ! checkAuth; then
-        echo "Please authenticate with AWS before rerunning."
-        return 1
-    fi
+    checkAuthAndFail || return 1
 
+    requireArg "an account name" $1 || return 1
     local targetAccount="ca-aws-$1"
 
     if [[ $(awsAccount) != "$targetAccount" ]]; then
@@ -95,11 +93,7 @@ function checkAccountAuthAndFail() {
 }
 
 function awsOrg() {
-    if [[ -z "$1" ]]; then
-        echo "Please supply an organization name! It must be one of the following:"
-        echo "$KNOWN_AWS_ORGS"
-        return 1;
-    fi
+    requireArgOptions "an organization name" "$1" "$KNOWN_AWS_ORGS" || return 1
 
     export DEPT_ROLE="$1"
     echo "Set AWS organization to: $1"
@@ -113,10 +107,7 @@ function awsAuth() {
         return 1
     fi
 
-    if [[ -z $1 ]]; then
-        echo "Please supply a profile name!"
-        return 1;
-    fi
+    requireArg "a profile name" $1 || return 1
 
     export AWS_PROFILE=$1
     export AWS_SSO_ORG_ROLE_ARN=arn:aws:iam::${AWS_ORG_IDENTITY_ACCOUNT_ID}:role/${DEPT_ROLE}
@@ -127,7 +118,6 @@ function awsAuth() {
 
     fi
 
-
     local role=$(awsRole)
     echo "Assumed role: $role"
 }
@@ -137,18 +127,11 @@ alias aws-auth=awsAuth
 # run a command with a specific AWS profile
 # args: profile name
 function withProfile() {
+    requireArg "a profile name" $1 || return 1
     local profile="$1"
     shift
 
-    if [[ -z $profile ]]; then
-        echo "Please supply a profile name!"
-        return 1;
-    fi
-
-    if [[ -z $1 ]]; then
-        echo "Please a command to run!"
-        return 1;
-    fi
+    requireArg "a command to run" $1 || return 1
 
     aws-auth $profile
     $*
