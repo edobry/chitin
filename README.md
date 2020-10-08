@@ -88,6 +88,11 @@ Functions:
 - `checkRdsInstanceExistence`: checks the existence of an RDS instance with the given name
 - `snapshotRds`: snapshots the given RDS instance
 
+##### S3
+
+Functions:
+ - `catS3Key`: downloads and reads the content of a particular S3 object
+
 ##### SSM
 
 Functions:
