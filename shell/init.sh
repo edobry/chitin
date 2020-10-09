@@ -39,6 +39,7 @@ if [[ -z "$IS_DOCKER" ]] && ! checkDeps; then
     return 1
 fi
 
+export PL_DIR=$PROJECT_DIR/dataeng-pipeline
 
 # load init scripts
 loadDir $DT_DIR/helpers/init/*.sh
@@ -50,3 +51,4 @@ loadDir $DT_DIR/helpers/*.sh
 if [ -n "$ZSH_VERSION" ]; then
     loadDir $DT_DIR/helpers/*.zsh
 fi
+
