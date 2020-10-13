@@ -25,6 +25,8 @@ function watchSnapshotProgress() {
 }
 
 function listAZs() {
+    checkAuthAndFail || return 1
+
     aws ec2 describe-availability-zones | jq -r '.AvailabilityZones[] | .ZoneName'
 }
 
