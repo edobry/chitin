@@ -37,15 +37,22 @@ function listContains() {
     echo "$2" | grep -q "$1"
 }
 
+# checks that an argument is supplied and prints a message if not
+# args: name of arg, arg value
 function requireArg() {
     requireArgWithCheck "$1" "$2" true ""
 }
 
+# checks that an argument is supplied and that it is numeric, and prints a message if not
+# args: name of arg, arg value
 function requireNumericArg() {
     requireArgWithCheck "$1" "$2" checkNumeric "a numeric "
 }
 
+# checks that an argument is supplied and that its one of the allowed options, and prints a message listing the available options if not
+# args: name of arg, arg value, list of valid options
 function requireArgOptions() {
+    # skip the first 2 arguments and transform to a space-delimited list
     local options=${$(echo $* | tr '\n' ' '):4}
 
     if [[ -z "$2" ]] || ! eval "argsContain $2 $options"; then
@@ -56,6 +63,8 @@ function requireArgOptions() {
     fi
 }
 
+# checks that an argument is supplied and that it passes the check, and prints a message if not
+# args: name of arg, arg value, validation command, (optionak) validation failure prefix
 function requireArgWithCheck() {
     if [[ -z "$2" ]] || ! eval "$3 '$2'"; then
         echo "Please supply ${4}${1:-a value}!"
