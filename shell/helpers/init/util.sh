@@ -18,18 +18,23 @@ function checkNumeric() {
 
 # can be used to check arguments for a specific string
 # args: search target, args...
-# example: if ! argsContain "some string" $*; then exit 1; fi
+# example: argsContain "some string" $* || exit 1
 function argsContain() {
     local target="$1"
     shift
 
-    for i in "$@" ; do
-        if [[ $i == "$target" ]]; then
-            return 0
-        fi
+    for i in $@ ; do
+        [[ "$i" == "$target" ]] && return 0
     done
 
     return 1
+}
+
+# can be used to check a list for a specific string
+# args: search target, list
+# example: listContains "eu-west-1" $(listAZs) || exit 1
+function listContains() {
+    echo "$2" | grep -q "$1"
 }
 
 function requireArg() {
@@ -41,7 +46,9 @@ function requireNumericArg() {
 }
 
 function requireArgOptions() {
-    if [[ -z "$2" ]] || ! (argsContain $2 ${*:3}); then
+    local options=${$(echo $* | tr '\n' ' '):4}
+
+    if [[ -z "$2" ]] || ! eval "argsContain $2 $options"; then
         echo "Please supply a valid ${1:-a value}!"
         echo "It must be one of the following:"
         echo ${*:3} | tr " " '\n'
