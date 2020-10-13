@@ -18,30 +18,44 @@ function checkNumeric() {
 
 # can be used to check arguments for a specific string
 # args: search target, args...
-# example: if ! argsContain "some string" $*; then exit 1; fi
+# example: argsContain "some string" $* || exit 1
 function argsContain() {
     local target="$1"
     shift
 
-    for i in "$@" ; do
-        if [[ $i == "$target" ]]; then
-            return 0
-        fi
+    for i in $@ ; do
+        [[ "$i" == "$target" ]] && return 0
     done
 
     return 1
 }
 
+# can be used to check a list for a specific string
+# args: search target, list
+# example: listContains "eu-west-1" $(listAZs) || exit 1
+function listContains() {
+    echo "$2" | grep -q "$1"
+}
+
+# checks that an argument is supplied and prints a message if not
+# args: name of arg, arg value
 function requireArg() {
     requireArgWithCheck "$1" "$2" true ""
 }
 
+# checks that an argument is supplied and that it is numeric, and prints a message if not
+# args: name of arg, arg value
 function requireNumericArg() {
     requireArgWithCheck "$1" "$2" checkNumeric "a numeric "
 }
 
+# checks that an argument is supplied and that its one of the allowed options, and prints a message listing the available options if not
+# args: name of arg, arg value, list of valid options
 function requireArgOptions() {
-    if [[ -z "$2" ]] || ! (argsContain $2 ${*:3}); then
+    # skip the first 2 arguments and transform to a space-delimited list
+    local options=${$(echo $* | tr '\n' ' '):4}
+
+    if [[ -z "$2" ]] || ! eval "argsContain $2 $options"; then
         echo "Please supply a valid ${1:-a value}!"
         echo "It must be one of the following:"
         echo ${*:3} | tr " " '\n'
@@ -49,6 +63,8 @@ function requireArgOptions() {
     fi
 }
 
+# checks that an argument is supplied and that it passes the check, and prints a message if not
+# args: name of arg, arg value, validation command, (optionak) validation failure prefix
 function requireArgWithCheck() {
     if [[ -z "$2" ]] || ! eval "$3 '$2'"; then
         echo "Please supply ${4}${1:-a value}!"
