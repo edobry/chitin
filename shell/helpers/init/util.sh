@@ -52,13 +52,18 @@ function requireNumericArg() {
 # checks that an argument is supplied and that its one of the allowed options, and prints a message listing the available options if not
 # args: name of arg, arg value, list of valid options
 function requireArgOptions() {
-    # skip the first 2 arguments and transform to a space-delimited list
-    local options=${$(echo $* | tr '\n' ' '):4}
+    local argName="$1"
+    local argValue="$2"
 
-    if [[ -z "$2" ]] || ! eval "argsContain $2 $options"; then
-        echo "Please supply a valid ${1:-a value}!"
+    # skip the first 2 arguments
+    shift && shift
+    # and transform to a space-delimited list
+    local options=$(echo "$*" | tr '\n' ' ' | sort)
+
+    if [[ -z "$argValue" ]] || ! eval "argsContain $argValue $options"; then
+        echo "Please supply a valid ${argName:-a value}!"
         echo "It must be one of the following:"
-        echo ${*:3} | tr " " '\n'
+        echo ${options} | tr " " '\n' | sort
         return 1
     fi
 }
