@@ -99,7 +99,7 @@ function installChart() {
     local expectedVersion=$(readJSON "$mergedConfig" '.version // ""')
 
     if [[ "$source" == "local" ]]; then
-        local path="../charts/$chart"
+        local path="$chart"
     elif [[ "$source" == "remote" ]]; then
         local path="fimbulvetr/$chart"
     else
