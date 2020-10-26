@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 if [[ -z "$IS_DOCKER" ]]; then
-    SOURCE_DIR=$(dirname "$0")
+    SOURCE_DIR=$(dirname -- "$0")
 
     if [[ "$0" = /* ]]; then
         SCRIPT_PATH="$0"
@@ -21,7 +21,7 @@ function loadDir() {
 }
 
 function checkDeps() {
-    local expectedYqVersion="3.3.2"
+    local expectedYqVersion="3.4.0"
     if [[ $(yq --version 2>&1 | awk '{ print $3 }') != $expectedYqVersion ]]; then
         echo "dataeng-tools - incorrect yq version, '$expectedYqVersion' expected!"
         return 1
@@ -51,4 +51,3 @@ loadDir $DT_DIR/helpers/*.sh
 if [ -n "$ZSH_VERSION" ]; then
     loadDir $DT_DIR/helpers/*.zsh
 fi
-
