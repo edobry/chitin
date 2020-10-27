@@ -1,11 +1,15 @@
+export CA_DT_AWS_AUTH_INIT=false
+
 function initAwsAuth() {
     if [ "$CA_DT_AWS_AUTH_ENABLED" != true ]; then
         echo "DT aws-auth plugin disabled, set 'CA_DT_AWS_AUTH_ENABLED=true' to enable"
         return 1
     fi
 
+    local embeddedAwsConfig=$CA_DT_DIR/terraform/util/aws/config
+
     # if we're already initialized, we're done
-    [[ -z $CA_DT_AWS_AUTH_INIT ]] || return 0
+    ([[ $CA_DT_AWS_AUTH_INIT = "true" ]] && [[ -f $embeddedAwsConfig ]]) && return 0
 
     # set google username
     # export CA_GOOGLE_USERNAME=<name>@chainalysis.com
@@ -14,14 +18,14 @@ function initAwsAuth() {
         exit 1
     fi
 
-    export DURATION=43200
     export AWS_SDK_LOAD_CONFIG=1
     export AWS_SSO_ORG_ROLE_ARN=arn:aws:iam::${AWS_ORG_IDENTITY_ACCOUNT_ID}:role/${CA_DEPT_ROLE}
 
     export TF_VAR_aws_sessionname=${CA_GOOGLE_USERNAME}
 
+    # download generated AWS config
     sparseCheckout git@github.com:chainalysis/terraform.git $CA_DT_DIR/terraform util/aws/config
-    export AWS_CONFIG_FILE=$CA_DT_DIR/terraform/util/aws/config
+    export AWS_CONFIG_FILE=$embeddedAwsConfig
 
     export CA_DT_AWS_AUTH_INIT=true
 }
@@ -59,8 +63,8 @@ function awsAccountId() {
 function awsRole() {
     local id
     if id=$(awsId); then
-        export AWS_CURRENT_ROLE=$(echo $id | jq '.Arn' | awk -F '/' '{ print $2 }')
-        echo $AWS_CURRENT_ROLE
+        export CA_AWS_CURRENT_ROLE=$(echo $id | jq '.Arn' | awk -F '/' '{ print $2 }')
+        echo $CA_AWS_CURRENT_ROLE
     else
         return 1
     fi
