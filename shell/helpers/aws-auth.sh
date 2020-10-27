@@ -1,20 +1,30 @@
-#!/usr/bin/env bash
+function initAwsAuth() {
+    if [ "$CA_DT_AWS_AUTH_ENABLED" != true ]; then
+        echo "DT aws-auth plugin disabled, set 'CA_DT_AWS_AUTH_ENABLED=true' to enable"
+        return 1
+    fi
 
-if [ "$DE_AWS_AUTH_ENABLED" = true ]; then
-    # set google username if you like
-    #export GOOGLE_USERNAME=@chainalysis.com
-    if [[ -z "${GOOGLE_USERNAME}" ]]; then
-        echo "GOOGLE_USERNAME must be set to your chainalysis email address."
+    # if we're already initialized, we're done
+    [[ -z $CA_DT_AWS_AUTH_INIT ]] || return 0
+
+    # set google username
+    # export CA_GOOGLE_USERNAME=<name>@chainalysis.com
+    if [[ -z "${CA_GOOGLE_USERNAME}" ]]; then
+        echo "CA_GOOGLE_USERNAME must be set to your chainalysis email address."
         exit 1
     fi
 
     export DURATION=43200
     export AWS_SDK_LOAD_CONFIG=1
-    export AWS_SSO_ORG_ROLE_ARN=arn:aws:iam::${AWS_ORG_IDENTITY_ACCOUNT_ID}:role/${DEPT_ROLE}
-    export AWS_CONFIG_FILE=$PROJECT_DIR/terraform/util/aws/config
+    export AWS_SSO_ORG_ROLE_ARN=arn:aws:iam::${AWS_ORG_IDENTITY_ACCOUNT_ID}:role/${CA_DEPT_ROLE}
 
-    export TF_VAR_aws_sessionname=${GOOGLE_USERNAME}
-fi
+    export TF_VAR_aws_sessionname=${CA_GOOGLE_USERNAME}
+
+    sparseCheckout git@github.com:chainalysis/terraform.git $CA_DT_DIR/terraform util/aws/config
+    export AWS_CONFIG_FILE=$CA_DT_DIR/terraform/util/aws/config
+
+    export CA_DT_AWS_AUTH_INIT=true
+}
 
 # prints your full identity if authenticated, or fails
 function awsId() {
@@ -102,10 +112,7 @@ function awsOrg() {
 # checks if you're authenticated, triggers authentication if not,
 # and then assumes the provided role
 function awsAuth() {
-    if [ "$DE_AWS_AUTH_ENABLED" != true ]; then
-        echo "DE AWS Auth disabled, set 'DE_AWS_AUTH_ENABLED=true' to enable"
-        return 1
-    fi
+    initAwsAuth || return 1
 
     requireArg "a profile name" $1 || return 1
 
@@ -127,12 +134,14 @@ alias aws-auth=awsAuth
 # run a command with a specific AWS profile
 # args: profile name
 function withProfile() {
+    initAwsAuth || return 1
+
     requireArg "a profile name" $1 || return 1
     local profile="$1"
     shift
 
     requireArg "a command to run" $1 || return 1
 
-    aws-auth $profile
+    awsAuth $profile
     $*
 }
