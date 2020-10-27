@@ -41,7 +41,7 @@ function debugPod() {
     local debugPodName="$baseName-$(randomString 8)"
 
     echo -e "\nGenerating '$baseName' manifest..."
-    local chartDir=$DT_DIR/../charts/debug-pod
+    local chartDir=$CA_DT_DIR/../charts/debug-pod
     pushd $chartDir > /dev/null
 
     npm run compile

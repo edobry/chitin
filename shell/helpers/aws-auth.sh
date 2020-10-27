@@ -95,7 +95,7 @@ function checkAccountAuthAndFail() {
 function awsOrg() {
     requireArgOptions "an organization name" "$1" "$KNOWN_AWS_ORGS" || return 1
 
-    export DEPT_ROLE="$1"
+    export CA_DEPT_ROLE="$1"
     echo "Set AWS organization to: $1"
 }
 
@@ -110,7 +110,7 @@ function awsAuth() {
     requireArg "a profile name" $1 || return 1
 
     export AWS_PROFILE=$1
-    export AWS_SSO_ORG_ROLE_ARN=arn:aws:iam::${AWS_ORG_IDENTITY_ACCOUNT_ID}:role/${DEPT_ROLE}
+    export AWS_SSO_ORG_ROLE_ARN=arn:aws:iam::${AWS_ORG_IDENTITY_ACCOUNT_ID}:role/${CA_DEPT_ROLE}
 
     if ! checkAuth; then
         echo "Authenticating..."

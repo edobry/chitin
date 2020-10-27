@@ -2,5 +2,5 @@
 export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
 
 if [ "$DE_K8S_CONFIG_ENABLED" = true ]; then
-    export KUBECONFIG="$DT_DIR/eksconfig.yaml:$KUBECONFIG:$HOME/.kube/config"
+    export KUBECONFIG="$CA_DT_DIR/eksconfig.yaml:$KUBECONFIG:$HOME/.kube/config"
 fi
