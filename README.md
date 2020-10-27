@@ -25,12 +25,32 @@ Linux only:
 
 ### Setup
 
-1. Clone (if you have not already) the `chainalysis/terraform` repository
-2. Copy the contents of `chainalysis-env-template.sh` into your profile, however
-you prefer (ie, into your existing configuration, or by copying the file and sourcing),
-and then set your own values
-3. Add `source $PROJECT_DIR/dataeng-tools/shell/init.sh` to your profile, AFTER
-the line(s) you added in the previous step
+1. Clone this repository
+2. Install the prerequisites for the module(s) you want to use (see docs below)
+3. Copy the contents of `chainalysis-env-template.sh` into your profile, and set the values accordingly
+4. Add `source $CA_PROJECT_DIR/dataeng-tools/shell/init.sh` to your profile, AFTER
+the lines you added in the previous step
+
+### Usage
+
+This project can be used in a variety of situations, with different usage patterns in each.
+
+#### AWS Example
+
+To switch between AWS organizations (if you are a member of multiple):
+```
+awsOrg engineering-data
+```
+
+To assume a particular AWS role, authenticating if needed:
+```
+awsAuth dataeng-dev-admin
+```
+
+To reset your AWS credentials (which can be useful for debugging):
+```
+deAuth
+```
 
 ### Helpers
 
@@ -44,7 +64,7 @@ There are several AWS helper submodules, broken out by service.
 
 The `aws-auth` helper is designed to reduce friction during development, providing
 useful functions for introspecting, and switching between roles, including
-automatically re-authenticating if needed. This shell integration is disabled by default, but you can enable it by setting `DE_AWS_AUTH_ENABLED=true` in step 2 of the setup. This is recommended, but not required.
+automatically re-authenticating if needed. This shell integration is disabled by default, but you can enable it by setting `CA_DT_AWS_AUTH_ENABLED=true` in step 3 of the setup. This is recommended, but not required.
 
 Functions:
 - `awsId`: prints your full identity if authenticated, or fails
