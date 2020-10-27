@@ -31,11 +31,19 @@ Linux only:
 4. Add `source $CA_PROJECT_DIR/dataeng-tools/shell/init.sh` to your profile, AFTER
 the lines you added in the previous step
 
-### Usage
+#### AWS
 
-This project can be used in a variety of situations, with different usage patterns in each.
+> Requires: `aws`, `jq`
 
-#### AWS Example
+There are several AWS helper submodules, broken out by service.
+
+##### Auth
+
+The `aws-auth` helper is designed to reduce friction during development, providing
+useful functions for introspecting, and switching between roles, including
+automatically re-authenticating if needed. This shell integration is disabled by default, but you can enable it by setting `CA_DT_AWS_AUTH_ENABLED=true` in step 3 of the setup. This is recommended, but not required.
+
+###### Examples
 
 To switch between AWS organizations (if you are a member of multiple):
 ```
@@ -51,20 +59,6 @@ To reset your AWS credentials (which can be useful for debugging):
 ```
 deAuth
 ```
-
-### Helpers
-
-#### AWS
-
-> Requires: `aws`, `jq`
-
-There are several AWS helper submodules, broken out by service.
-
-##### Auth
-
-The `aws-auth` helper is designed to reduce friction during development, providing
-useful functions for introspecting, and switching between roles, including
-automatically re-authenticating if needed. This shell integration is disabled by default, but you can enable it by setting `CA_DT_AWS_AUTH_ENABLED=true` in step 3 of the setup. This is recommended, but not required.
 
 Functions:
 - `awsId`: prints your full identity if authenticated, or fails
