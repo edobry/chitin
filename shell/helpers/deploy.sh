@@ -39,7 +39,7 @@ else
     DP_TARGET="$*"
 
     additionalMsg=$([[ ! -z $CHART_MODE ]] && echo " instances of chart" || echo "")
-    echo "Limiting to$additionalMsg: $(echo "$DP_TARGET" | sed 's/ /, /g')"
+    echo -e "\nLimiting to$additionalMsg: $(echo "$DP_TARGET" | sed 's/ /, /g')"
 fi
 
 notDryrun && notTeardown && helm repo update
