@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 if [[ -z "$IS_DOCKER" ]]; then
-    SOURCE_DIR=$(dirname "$0")
+    SOURCE_DIR=$(dirname -- "$0")
 
     if [[ "$0" = /* ]]; then
         SCRIPT_PATH="$0"
@@ -11,7 +11,7 @@ if [[ -z "$IS_DOCKER" ]]; then
         SCRIPT_PATH="$SOURCE_DIR/init.sh"
     fi
 
-    export DT_DIR="$(dirname $SCRIPT_PATH)"
+    export CA_DT_DIR="$(dirname $SCRIPT_PATH)"
 fi
 
 function loadDir() {
@@ -39,15 +39,15 @@ if [[ -z "$IS_DOCKER" ]] && ! checkDeps; then
     return 1
 fi
 
-export PL_DIR=$PROJECT_DIR/dataeng-pipeline
+export CA_DP_DIR=$CA_PROJECT_DIR/dataeng-pipeline
 
 # load init scripts
-loadDir $DT_DIR/helpers/init/*.sh
+loadDir $CA_DT_DIR/helpers/init/*.sh
 
 # load helpers
-loadDir $DT_DIR/helpers/*.sh
+loadDir $CA_DT_DIR/helpers/*.sh
 
 # zsh completions only loaded on zsh shells
 if [ -n "$ZSH_VERSION" ]; then
-    loadDir $DT_DIR/helpers/*.zsh
+    loadDir $CA_DT_DIR/helpers/*.zsh
 fi
