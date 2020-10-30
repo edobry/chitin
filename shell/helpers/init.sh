@@ -78,7 +78,7 @@ function createDatabaseServicesFromTerraform() {
 function installService() {
     path=$1
     # grab just the filename, without the extension
-    name=$(echo $1 | awk -F '/' '{ print $3 }' | sed 's/.yaml//')
+    name=$(echo $1 | awk -F '/' '{ print $4 }' | sed 's/.yaml//')
     shift
 
     if [ ! -z "$DP_TARGET" ] && ! argsContain $name $DP_TARGET; then return 0; fi
@@ -103,7 +103,7 @@ function installService() {
 }
 
 # generate service files
-createDatabaseServicesFromTerraform
+# createDatabaseServicesFromTerraform
 
 # install services
 for service in $DP_RESOURCES_DIR/*; do
