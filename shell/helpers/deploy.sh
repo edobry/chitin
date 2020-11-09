@@ -97,6 +97,7 @@ function installChart() {
 
     local source=$(readJSON "$mergedConfig" '.source // "remote"')
     local expectedVersion=$(readJSON "$mergedConfig" '.version // ""')
+    local values=$(readJSON "$mergedConfig" '.values // {}')
 
     if [[ "$source" == "local" ]]; then
         local path="$chart"
@@ -130,7 +131,12 @@ function installChart() {
     local helmVersionArg=$([ -n $version ] && echo "--version=$version" || echo "")
     ##
 
-    local helmChartBaseConf=$([ -f $DP_ENV_DIR/configs/$chart.yaml ] && echo "-f $DP_ENV_DIR/configs/$chart.yaml" || echo "")
+    ## inline values
+    local inlineValuesFile=$(tempFile)
+    echo $values | printYaml > $inlineValuesFile
+    ##
+
+    local helmChartBaseArg=$([ -f $DP_ENV_DIR/configs/$chart.yaml ] && echo "-f $DP_ENV_DIR/configs/$chart.yaml" || echo "")
 
     if [ $source == "local" ] && [ -d $path ] && notDryrun; then
         if ! helm dep update $path; then
@@ -141,9 +147,8 @@ function installChart() {
 
     local helmSubCommand=$(render && echo "template" || echo "upgrade --install")
 
-
-    local helmCommand="helm $helmSubCommand $name $path $helmVersionArg $helmEnvValues $helmChartBaseConf \
-        -f $DP_ENV_DIR/deployments/$name.yaml -f $envFile"
+    local helmCommand="helm $helmSubCommand $name $path $helmVersionArg $helmEnvValues $helmChartBaseArg \
+        -f $DP_ENV_DIR/deployments/$name.yaml -f $inlineValuesFile -f $envFile"
 
     dryrun && echo $helmCommand
     notDryrun && $helmCommand
