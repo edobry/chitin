@@ -10,6 +10,10 @@ function prettyYaml() {
     yq r -PC -
 }
 
+function printYaml() {
+    yq r -P -
+}
+
 function prettyYamlMultiple() {
     yq r -PCd'*' -
 }
