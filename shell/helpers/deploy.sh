@@ -87,7 +87,7 @@ function installChart() {
     local chart=$(readJSON "$config" '.chart')
 
     local chartDefaults
-    chartDefaults=$(readJSON "$allChartDefaults" ".\"$chart\"")
+    chartDefaults=$(readJSON "$allChartDefaults" ".\"$chart\" | del(.values)")
     local chartDefaultCode=$?
 
     local mergedConfig="$config"
@@ -97,7 +97,6 @@ function installChart() {
 
     local source=$(readJSON "$mergedConfig" '.source // "remote"')
     local expectedVersion=$(readJSON "$mergedConfig" '.version // ""')
-    local values=$(readJSON "$mergedConfig" '.values // {}')
 
     if [[ "$source" == "local" ]]; then
         local path="$chart"
@@ -132,14 +131,20 @@ function installChart() {
     ##
 
     ## values
-    local inlineValuesFile=$(tempFile)
-    echo $values | printYaml > $inlineValuesFile
+    local chartDefaultFilePath="$DP_ENV_DIR/chartDefaults/$chart.yaml"
+    local chartDefaultFileArg=$([ -f $chartDefaultFilePath ] && echo "-f $chartDefaultFilePath" || echo "")
 
     local deploymentFilePath="$DP_ENV_DIR/deployments/$name.yaml"
     local deploymentFileArg=$([ -f "$deploymentFilePath" ] && echo "-f $deploymentFilePath" || echo "")
-    ##
 
-    local helmChartBaseArg=$([ -f $DP_ENV_DIR/configs/$chart.yaml ] && echo "-f $DP_ENV_DIR/configs/$chart.yaml" || echo "")
+    local chartDefaultInlineValues=$(readJSON "$allChartDefaults" ".\"$chart\" | .values // {}")
+    local chartDefaultInlineValuesFile=$(tempFile)
+    writeJSONToYamlFile "$chartDefaultInlineValues" "$chartDefaultInlineValuesFile"
+
+    local inlineValues=$(readJSON "$mergedConfig" '.values // {}')
+    local inlineValuesFile=$(tempFile)
+    writeJSONToYamlFile "$inlineValues" "$inlineValuesFile"
+    ##
 
     if [ $source == "local" ] && [ -d $path ] && notDryrun; then
         if ! helm dep update $path; then
@@ -150,8 +155,17 @@ function installChart() {
 
     local helmSubCommand=$(render && echo "template" || echo "upgrade --install")
 
-    local helmCommand="helm $helmSubCommand $name $path $helmVersionArg $helmEnvValues $helmChartBaseArg \
-        $deploymentFileArg -f $inlineValuesFile -f $envFile"
+    # precedence order
+    #
+    # chart default
+    #
+    # per env chart default (file)
+    # per env chart default (inlinr)
+    # deployment (file)
+    # deployment (inline)
+
+    local helmCommand="helm $helmSubCommand $name $path $helmVersionArg $helmEnvValues $chartDefaultFileArg \
+        -f $chartDefaultInlineValuesFile $deploymentFileArg -f $inlineValuesFile -f $envFile"
 
     dryrun && echo $helmCommand
     notDryrun && $helmCommand
