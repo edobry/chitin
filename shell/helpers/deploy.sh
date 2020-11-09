@@ -131,9 +131,12 @@ function installChart() {
     local helmVersionArg=$([ -n $version ] && echo "--version=$version" || echo "")
     ##
 
-    ## inline values
+    ## values
     local inlineValuesFile=$(tempFile)
     echo $values | printYaml > $inlineValuesFile
+
+    local deploymentFilePath="$DP_ENV_DIR/deployments/$name.yaml"
+    local deploymentFileArg=$([ -f "$deploymentFilePath" ] && echo "-f $deploymentFilePath" || echo "")
     ##
 
     local helmChartBaseArg=$([ -f $DP_ENV_DIR/configs/$chart.yaml ] && echo "-f $DP_ENV_DIR/configs/$chart.yaml" || echo "")
@@ -148,7 +151,7 @@ function installChart() {
     local helmSubCommand=$(render && echo "template" || echo "upgrade --install")
 
     local helmCommand="helm $helmSubCommand $name $path $helmVersionArg $helmEnvValues $helmChartBaseArg \
-        -f $DP_ENV_DIR/deployments/$name.yaml -f $inlineValuesFile -f $envFile"
+        $deploymentFileArg -f $inlineValuesFile -f $envFile"
 
     dryrun && echo $helmCommand
     notDryrun && $helmCommand
