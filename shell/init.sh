@@ -21,33 +21,54 @@ function loadDir() {
 }
 
 function checkDeps() {
-    local expectedYqVersion="3.4.0"
-    if [[ $(yq --version 2>&1 | awk '{ print $3 }') != $expectedYqVersion ]]; then
-        echo "dataeng-tools - incorrect yq version, '$expectedYqVersion' expected!"
+    # we need at least jq to bootstrap
+    if ! checkCommand jq; then
+        echo "dataeng-tools - jq not installed!"
         return 1
     fi
 
-    local expectedJqVersion="1.6"
-    if [[ $(jq --version | awk -F '-' '{ print $2 }') != $expectedJqVersion ]]; then
-        echo "dataeng-tools - incorrect jq version, '$expectedJqVersion' expected!"
+    # bring in jq helpers
+    source $CA_DT_DIR/helpers/json.sh
+
+    local config=$(readJSONFile "$CA_DT_DIR/config.json")
+    readJSON "$config" '.dependencies | to_entries[]' | \
+    while read -r dep; do
+        local depName=$(readJSON $dep '.key')
+        local expectedVersion=$(readJSON $dep '.value.version')
+        local versionCommand=$(readJSON $dep '.value.command')
+
+        if ! checkCommand "$depName"; then
+            echo "dataeng-tools - $depName not installed!"
+            return 1
+        fi
+
+        local currentVersion=$(eval "$versionCommand")
+
+        if [[ "$currentVersion" != "$expectedVersion" ]]; then
+            echo "dataeng-tools - invalid $depName version: >=$expectedVersion expected, $currentVersion found!"
+            return 1
+        fi
+    done
+}
+
+function init() {
+    # load init scripts
+    loadDir $CA_DT_DIR/helpers/init/*.sh
+
+    if [[ -z "$IS_DOCKER" ]] && ! checkDeps; then
+        echo "dataeng-tools - exiting!"
         return 1
+    fi
+
+    export CA_DP_DIR=$CA_PROJECT_DIR/dataeng-pipeline
+
+    # load helpers
+    loadDir $CA_DT_DIR/helpers/*.sh
+
+    # zsh completions only loaded on zsh shells
+    if [ -n "$ZSH_VERSION" ]; then
+        loadDir $CA_DT_DIR/helpers/*.zsh
     fi
 }
 
-if [[ -z "$IS_DOCKER" ]] && ! checkDeps; then
-    echo "dataeng-tools - exiting!"
-    return 1
-fi
-
-export CA_DP_DIR=$CA_PROJECT_DIR/dataeng-pipeline
-
-# load init scripts
-loadDir $CA_DT_DIR/helpers/init/*.sh
-
-# load helpers
-loadDir $CA_DT_DIR/helpers/*.sh
-
-# zsh completions only loaded on zsh shells
-if [ -n "$ZSH_VERSION" ]; then
-    loadDir $CA_DT_DIR/helpers/*.zsh
-fi
+init
