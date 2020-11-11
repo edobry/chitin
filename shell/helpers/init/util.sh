@@ -76,3 +76,20 @@ function requireArgWithCheck() {
         return 1
     fi
 }
+
+# checks that the current version of a program is GTE the minimum required version
+# args: minimum version, current version
+function checkVersion() {
+    requireArg "the minimum version" "$1" || return 1
+    requireArg "the current version" "$2" || return 1
+
+    [[ "$(printf '%s\n' "$1" "$2" | sort -V | head -n1)" = "$1" ]]
+}
+
+# checks if a command exists
+# args: command
+function checkCommand() {
+    requireArg "a command" "$1" || return 1
+
+    hash "$1" 2>/dev/null
+}
