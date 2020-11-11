@@ -44,7 +44,7 @@ function checkDeps() {
 
         local currentVersion=$(eval "$versionCommand")
 
-        if [[ "$currentVersion" != "$expectedVersion" ]]; then
+        if ! checkVersion "$expectedVersion" "$currentVersion" ]]; then
             echo "dataeng-tools - invalid $depName version: >=$expectedVersion expected, $currentVersion found!"
             return 1
         fi
