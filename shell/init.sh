@@ -20,6 +20,24 @@ function loadDir() {
     done
 }
 
+function checkDep() {
+    local depName=$(readJSON "$1" '.key')
+    local expectedVersion=$(readJSON "$1" '.value.version')
+    local versionCommand=$(readJSON "$1" '.value.command')
+
+    if ! checkCommand "$depName"; then
+        echo "dataeng-tools - $depName not installed!"
+        return 1
+    fi
+
+    local currentVersion=$(eval "$versionCommand")
+
+    if ! checkVersion "$expectedVersion" "$currentVersion" ]]; then
+        echo "dataeng-tools - invalid $depName version: >=$expectedVersion expected, $currentVersion found!"
+        return 1
+    fi
+}
+
 function checkDeps() {
     # we need at least jq to bootstrap
     if ! checkCommand jq; then
@@ -33,21 +51,7 @@ function checkDeps() {
     local config=$(readJSONFile "$CA_DT_DIR/config.json")
     readJSON "$config" '.dependencies | to_entries[]' | \
     while read -r dep; do
-        local depName=$(readJSON $dep '.key')
-        local expectedVersion=$(readJSON $dep '.value.version')
-        local versionCommand=$(readJSON $dep '.value.command')
-
-        if ! checkCommand "$depName"; then
-            echo "dataeng-tools - $depName not installed!"
-            return 1
-        fi
-
-        local currentVersion=$(eval "$versionCommand")
-
-        if ! checkVersion "$expectedVersion" "$currentVersion" ]]; then
-            echo "dataeng-tools - invalid $depName version: >=$expectedVersion expected, $currentVersion found!"
-            return 1
-        fi
+        checkDep "$dep" || return 1
     done
 }
 
