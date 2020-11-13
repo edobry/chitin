@@ -74,6 +74,15 @@ If you enable the shell integration, you can use the following functions to assu
 - `awsAuth`: authenticate if needed, and assume a profile
 - `withProfile`: run a command with a specific AWS profile
 
+##### IAM
+
+Functions
+- `listRolePolicies`: shows all policy attachments for a given role
+- `getPolicy`: fetches a policy
+- `showCurrentRolePermissions`: shows all policy attachments and their allowed actions for the current role
+- `getPolicyAttachments`: shows all policy attachments for a given policy version
+- `showPolicy`: shows all policy attachments and their allowed actions for a given policy version
+
 ##### EBS
 
 Functions:

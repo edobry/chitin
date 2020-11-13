@@ -1,3 +1,5 @@
+# shows all policy attachments for a given role
+# args: role name
 function listRolePolicies() {
     requireArg "a role name" $1 || return 1
 
@@ -5,12 +7,15 @@ function listRolePolicies() {
         jq -cr '.AttachedPolicies[].PolicyArn'
 }
 
+# fetches a policy
+# args: policy ARN
 function getPolicy() {
     requireArg "a policy ARN" $1 || return 1
 
     aws iam get-policy --policy-arn "$1"
 }
 
+# shows all policy attachments and their allowed actions for the current role
 function showCurrentRolePermissions() {
     local role=$(awsRole)
 
@@ -24,6 +29,8 @@ function showCurrentRolePermissions() {
     done
 }
 
+# shows all policy attachments for a given policy version
+# args: policy ARN, policy version
 function getPolicyAttachments() {
     requireArg "a policy ARN" $1 || return 1
     requireArg "a policy version" $2 || return 1
@@ -35,6 +42,8 @@ function getPolicyAttachments() {
         --policy-arn $policyArn --version-id $policyVersion
 }
 
+# shows all policy attachments and their allowed actions for a given policy version
+# args: policy ARN, policy version
 function showPolicy() {
     requireArg "a policy ARN" $1 || return 1
     requireArg "a policy version" $2 || return 1
