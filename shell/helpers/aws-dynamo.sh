@@ -1,9 +1,12 @@
+# lists all DyanmoDB tables
 function listDynamoTables() {
     checkAuthAndFail || return 1
 
     aws dynamodb list-tables
 }
 
+# lists all items in the given DynamoDB table
+# args: table name
 function listDynamoTableItems() {
     requireArg "a table name" "$1" || return 1
     checkAuthAndFail || return 1
@@ -13,6 +16,8 @@ function listDynamoTableItems() {
     aws dynamodb scan --table-name $tableName | jq -r '.Items[] | to_entries | [(.[] | "\(.key): \(.value.S)")] | join("\n\n")'
 }
 
+# gets a specific DynamoDB item
+# args: table name, item key
 function getDynamoItem() {
     requireArg "a table name" "$1" || return 1
     requireArg "an item key" "$2" || return 1
@@ -24,6 +29,8 @@ function getDynamoItem() {
     aws dynamodb get-item --table-name $tableName --key $itemKey
 }
 
+# updates the value of a specific DynamoDB item
+# args: table name, item key, field to set, new value
 function updateDynamoItem() {
     requireArg "a table name" "$1" || return 1
     requireArg "an item key" "$2" || return 1
