@@ -14,8 +14,8 @@ function initAwsAuth() {
     # set google username
     # export CA_GOOGLE_USERNAME=<name>@chainalysis.com
     if [[ -z "${CA_GOOGLE_USERNAME}" ]]; then
-        echo "CA_GOOGLE_USERNAME must be set to your chainalysis email address."
-        exit 1
+        echo "CA_GOOGLE_USERNAME must be set to your Chainalysis email address."
+        return 1
     fi
 
     export AWS_SDK_LOAD_CONFIG=1
@@ -126,7 +126,6 @@ function awsAuth() {
     if ! checkAuth; then
         echo "Authenticating..."
         AWS_PROFILE=$AWS_ORG_SSO_PROFILE gimme-aws-creds --roles $AWS_SSO_ORG_ROLE_ARN
-
     fi
 
     local role=$(awsRole)
