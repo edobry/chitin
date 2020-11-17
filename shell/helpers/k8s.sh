@@ -230,7 +230,37 @@ function upgradeK8sComponent() {
     echo "Done!"
 }
 
+function upgradeK8sVpcCniPlugin() {
+    requireArg "the new version" "$1" || return 1
+    requireArg "the region" "$2" || return 1
+    checkAuthAndFail || return 1
+
+    local resourceType="daemonset"
+    local resourceId="aws-node"
+    local namespace="kube-system"
+    local newVersion="v$1"
+    local region="$2"
+
+    local currentImage=$(getK8sImage $resourceType $resourceId $namespace)
+    local currentVersion=$(extractEKSImageVersion $currentImage)
+
+    if [[ $currentVersion == $newVersion ]]; then
+        echo "Current version of $resourceId is already up-to-date!"
+        return 0
+    fi
+
+    local newVersionImage=$(echo "$currentImage" | awk -F':' -v ver="$newVersion" '{ print $1 ":" ver "-eksbuild.1" }')
+
+    echo "Upgrading version of $resourceId from $currentVersion to $newVersion..."
+
+    local tmpFile=$(tempFile)
+    curl -s -o $tmpFile https://raw.githubusercontent.com/aws/amazon-vpc-cni-k8s/$newVersion/config/v1.7/aws-k8s-cni.yaml
+    sed -i -e "s/us-west-2/$region/" $tmpFile
+    kubectl apply -f $tmpFile
+
     echo "Done!"
+}
+
 
 
 
