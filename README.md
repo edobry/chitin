@@ -129,6 +129,14 @@ Functions:
  - `getKafkaConnection`: gets the connection string of the MSK cluster with the given identifier
  - `getKafkaZkConnection`: gets the Zookeeper connection string of the MSK cluster with the given identifier
 
+##### DynamoDB
+
+Functions:
+ - `listDynamoTables`: lists all DyanmoDB tables
+ - `listDynamoTableItems`: lists all items in the given DynamoDB table
+ - `getDynamoItem`: gets a specific DynamoDB item
+ - `updateDynamoItem`: updates the value of a specific DynamoDB item
+
 #### K8s
 
 ##### Env
@@ -191,6 +199,12 @@ Functions:
 Functions:
 - `runTF`: runs the specified terraform command in on a particular module
 - `showDestroys`: generates a terraform plan and shows destructive actions
+- `copyTfState`: copies the Terraform remote state
+- `backupTfState`: backs up a Terraform remote state file
+- `restoreTfState`: restores a Terraform remote state file backup
+- `getTfLockTableItem`: get a specific TF remote state lock item
+- `getTfLockDigest`: get a specific TF remote state lock digest
+- `updateTfLockDigest`: get a specific TF remote state lock digest
 
 #### Network
 
