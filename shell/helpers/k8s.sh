@@ -166,3 +166,72 @@ function killDeploymentPods() {
 
     kubectl delete pods --selector app.kubernetes.io/instance=$deployment
 }
+
+function getK8sImage() {
+    requireArg "a resource type" "$1" || return 1
+    requireArg "a resource identifier" "$2" || return 1
+    requireArg "a namespace" "$3" || return 1
+
+    local resourceType="$1"
+    local resourceId="$2"
+    local namespace="$3"
+
+    kubectl get $resourceType $resourceId --namespace $namespace \
+        -o=jsonpath='{$.spec.template.spec.containers[:1].image}'
+}
+
+function extractEKSImageVersion() {
+    requireArg "an EKS Docker image" "$1" || return 1
+
+    echo "$1" | cut -d ":" -f 2 | sed 's/-eksbuild\.1//'
+}
+
+function getK8sImageVersion() {
+    requireArg "a resource type" "$1" || return 1
+    requireArg "a resource identifier" "$2" || return 1
+    requireArg "a namespace" "$3" || return 1
+
+    local resourceType="$1"
+    local resourceId="$2"
+    local namespace="$3"
+
+    echo "Checking current version of $resourceId..."
+    local currentImage=$(getK8sImage $resourceType $resourceId $namespace)
+
+    extractEKSImageVersion "$currentImage"
+}
+
+function upgradeK8sComponent() {
+    requireArg "a resource type" "$1" || return 1
+    requireArg "a resource identifier" "$2" || return 1
+    requireArg "a namespace" "$3" || return 1
+    requireArg "the new version" "$4" || return 1
+    checkAuthAndFail || return 1
+
+    local resourceType="$1"
+    local resourceId="$2"
+    local namespace="$3"
+    local newVersion="v$4"
+
+    local currentImage=$(getK8sImage $resourceType $resourceId $namespace)
+    local currentVersion=$(extractEKSImageVersion $currentImage)
+
+    if [[ $currentVersion == $newVersion ]]; then
+        echo "Current version of $resourceId is already up-to-date!"
+        return 0
+    fi
+
+    local newVersionImage=$(echo "$currentImage" | awk -F':' -v ver="$newVersion" '{ print $1 ":" ver "-eksbuild.1" }')
+
+    echo "Upgrading version of $resourceId from $currentVersion to $newVersion..."
+    kubectl set image $resourceType.apps/$resourceId \
+        -n $namespace $resourceId=$newVersionImage
+
+    echo "Done!"
+}
+
+    echo "Done!"
+
+
+
+}
