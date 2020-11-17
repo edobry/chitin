@@ -262,6 +262,19 @@ function upgradeK8sVpcCniPlugin() {
 }
 
 
+function upgradeEKS() {
+    requireArg "the new K8s version" "$1" || return 1
+    requireArg "the new kube-proxy version" "$2" || return 1
+    requireArg "the new CoreDNS version" "$3" || return 1
+    requireArg "the region" "$4" || return 1
+    checkAuthAndFail || return 1
 
+    local newClusterVersion="$1"
+    local newKubeProxyVersion="$2"
+    local newVpcCniPluginVersion="$3"
+    local region="$4"
 
+    upgradeK8sComponent daemonset kube-proxy kube-system $newKubeProxyVersion
+    upgradeK8sComponent deployment coredns kube-system $newCoreDnsVersion
+    upgradeK8sVpcCniPlugin $newVpcCniPluginVersion $region
 }
