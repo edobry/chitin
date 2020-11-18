@@ -180,13 +180,13 @@ function getK8sImage() {
         -o=jsonpath='{$.spec.template.spec.containers[:1].image}'
 }
 
-function extractEKSImageVersion() {
+function extractEksImageVersion() {
     requireArg "an EKS Docker image" "$1" || return 1
 
     echo "$1" | cut -d ":" -f 2 | sed 's/-eksbuild\.1//'
 }
 
-function getK8sImageVersion() {
+function getEKSImageVersion() {
     requireArg "a resource type" "$1" || return 1
     requireArg "a resource identifier" "$2" || return 1
     requireArg "a namespace" "$3" || return 1
@@ -198,10 +198,10 @@ function getK8sImageVersion() {
     echo "Checking current version of $resourceId..."
     local currentImage=$(getK8sImage $resourceType $resourceId $namespace)
 
-    extractEKSImageVersion "$currentImage"
+    extractEksImageVersion "$currentImage"
 }
 
-function upgradeK8sComponent() {
+function upgradeEksComponent() {
     requireArg "a resource type" "$1" || return 1
     requireArg "a resource identifier" "$2" || return 1
     requireArg "a namespace" "$3" || return 1
@@ -214,7 +214,7 @@ function upgradeK8sComponent() {
     local newVersion="v$4"
 
     local currentImage=$(getK8sImage $resourceType $resourceId $namespace)
-    local currentVersion=$(extractEKSImageVersion $currentImage)
+    local currentVersion=$(extractEksImageVersion $currentImage)
 
     if [[ $currentVersion == $newVersion ]]; then
         echo "Current version of $resourceId is already up-to-date!"
@@ -230,7 +230,7 @@ function upgradeK8sComponent() {
     echo "Done!"
 }
 
-function upgradeK8sVpcCniPlugin() {
+function upgradeEksVpcCniPlugin() {
     requireArg "the new version" "$1" || return 1
     requireArg "the region" "$2" || return 1
     checkAuthAndFail || return 1
@@ -242,7 +242,7 @@ function upgradeK8sVpcCniPlugin() {
     local region="$2"
 
     local currentImage=$(getK8sImage $resourceType $resourceId $namespace)
-    local currentVersion=$(extractEKSImageVersion $currentImage)
+    local currentVersion=$(extractEksImageVersion $currentImage)
 
     if [[ $currentVersion == $newVersion ]]; then
         echo "Current version of $resourceId is already up-to-date!"
@@ -266,17 +266,22 @@ function upgradeEKS() {
     requireArg "the new K8s version" "$1" || return 1
     requireArg "the new kube-proxy version" "$2" || return 1
     requireArg "the new CoreDNS version" "$3" || return 1
+    requireArg "the new VPC CNI Plugin version" "$3" || return 1
     requireArg "the region" "$4" || return 1
     checkAuthAndFail || return 1
 
     local newClusterVersion="$1"
     local newKubeProxyVersion="$2"
-    local newVpcCniPluginVersion="$3"
+    local newCoreDnsVersion="$3"
+    local newVpcCniPluginVersion="$4"
     local region="$4"
 
-    upgradeK8sComponent daemonset kube-proxy kube-system $newKubeProxyVersion
-    upgradeK8sComponent deployment coredns kube-system $newCoreDnsVersion
-    upgradeK8sVpcCniPlugin $newVpcCniPluginVersion $region
+    echo "Upgrading cluster components to version $newClusterVersion..."
+
+    upgradeEksComponent daemonset kube-proxy kube-system $newKubeProxyVersion
+    upgradeEksComponent deployment coredns kube-system $newCoreDnsVersion
+    upgradeEksVpcCniPlugin $newVpcCniPluginVersion $region
+}
 
 function listEksNodegroups() {
     requireArg "a cluster name" "$1" || return 1
