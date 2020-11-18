@@ -277,4 +277,65 @@ function upgradeEKS() {
     upgradeK8sComponent daemonset kube-proxy kube-system $newKubeProxyVersion
     upgradeK8sComponent deployment coredns kube-system $newCoreDnsVersion
     upgradeK8sVpcCniPlugin $newVpcCniPluginVersion $region
+
+function listEksNodegroups() {
+    requireArg "a cluster name" "$1" || return 1
+    checkAuthAndFail || return 1
+
+    aws eks list-nodegroups --cluster-name "$1" | jq -r '.nodegroups[]'
+}
+
+function listEksClusters() {
+    checkAuthAndFail || return 1
+
+    aws eks list-clusters | jq -r '.clusters[]'
+}
+
+function updateEksNodegroups() {
+    requireArg "a cluster name" "$1" || return 1
+    checkAuthAndFail || return 1
+
+    local clusterName="$1"
+    local nodeGroups=$(listEksNodegroups $clusterName)
+
+    echo "Updating node groups for cluster $clusterName..."
+
+    echo $nodeGroups |\
+    while read -r nodegroup; do
+        echo -e "Starting update for node group $nodegroup..."
+        updateEksNodegroup $clusterName $nodegroup
+    done
+
+    echo -e "\nWaiting for node group updates to complete..."
+
+    echo $nodeGroups |\
+    while read -r nodegroup; do
+        echo "Waiting for $nodegroup..."
+        waitForEksNodeGroupActive $clusterName $nodegroup
+    done
+
+    echo "Done!"
+}
+
+function updateEksNodegroup() {
+    requireArg "a cluster name" "$1" || return 1
+    requireArg "a node group name" "$2" || return 1
+    checkAuthAndFail || return 1
+
+    local response
+    response=$(aws eks update-nodegroup-version --cluster-name $1 --nodegroup-name $2 2>/dev/null)
+    [[ $? -eq 0 ]] || return 1
+
+    local updateStatus=$(readJSON "$response" '.update.status')
+    local newVersion=$(readJSON "$response" '.update.params[] | select(.type == "ReleaseVersion") | .value')
+
+    echo "Status of node group '$2' update to version '$newVersion' is $updateStatus"
+}
+
+function waitForEksNodeGroupActive() {
+    requireArg "a cluster name" "$1" || return 1
+    requireArg "a node group name" "$2" || return 1
+    checkAuthAndFail || return 1
+
+    aws eks wait nodegroup-active --cluster-name $1 --nodegroup-name $2
 }
