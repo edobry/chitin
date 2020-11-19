@@ -55,6 +55,35 @@ function checkDeps() {
     done
 }
 
+function readConfig() {
+    local jsonFileName="config.json"
+    local json5FileName="${jsonFileName}5"
+
+    # if we have json5 use it to spit out json, otherwise, poor-mans
+    if ! checkCommand json5; then
+        sed '/\/\//d' $CA_DT_DIR/$json5FileName > $jsonFileName
+    else
+        json5 -c $CA_DT_DIR/$json5FileName
+    fi
+
+    local config=$(readJSONFile $CA_DT_DIR/$jsonFileName)
+
+    local projectDir=$(readJSON "$config" '.projectDir')
+    [[ -z $CA_PROJECT_DIR ]] && export CA_PROJECT_DIR=$projectDir
+
+    local awsAuthEnabled=$(readJSON "$config" '.modules."aws-auth".enabled')
+    [[ -z $CA_DT_AWS_AUTH_ENABLED ]] && export CA_DT_AWS_AUTH_ENABLED=$awsAuthEnabled
+
+    local googleUsername=$(readJSON "$config" '.modules."aws-auth".googleUsername')
+    [[ -z $CA_GOOGLE_USERNAME ]] && export CA_GOOGLE_USERNAME=$googleUsername
+
+    local departmentRole=$(readJSON "$config" '.modules."aws-auth".departmentRole')
+    [[ -z $CA_DEPT_ROLE ]] && export CA_DEPT_ROLE=$departmentRole
+
+    local k8sEnvEnabled=$(readJSON "$config" '.modules."k8s-env".enabled')
+    [[ -z $CA_DT_K8S_CONFIG_ENABLED ]] && export CA_DT_K8S_CONFIG_ENABLED=$k8sEnvEnabled
+}
+
 function init() {
     # load init scripts
     loadDir $CA_DT_DIR/helpers/init/*.sh
@@ -63,6 +92,8 @@ function init() {
         echo "dataeng-tools - exiting!"
         return 1
     fi
+
+    readConfig
 
     export CA_DP_DIR=$CA_PROJECT_DIR/dataeng-pipeline
 
