@@ -1,4 +1,15 @@
 {
+    "projectDir": "",
+    "modules": {
+        "aws-auth": {
+            "enabled": false,
+            "googleUsername": "",
+            "departmentRole": ""
+        },
+        "k8s-env": {
+            "enabled": false
+        }
+    },
     "dependencies": {
         "jq": {
             "command": "jq --version | awk -F '-' '{ print $2 }'",
