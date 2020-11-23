@@ -2,7 +2,7 @@
     "dependencies": {
         "jq": {
             "command": "jq --version | awk -F '-' '{ print $2 }'",
-            "version": "1.6"
+            "version": "1.9"
         },
         "yq": {
             "command": "yq --version 2>&1 | awk '{ print $3 }'",
