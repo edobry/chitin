@@ -76,3 +76,4 @@ function init() {
 }
 
 init
+exit 1
