@@ -18,16 +18,16 @@
     //you probably dont want to touch any of this
     "dependencies": {
         "jq": {
-            "command": "jq --version | awk -F '-' '{ print $2 }'",
-            "version": "1.6"
+            "version": "1.6",
+            "command": "jq --version | awk -F '-' '{ print $2 }'"
         },
         "yq": {
-            "command": "yq --version 2>&1 | awk '{ print $3 }'",
-            "version": "3.4.0"
+            "version": "3.4.0",
+            "command": "yq --version 2>&1 | awk '{ print $3 }'"
         },
         "aws": {
-            "command": "aws --version | awk '{ print $1 }' | sed 's/aws-cli\\///'",
-            "version": "2.0.57"
+            "version": "2.0.57",
+            "command": "aws --version | awk '{ print $1 }' | sed 's/aws-cli\\///'"
         }
     }
 }
