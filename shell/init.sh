@@ -40,7 +40,7 @@ function checkDep() {
     fi
 }
 
-function checkDeps() {
+function initJq() {
     # we need at least jq to bootstrap
     if ! checkCommand jq; then
         echo "dataeng-tools - jq not installed!"
@@ -49,55 +49,58 @@ function checkDeps() {
 
     # bring in jq helpers
     source $CA_DT_DIR/helpers/json.sh
-
-    local config=$(readJSONFile "$CA_DT_DIR/config.json")
-    readJSON "$config" '.dependencies | to_entries[]' | \
-    while read -r dep; do
-        checkDep "$dep" || return 1
-    done
 }
 
+export CA_DT_CONFIG_FILE="config.json"
+
 function readConfig() {
-    local jsonFileName="config.json"
-    local json5FileName="${jsonFileName}5"
+    local json5FileName="${CA_DT_CONFIG_FILE}5"
 
     # if we have json5 use it to spit out json, otherwise, poor-mans
     if ! checkCommand json5; then
-        sed '/\/\//d' $CA_DT_DIR/$json5FileName > $jsonFileName
+        sed '/\/\//d' $CA_DT_DIR/$json5FileName > $CA_DT_CONFIG_FILE
     else
         json5 -c $CA_DT_DIR/$json5FileName
     fi
 
-    local config=$(readJSONFile $CA_DT_DIR/$jsonFileName)
+    export CA_DT_CONFIG=$(readJSONFile $CA_DT_DIR/$CA_DT_CONFIG_FILE)
 
-    local projectDir=$(readJSON "$config" '.projectDir')
+    local projectDir=$(readJSON "$CA_DT_CONFIG" '.projectDir')
     [[ -z $CA_PROJECT_DIR ]] && export CA_PROJECT_DIR=$projectDir
 
-    local awsAuthEnabled=$(readJSON "$config" '.modules."aws-auth".enabled')
+    local awsAuthEnabled=$(readJSON "$CA_DT_CONFIG" '.modules."aws-auth".enabled')
     [[ -z $CA_DT_AWS_AUTH_ENABLED ]] && export CA_DT_AWS_AUTH_ENABLED=$awsAuthEnabled
 
-    local googleUsername=$(readJSON "$config" '.modules."aws-auth".googleUsername')
+    local googleUsername=$(readJSON "$CA_DT_CONFIG" '.modules."aws-auth".googleUsername')
     [[ -z $CA_GOOGLE_USERNAME ]] && export CA_GOOGLE_USERNAME=$googleUsername
 
-    local departmentRole=$(readJSON "$config" '.modules."aws-auth".departmentRole')
+    local departmentRole=$(readJSON "$CA_DT_CONFIG" '.modules."aws-auth".departmentRole')
     [[ -z $CA_DEPT_ROLE ]] && export CA_DEPT_ROLE=$departmentRole
 
-    local k8sEnvEnabled=$(readJSON "$config" '.modules."k8s-env".enabled')
+    local k8sEnvEnabled=$(readJSON "$CA_DT_CONFIG" '.modules."k8s-env".enabled')
     [[ -z $CA_DT_K8S_CONFIG_ENABLED ]] && export CA_DT_K8S_CONFIG_ENABLED=$k8sEnvEnabled
+}
+
+function checkDeps() {
+    readJSON "$CA_DT_CONFIG" '.dependencies | to_entries[]' | \
+    while read -r dep; do
+        checkDep "$dep" || return 1
+    done
 }
 
 function init() {
     # load init scripts
     loadDir $CA_DT_DIR/helpers/init/*.sh
 
+    initJq
+    readConfig
+
     if [[ -z "$IS_DOCKER" ]] && ! checkDeps; then
         echo "dataeng-tools - exiting!"
         return 1
     fi
 
-    readConfig
-
-    export CA_DP_DIR=$CA_PROJECT_DIR/dataeng-pipeline
+        export CA_DP_DIR=$CA_PROJECT_DIR/dataeng-pipeline
 
     # load helpers
     loadDir $CA_DT_DIR/helpers/*.sh
