@@ -18,82 +18,110 @@ function k8sPipeline() {
         shift
     fi
 
-    requireArgOptions "a subcommand" "init deploy" "$1" || return 1
+    requireArgOptions "a subcommand" "$1" 'init deploy' || return 1
     requireArg "the environment name" "$2" || return 1
     local subCommand="$1"
-    local DP_ENV="$2"
-    local DP_ENV_DIR=env/$DP_ENV
+    local envName="$2"
+    local envDir=env/$envName
 
-    if [[ ! -d "$DP_ENV_DIR" ]]; then
-        echo "No environment called '$DP_ENV' exists!"
+    if [[ ! -d "$envDir" ]]; then
+        echo "No environment called '$envName' exists!"
         return 1
     fi
 
-    local configFile=$DP_ENV_DIR/config.json
+    local configFile=$envDir/config.json
 
     local envConfig=$(cat $configFile | jq -c)
 
     local commonConfig=$(readJSON "$envConfig" '{ account, context, namespace, environment }')
+    local runtimeConfig=$(echo "$commonConfig" | jq -n \
+        --arg debugMode "$isDebugMode" \
+        --arg dryrunMode "$isDryrunMode" \
+        --arg envName "$envName" \
+        --arg envDir "$envDir" \
+        '[inputs, {
+        env: $envName,
+        envDir: $envDir,
+        flags: {
+            isDebugMode: ($debugMode != ""),
+            isDryrunMode: ($dryrunMode != "")
+        } }] | add')
 
-    local DP_ACCOUNT=$(readJSON "$commonConfig" '.account')
-    local DP_CLUSTER=$(readJSON "$commonConfig" '.context')
-    local DP_NAMESPACE=$(readJSON "$commonConfig" '.namespace')
-    local DP_TF_ENV=$(readJSON "$commonConfig" '.environment')
+    readJSON "$runtimeConfig" '.'
 
-    local DP_TF_MODULE=coin-collection/$(readJSON "$envConfig" ".tfModule // \"$DP_ENV\"")
+    local account=$(readJSON "$runtimeConfig" '.account')
+    local cluster=$(readJSON "$runtimeConfig" '.context')
+    local namespace=$(readJSON "$runtimeConfig" '.namespace')
+    local tfEnv=$(readJSON "$runtimeConfig" '.environment')
 
-    checkAccountAuthAndFail "$DP_ACCOUNT" || return 1
+    local tfModule=coin-collection/$(readJSON "$envConfig" ".tfModule // \"$envName\"")
 
-    echo "Initializing DP environment '$DP_ENV'..."
-    echo "AWS account: 'ca-aws-$DP_ACCOUNT'"
-    echo "Terraform environment: '$DP_TF_ENV'"
-    echo "Terraform module: '$DP_TF_MODULE'"
-    echo "EKS cluster: '$DP_CLUSTER'"
-    echo "EKS namespace: '$DP_NAMESPACE'"
+    checkAccountAuthAndFail "$account" || return 1
+
+    echo "Initializing DP environment '$envName'..."
+    echo "AWS account: 'ca-aws-$account'"
+    echo "Terraform environment: '$tfEnv'"
+    echo "Terraform module: '$tfModule'"
+    echo "EKS cluster: '$cluster'"
+    echo "EKS namespace: '$namespace'"
     echo
 
-    notSet $isDryrunMode && kubectx $DP_CLUSTER
+    notSet $isDryrunMode && kubectx $cluster
 
     if [[ "$subCommand" = "init" ]]; then
-        k8sPipelineDeploy "$envConfig"
+        k8sPipelineInit "$envConfig" "$runtimeConfig"
     elif [[ "$subCommand" = "deploy" ]]; then
-        k8sPipelineInit "$isDryrunMode"
+        k8sPipelineDeploy "$envConfig" "$runtimeConfig"
     else
         echo "Something went wrong; Subcommand '$subCommand' is not supported!"
         return 1
     fi
 }
 
-function k8sPipelineDeploy() {
-    k8sDeployCommon $*
-    shift
+function checkJSONFlag() {
+    requireArg "a flag name" "$1" || return 1
+    requireArg "a JSON string" "$2" || return 1
 
-    notDryrun && kubens $DP_NAMESPACE
+    echo "$2" | jq -r --arg flagName "$1" 'if .flags[$flagName] then "true" else "" end'
+}
+
+function k8sPipelineDeploy() {
+    local envConfig="$1"
+    local runtimeConfig="$2"
+
+    local env=$(readJSON "$runtimeConfig" '.env')
+    local envDir=$(readJSON "$runtimeConfig" '.envDir')
+
+    local account=$(readJSON "$runtimeConfig" '.account')
+    local cluster=$(readJSON "$runtimeConfig" '.context')
+    local namespace=$(readJSON "$runtimeConfig" '.namespace')
+    local tfEnv=$(readJSON "$runtimeConfig" '.environment')
+
+    local isDebugMode=$(checkJSONFlag isDebugMode "$runtimeConfig")
+    local isDryrunMode=$(checkJSONFlag isDryrunMode "$runtimeConfig")
+
+    notSet $isDryrunMode && kubens $namespace
 
     # to use, call with `teardown` as the second arg (after env)
-    local isTeardown
+    local isTeardownMode
     if [[ "$2" == "teardown" ]]; then
-        isTeardown=true
+        isTeardownMode=true
         echo -e "\n-- TEARDOWN MODE --"
         shift
     fi
-    notTeardown () [[ -z $TEARDOWN ]]
-    teardown () [[ ! -z $TEARDOWN ]]
 
     # to use, call with `render` as the second arg (after env)
-    unset RENDER
+    local isRenderMode
     if [[ "$2" == "render" ]]; then
-        RENDER=true
+        isRenderMode=true
         echo -e "\n-- RENDER MODE --"
         shift
     fi
-    notRender () [[ -z $RENDER ]]
-    render () [[ ! -z $RENDER ]]
 
     # to use, call with `chart` as the second arg (after env)
-    unset CHART_MODE
+    local isChartMode
     if [[ "$2" == "chart" ]]; then
-        CHART_MODE=true
+        isChartMode=true
         shift
     fi
 
@@ -105,18 +133,19 @@ function k8sPipelineDeploy() {
     else
         DP_TARGET="$*"
 
-        additionalMsg=$([[ ! -z $CHART_MODE ]] && echo " instances of chart" || echo "")
+        additionalMsg=$(isSet $isChartMode && echo " instances of chart" || echo "")
         echo -e "\nLimiting to$additionalMsg: $(echo "$DP_TARGET" | sed 's/ /, /g')"
     fi
 
-    notDryrun && notTeardown && helm repo update
+    notSet $isDryrunMode && notSet $isTeardownMode && helm repo update
 
     # generate environment-specific configuration and write to a temporary file
     # TODO: add per-chart child-chart config
-    envFile=$DP_ENV_DIR/env.json
-    envValues=$(readJSON "$envConfig" '{ region, nodeSelector: { "eks.amazonaws.com/nodegroup": (.nodegroup // empty) } } ')
-    dryrun && notTeardown && echo $envValues | prettyYaml
-    notDryrun && notTeardown && echo $envValues > $envFile
+    local envFile=$envDir/env.json
+    local envValues=$(readJSON "$envConfig" '{ region, nodeSelector: { "eks.amazonaws.com/nodegroup": (.nodegroup // empty) } } ')
+
+    isSet $isDryrunMode notSet $isTeardownMode && echo $envValues | prettyYaml
+    notSet $isDryrunMode && notSet $isTeardownMode && echo $envValues > $envFile
 
     function targetMatches() {
         # LIMITING
@@ -129,9 +158,9 @@ function k8sPipelineDeploy() {
         debug && echo -e "\nTesting instance '$name' of chart '$chart'..."
 
         local chartMatches=false;
-        ([ ! -z $CHART_MODE ] && argsContain $chart $DP_TARGET) && chartMatches=true
+        ([ ! -z $isChartMode ] && argsContain $chart $DP_TARGET) && chartMatches=true
         local nameMatches=false;
-        if [ -z $CHART_MODE ]; then
+        if [ -z $isChartMode ]; then
             ([ ! -z "$DP_TARGET" ] && argsContain $name $DP_TARGET) && nameMatches=true
         fi
 
@@ -176,7 +205,7 @@ function k8sPipelineDeploy() {
 
         (targetMatches "$chart" "$name") || return 0
 
-        echo -e "\n$(render && echo 'Rendering' || echo 'Deploying') $name..."
+        echo -e "\n$(isSet $isRenderMode && echo 'Rendering' || echo 'Deploying') $name..."
 
         ## version
         local version
@@ -198,10 +227,10 @@ function k8sPipelineDeploy() {
         ##
 
         ## values
-        local chartDefaultFilePath="$DP_ENV_DIR/chartDefaults/$chart.yaml"
+        local chartDefaultFilePath="$envDir/chartDefaults/$chart.yaml"
         local chartDefaultFileArg=$([ -f $chartDefaultFilePath ] && echo "-f $chartDefaultFilePath" || echo "")
 
-        local deploymentFilePath="$DP_ENV_DIR/deployments/$name.yaml"
+        local deploymentFilePath="$envDir/deployments/$name.yaml"
         local deploymentFileArg=$([ -f "$deploymentFilePath" ] && echo "-f $deploymentFilePath" || echo "")
 
         local chartDefaultInlineValues=$(readJSON "$allChartDefaults" ".\"$chart\" | .values // {}")
@@ -213,14 +242,14 @@ function k8sPipelineDeploy() {
         writeJSONToYamlFile "$inlineValues" "$inlineValuesFile"
         ##
 
-        if [ $source == "local" ] && [ -d $path ] && notDryrun; then
+        if [ $source == "local" ] && [ -d $path ] && notSet $isDryrunMode; then
             if ! helm dep update $path; then
                 echo "Skipping due to missing dependency!"
                 return 1
             fi
         fi
 
-        local helmSubCommand=$(render && echo "template" || echo "upgrade --install")
+        local helmSubCommand=$(isSet $isRenderMode && echo "template" || echo "upgrade --install")
 
         # precedence order
         #
@@ -234,8 +263,8 @@ function k8sPipelineDeploy() {
         local helmCommand="helm $helmSubCommand $name $path $helmVersionArg $helmEnvValues $chartDefaultFileArg \
             -f $chartDefaultInlineValuesFile $deploymentFileArg -f $inlineValuesFile -f $envFile"
 
-        dryrun && echo $helmCommand
-        notDryrun && $helmCommand
+        isSet $isDryrunMode echo $helmCommand
+        notSet $isDryrunMode && $helmCommand
     }
 
     function teardownChart() {
@@ -249,36 +278,51 @@ function k8sPipelineDeploy() {
 
         helmCommand="helm uninstall $name"
 
-        dryrun && echo $helmCommand
-        notDryrun && $helmCommand
+        isSet $isDryrunMode echo $helmCommand
+        notSet $isDryrunMode && $helmCommand
     }
 
     chartDefaults=$(readJSON "$envConfig" '.chartDefaults')
 
     readJSON "$envConfig" '.deployments | to_entries[] | select(.value.disabled | not)' | \
     while read -r args; do
-        if notTeardown; then
+        if notSet $isTeardownMode; then
             installChart "$args" "$chartDefaults"
         else
             teardownChart "$args" "$chartDefaults"
         fi
     done
 
-    notDryrun && notTeardown && rm "$envFile"
+    notSet $isDryrunMode && notSet $isTeardownMode && rm "$envFile"
 }
 
 function k8sPipelineInit() {
     k8sDeployCommon $*
     shift
 
+    local env=$(readJSON "$runtimeConfig" '.env')
+    local envDir=$(readJSON "$runtimeConfig" '.envDir')
+
+    local account=$(readJSON "$runtimeConfig" '.account')
+    local cluster=$(readJSON "$runtimeConfig" '.context')
+    local namespace=$(readJSON "$runtimeConfig" '.namespace')
+    local tfEnv=$(readJSON "$runtimeConfig" '.environment')
+
+    local isDebugMode=$(checkJSONFlag isDebugMode "$runtimeConfig")
+    local isDryrunMode=$(checkJSONFlag isDryrunMode "$runtimeConfig")
+
+    notSet $isDryrunMode && kubens $namespace
+
+    local tfModule=coin-collection/$(readJSON "$envConfig" ".tfModule // \"$envName\"")
+
     echo "Creating namespace..."
-    namespaceResource=$(kubectl create namespace $DP_NAMESPACE \
+    namespaceResource=$(kubectl create namespace $namespace \
         --dry-run=true -o=json --save-config)
-    dryrun && echo $namespaceResource | jq '.'
-    notDryrun && echo $namespaceResource | kubectl apply -f -
+    isSet $isDryrunMode echo $namespaceResource | jq '.'
+    notSet $isDryrunMode && echo $namespaceResource | kubectl apply -f -
 
     #switch to the newly-created namespace
-    notDryrun && kubens $DP_NAMESPACE
+    notSet $isDryrunMode && kubens $namespace
 
     shift
     unset DP_TARGET
@@ -293,9 +337,9 @@ function k8sPipelineInit() {
     ssmOverride=$(cat $CONFIG_FILE | jq -r '.ssmOverride // empty')
     baseSsmPath=$([[ ! -z $ssmOverride ]] && \
         echo "/$ssmOverride" || \
-        echo "/dataeng-$DP_ENV")
+        echo "/dataeng-$envName")
 
-    dryrun && echo "Base SSM Path: '$baseSsmPath'"
+    isSet $isDryrunMode echo "Base SSM Path: '$baseSsmPath'"
 
     ccSsmPath=$baseSsmPath/coin-collection
     echo "Fetching from '$ccSsmPath'..."
@@ -319,22 +363,22 @@ function k8sPipelineInit() {
         --docker-password=$dockerPassword \
         --docker-email=$dockerUsername@chainalysis.com \
         --dry-run=true -o=json --save-config)"
-    dryrun && echo $regcredResource | jq '.'
-    notDryrun && echo $regcredResource | kubectl apply -f -
+    isSet $isDryrunMode echo $regcredResource | jq '.'
+    notSet $isDryrunMode && echo $regcredResource | kubectl apply -f -
 
-    DP_RESOURCES_DIR=$DP_ENV_DIR/resources
+    DP_RESOURCES_DIR=$envDir/resources
     function createDatabaseServicesFromTerraform() {
-        echo -e "\nParsing Terraform output from module '$DP_TF_ENV/$DP_TF_MODULE'..."
+        echo -e "\nParsing Terraform output from module '$tfEnv/$tfModule'..."
 
-        local tfCommand="runTF $DP_TF_ENV $DP_TF_MODULE output -json rds_instance_endpoints"
-        dryrun && echo $tfCommand
+        local tfCommand="runTF $tfEnv $tfModule output -json rds_instance_endpoints"
+        isSet $isDryrunMode echo $tfCommand
 
         # read the terraform state for this environment, grab the databases
         local rdsInstances=$($tfCommand \
             | jq -c 'to_entries[] | { name: "postgres-\(.key)", externalName: (.value | split(":") | first) }')
 
         for instance in $rdsInstances; do
-            dryrun && echo $instance | jq '.'
+            isSet $isDryrunMode echo $instance | jq '.'
 
             local name=$(echo $instance | jq -r '.name')
 
@@ -367,8 +411,8 @@ function k8sPipelineInit() {
         fi
 
         helmCommand="helm upgrade --install $name ../charts/external/external-service -f $path $* $helmCredsConf"
-        dryrun && echo $helmCommand
-        notDryrun && $helmCommand
+        isSet $isDryrunMode echo $helmCommand
+        notSet $isDryrunMode && $helmCommand
     }
 
     # generate service files
