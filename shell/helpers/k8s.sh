@@ -166,3 +166,16 @@ function killDeploymentPods() {
 
     kubectl delete pods --selector app.kubernetes.io/instance=$deployment
 }
+
+function getK8sImage() {
+    requireArg "a resource type" "$1" || return 1
+    requireArg "a resource identifier" "$2" || return 1
+    requireArg "a namespace" "$3" || return 1
+
+    local resourceType="$1"
+    local resourceId="$2"
+    local namespace="$3"
+
+    kubectl get $resourceType $resourceId --namespace $namespace \
+        -o=jsonpath='{$.spec.template.spec.containers[:1].image}'
+}
