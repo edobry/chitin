@@ -1,5 +1,6 @@
 notSet () [[ -z $1 ]]
 isSet () [[ ! -z $1 ]]
+isTrue () [[ "$1" = true ]]
 
 function k8sPipeline() {
     # to use, call with `debug` as the first arg
@@ -85,6 +86,37 @@ function checkJSONFlag() {
     echo "$2" | jq -r --arg flagName "$1" 'if .flags[$flagName] then "true" else "" end'
 }
 
+
+function targetMatches() {
+    requireArg "a chart name" "$1" || return 1
+    requireArg "a deployment name" "$2" || return 1
+
+    local chartName="$1"
+    local deploymentName="$2"
+    local deployTarget="$3"
+
+    # if limiting to "all", always pass
+    notSet $deployTarget && return 0
+
+    debug && echo -e "\nTesting instance '$deploymentName' of chart '$chartName'..."
+
+    local chartMatches=false;
+    (isSet $isChartMode && argsContain $chartName $deployTarget) && chartMatches=true
+
+    local nameMatches=false;
+    if notSet $isChartMode; then
+        (isSet $deployTarget && argsContain $deploymentName $deployTarget) && nameMatches=true
+    fi
+
+    if ! isTrue "$chartMatches" && ! isTrue "$nameMatches"; then
+        echo "Does not match!"
+        return 1
+    else
+        echo "Matches!"
+        return 0
+    fi
+}
+
 function k8sPipelineDeploy() {
     local envConfig="$1"
     local runtimeConfig="$2"
@@ -147,33 +179,6 @@ function k8sPipelineDeploy() {
     isSet $isDryrunMode notSet $isTeardownMode && echo $envValues | prettyYaml
     notSet $isDryrunMode && notSet $isTeardownMode && echo $envValues > $envFile
 
-    function targetMatches() {
-        # LIMITING
-        local chart="$1"
-        local name="$2"
-
-        # if limiting to "all", always pass
-        if [[ -z $DP_TARGET ]]; then return 0; fi
-
-        debug && echo -e "\nTesting instance '$name' of chart '$chart'..."
-
-        local chartMatches=false;
-        ([ ! -z $isChartMode ] && argsContain $chart $DP_TARGET) && chartMatches=true
-        local nameMatches=false;
-        if [ -z $isChartMode ]; then
-            ([ ! -z "$DP_TARGET" ] && argsContain $name $DP_TARGET) && nameMatches=true
-        fi
-
-        if [ "$chartMatches" != true ] && [ "$nameMatches" != true ]; then
-            debug && echo "Does not match!"
-            return 1
-        else
-            debug && echo "Matches!"
-            return 0
-        fi
-        # END LIMITING
-    }
-
     function installChart() {
         local deployment="$1"
         local allChartDefaults="$2"
@@ -203,7 +208,7 @@ function k8sPipelineDeploy() {
             return 1
         fi
 
-        (targetMatches "$chart" "$name") || return 0
+        (targetMatches "$chart" "$name" "$DP_TARGET") || return 0
 
         echo -e "\n$(isSet $isRenderMode && echo 'Rendering' || echo 'Deploying') $name..."
 
@@ -272,7 +277,7 @@ function k8sPipelineDeploy() {
         local source=$(readJSON $1 .value.source)
         local chart=$(readJSON $1 .value.chart)
 
-        if ! targetMatches "$chart" "$name"; then return 0; fi
+        if ! targetMatches "$chart" "$name" "$DP_TARGET"; then return 0; fi
 
         echo -e "\nUninstalling '$name'..."
 
