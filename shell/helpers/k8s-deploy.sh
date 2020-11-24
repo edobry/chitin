@@ -1,7 +1,7 @@
 notSet () [[ -z $1 ]]
 isSet () [[ ! -z $1 ]]
 
-function k8sDeployCommon() {
+function k8sPipeline() {
     # to use, call with `debug` as the first arg
     local isDebugMode
     if [[ "$1" == "debug" ]]; then
@@ -18,26 +18,31 @@ function k8sDeployCommon() {
         shift
     fi
 
-    requireArg "the environment name" $1 || exit 1
-    DP_ENV=$1
-    DP_ENV_DIR=env/$1
+    requireArgOptions "a subcommand" "init deploy" "$1" || return 1
+    requireArg "the environment name" "$2" || return 1
+    local subCommand="$1"
+    local DP_ENV="$2"
+    local DP_ENV_DIR=env/$DP_ENV
 
     if [[ ! -d "$DP_ENV_DIR" ]]; then
         echo "No environment called '$DP_ENV' exists!"
-        exit 1
+        return 1
     fi
 
     local configFile=$DP_ENV_DIR/config.json
 
     local envConfig=$(cat $configFile | jq -c)
 
-    DP_ACCOUNT=$(readJSON "$envConfig" '.account')
-    DP_CLUSTER=$(readJSON "$envConfig" '.context')
-    DP_NAMESPACE=$(readJSON "$envConfig" '.namespace')
-    DP_TF_ENV=$(readJSON "$envConfig" '.environment')
-    DP_TF_MODULE=coin-collection/$(readJSON "$envConfig" ".tfModule // \"$DP_ENV\"")
+    local commonConfig=$(readJSON "$envConfig" '{ account, context, namespace, environment }')
 
-    checkAccountAuthAndFail "$DP_ACCOUNT" || exit 1
+    local DP_ACCOUNT=$(readJSON "$commonConfig" '.account')
+    local DP_CLUSTER=$(readJSON "$commonConfig" '.context')
+    local DP_NAMESPACE=$(readJSON "$commonConfig" '.namespace')
+    local DP_TF_ENV=$(readJSON "$commonConfig" '.environment')
+
+    local DP_TF_MODULE=coin-collection/$(readJSON "$envConfig" ".tfModule // \"$DP_ENV\"")
+
+    checkAccountAuthAndFail "$DP_ACCOUNT" || return 1
 
     echo "Initializing DP environment '$DP_ENV'..."
     echo "AWS account: 'ca-aws-$DP_ACCOUNT'"
@@ -48,17 +53,27 @@ function k8sDeployCommon() {
     echo
 
     notSet $isDryrunMode && kubectx $DP_CLUSTER
+
+    if [[ "$subCommand" = "init" ]]; then
+        k8sPipelineDeploy "$envConfig"
+    elif [[ "$subCommand" = "deploy" ]]; then
+        k8sPipelineInit "$isDryrunMode"
+    else
+        echo "Something went wrong; Subcommand '$subCommand' is not supported!"
+        return 1
+    fi
 }
 
-function k8sDeploy() {
+function k8sPipelineDeploy() {
+    k8sDeployCommon $*
+    shift
 
-    source ./common.sh
     notDryrun && kubens $DP_NAMESPACE
 
     # to use, call with `teardown` as the second arg (after env)
-    unset TEARDOWN
+    local isTeardown
     if [[ "$2" == "teardown" ]]; then
-        TEARDOWN=true
+        isTeardown=true
         echo -e "\n-- TEARDOWN MODE --"
         shift
     fi
@@ -84,7 +99,7 @@ function k8sDeploy() {
 
     shift
     unset DP_TARGET
-    requireArg "deployments to limit to, or 'all' to not limit" "$1" || exit 1
+    requireArg "deployments to limit to, or 'all' to not limit" "$1" || return 1
     if [[ "$1" = "all" ]]; then
         echo "Processing all deployments"
     else
@@ -252,8 +267,9 @@ function k8sDeploy() {
     notDryrun && notTeardown && rm "$envFile"
 }
 
-function k8sInit() {
-    source ./common.sh
+function k8sPipelineInit() {
+    k8sDeployCommon $*
+    shift
 
     echo "Creating namespace..."
     namespaceResource=$(kubectl create namespace $DP_NAMESPACE \
