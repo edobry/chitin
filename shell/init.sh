@@ -14,13 +14,13 @@ if [[ -z "$IS_DOCKER" ]]; then
     export CA_DT_DIR="$(dirname $SCRIPT_PATH)"
 fi
 
-function loadDir() {
+function loadDTDir() {
     for f in "$@";
         do source $f;
     done
 }
 
-function checkDep() {
+function checkDTDep() {
     local depName=$(readJSON "$1" '.key')
     local expectedVersion=$(readJSON "$1" '.value.version')
     local versionCommand=$(readJSON "$1" '.value.command')
@@ -38,7 +38,7 @@ function checkDep() {
     fi
 }
 
-function checkDeps() {
+function checkDTDeps() {
     # we need at least jq to bootstrap
     if ! checkCommand jq; then
         echo "dataeng-tools - jq not installed!"
@@ -51,15 +51,15 @@ function checkDeps() {
     local config=$(readJSONFile "$CA_DT_DIR/config.json")
     readJSON "$config" '.dependencies | to_entries[]' | \
     while read -r dep; do
-        checkDep "$dep" || return 1
+        checkDTDep "$dep" || return 1
     done
 }
 
-function init() {
+function initDT() {
     # load init scripts
-    loadDir $CA_DT_DIR/helpers/init/*.sh
+    loadDTDir $CA_DT_DIR/helpers/init/*.sh
 
-    if [[ -z "$IS_DOCKER" ]] && ! checkDeps; then
+    if [[ -z "$IS_DOCKER" ]] && ! checkDTDeps; then
         echo "dataeng-tools - exiting!"
         return 1
     fi
@@ -67,12 +67,12 @@ function init() {
     export CA_DP_DIR=$CA_PROJECT_DIR/dataeng-pipeline
 
     # load helpers
-    loadDir $CA_DT_DIR/helpers/*.sh
+    loadDTDir $CA_DT_DIR/helpers/*.sh
 
     # zsh completions only loaded on zsh shells
     if [ -n "$ZSH_VERSION" ]; then
-        loadDir $CA_DT_DIR/helpers/*.zsh
+        loadDTDir $CA_DT_DIR/helpers/*.zsh
     fi
 }
 
-init
+initDT
