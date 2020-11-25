@@ -16,6 +16,10 @@ if [[ -z "$IS_DOCKER" ]]; then
     export CA_DT_DIR="$(dirname $SCRIPT_PATH)"
 fi
 
+function dtLog() {
+    echo "dataeng-tools - $1"
+}
+
 function loadDir() {
     for f in "$@";
         do source $f;
@@ -28,14 +32,14 @@ function checkDep() {
     local versionCommand=$(readJSON "$1" '.value.command')
 
     if ! checkCommand "$depName"; then
-        echo "dataeng-tools - $depName not installed!"
+        dtLog "$depName not installed!"
         return 1
     fi
 
     local currentVersion=$(eval "$versionCommand")
 
     if ! checkVersion "$expectedVersion" "$currentVersion" ]]; then
-        echo "dataeng-tools - invalid $depName version: >=$expectedVersion expected, $currentVersion found!"
+        dtLog "invalid $depName version: >=$expectedVersion expected, $currentVersion found!"
         return 1
     fi
 }
@@ -43,7 +47,7 @@ function checkDep() {
 function initJq() {
     # we need at least jq to bootstrap
     if ! checkCommand jq; then
-        echo "dataeng-tools - jq not installed!"
+        dtLog "jq not installed!"
         return 1
     fi
 
@@ -96,7 +100,7 @@ function init() {
     readConfig
 
     if [[ -z "$IS_DOCKER" ]] && ! checkDeps; then
-        echo "dataeng-tools - exiting!"
+        dtLog "exiting!"
         return 1
     fi
 
