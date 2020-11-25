@@ -192,12 +192,6 @@ function getServiceAccountToken() {
     kubectl get secrets $serviceAccountTokenName -o json | jq -r '.data.token' | base64 -D
 }
 
-# gets the current k8s context config
-function getCurrentK8sContext() {
-    kubectl config view -o json | jq -cr --arg ctx $(kubectl config current-context) \
-        '.contexts[] | select(.name == $ctx).context'
-}
-
 # creates a temporary k8s context for a ServiceAccount
 # args: svc acc name
 function createTmpK8sSvcAccContext() {
@@ -216,15 +210,6 @@ function createTmpK8sSvcAccContext() {
         --user $svcAccountName > /dev/null
 
     echo "$ctxName"
-}
-
-# deletes a k8s context
-# args: context name
-function deleteK8sContext() {
-    requireArg "a context name" "$1" || return 1
-    local contextName="$1"
-
-    kubectl config delete-context $contextName
 }
 
 # impersonates a given ServiceAccount and runs a command
