@@ -167,6 +167,8 @@ function killDeploymentPods() {
     kubectl delete pods --selector app.kubernetes.io/instance=$deployment
 }
 
+# gets the container image for a given resource
+# args: resource type, resource id, namespace
 function getK8sImage() {
     requireArg "a resource type" "$1" || return 1
     requireArg "a resource identifier" "$2" || return 1
@@ -180,6 +182,8 @@ function getK8sImage() {
         -o=jsonpath='{$.spec.template.spec.containers[:1].image}'
 }
 
+# gets the token for a given ServiceAccount
+# args: svc acc name
 function getServiceAccountToken() {
     requireArg "a service account name" "$1" || return 1
     checkAuthAndFail || return 1
@@ -188,11 +192,14 @@ function getServiceAccountToken() {
     kubectl get secrets $serviceAccountTokenName -o json | jq -r '.data.token' | base64 -D
 }
 
+# gets the current k8s context config
 function getCurrentK8sContext() {
     kubectl config view -o json | jq -cr --arg ctx $(kubectl config current-context) \
         '.contexts[] | select(.name == $ctx).context'
 }
 
+# creates a temporary k8s context for a ServiceAccount
+# args: svc acc name
 function createTmpK8sSvcAccContext() {
     requireArg "a service account name" "$1" || return 1
     local svcAccountName="$1"
@@ -211,6 +218,8 @@ function createTmpK8sSvcAccContext() {
     echo "$ctxName"
 }
 
+# deletes a k8s context
+# args: context name
 function deleteK8sContext() {
     requireArg "a context name" "$1" || return 1
     local contextName="$1"
@@ -218,10 +227,11 @@ function deleteK8sContext() {
     kubectl config delete-context $contextName
 }
 
+# impersonates a given ServiceAccount and runs a command
+# args: svc acc name, command name, command args (optional[])
 function runAsServiceAccount() {
     requireArg "a service account name" "$1" || return 1
     requireArg "a command name" "$2" || return 1
-    requireArg "command arguments" "$3" || return 1
     checkAuthAndFail || return 1
 
     local svcAccountName="$1"
@@ -243,6 +253,8 @@ function runAsServiceAccount() {
     deleteK8sContext $ctxName
 }
 
+# impersonates a given ServiceAccount and runs a kubectl command using its token
+# args: svc acc name, kubectl command name, command args (optional[])
 function kubectlAsServiceAccount() {
     requireArg "a service account name" "$1" || return 1
     requireArg "a kubectl command to run" "$2" || return 1
