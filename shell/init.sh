@@ -127,4 +127,8 @@ function init() {
     fi
 }
 
+function reinitDT() {
+    source $CA_DT_DIR/init.sh
+}
+
 init
