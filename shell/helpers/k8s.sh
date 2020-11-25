@@ -188,12 +188,67 @@ function getServiceAccountToken() {
     kubectl get secrets $serviceAccountTokenName -o json | jq -r '.data.token' | base64 -D
 }
 
+function getCurrentK8sContext() {
+    kubectl config view -o json | jq -cr --arg ctx $(kubectl config current-context) \
+        '.contexts[] | select(.name == $ctx).context'
+}
+
+function createTmpK8sSvcAccContext() {
+    requireArg "a service account name" "$1" || return 1
+    local svcAccountName="$1"
+
+    local token=$(getServiceAccountToken "$svcAccountName")
+    kubectl config set-credentials $svcAccountName --token $token > /dev/null
+
+    local currentCtx=$(getCurrentK8sContext)
+
+    local ctxName="tmp-ctx-svc-acc-$svcAccountName"
+    kubectl config set-context $ctxName \
+        --cluster $(readJSON "$currentCtx" '.cluster') \
+        --namespace $(readJSON "$currentCtx" '.namespace') \
+        --user $svcAccountName > /dev/null
+
+    echo "$ctxName"
+}
+
+function deleteK8sContext() {
+    requireArg "a context name" "$1" || return 1
+    local contextName="$1"
+
+    kubectl config delete-context $contextName
+}
+
+function runAsServiceAccount() {
+    requireArg "a service account name" "$1" || return 1
+    requireArg "a command name" "$2" || return 1
+    requireArg "command arguments" "$3" || return 1
+    checkAuthAndFail || return 1
+
+    local svcAccountName="$1"
+    local command="$2"
+    shift && shift
+
+    echo "Creating temporary service account context for '$svcAccountName'..."
+    local ctxName=$(createTmpK8sSvcAccContext $svcAccountName)
+    local currentCtx=$(kubectx -c)
+    kubectx $ctxName
+
+    echo "Running command in context..."
+    echo -e "\n------ START COMMAND OUTPUT ------"
+    $command $*
+    echo -e "------ END COMMAND OUTPUT ------\n"
+
+    echo "Cleaning up temporary context..."
+    kubectx $currentCtx
+    deleteK8sContext $ctxName
+}
+
 function kubectlAsServiceAccount() {
     requireArg "a service account name" "$1" || return 1
-    requireArg "a command to run" "$2" || return 1
+    requireArg "a kubectl command to run" "$2" || return 1
 
-    local token=$(getServiceAccountToken "$1")
+    local svcAccountName="$1"
     shift
 
-    kubectl --token $token $*
+    runAsServiceAccount $svcAccountName kubectl $*
 }
