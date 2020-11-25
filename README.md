@@ -143,6 +143,10 @@ Functions:
 
 The `k8s-env` helper sets up your Kubernetes configuration for working with our EKS environments. It works by adding the `eksconfig.yaml` file to your `KUBECONFIG` environment variable. This shell integration is disabled by default, but you can enable it by setting `DE_K8S_CONFIG_ENABLED=true` in step 2 of the setup. This is recommended, but not required. If you do choose to use it, however, you may want to delete any existing EKS-relevant config from your `~/.kube/config` file, to avoid conflicts.
 
+Functions:
+- `getCurrentK8sContext`: gets the current k8s context config
+- `deleteK8sContext`: deletes a k8s context
+
 ##### Helpers
 
 > Requires: `kubectl`, `yq`, `jq`, `fzf` (optional)
@@ -158,6 +162,11 @@ Functions:
  - `getServiceExternalUrl`: fetches the external url, with port, for a Service with a load balancer configured
  - `getServiceEndpoint`: fetches the endpoint url for both services and proxies to zen garden
  - `killDeploymentPods`: kills all pods for a deployment, useful for forcing a restart during dev
+ - `getK8sImage`: gets the container image for a given resource
+ - `getServiceAccountToken`: gets the token for a given ServiceAccount
+ - `createTmpK8sSvcAccContext`: creates a temporary k8s context for a ServiceAccount
+ - `runAsServiceAccount`: impersonates a given ServiceAccount and runs a command
+ - `kubectlAsServiceAccount`: impersonates a given ServiceAccount and runs a kubectl command using its token
 
 #### Kafka
 
