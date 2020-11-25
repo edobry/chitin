@@ -24,6 +24,7 @@ function k8sPipeline() {
     local subCommand="$1"
     local envName="$2"
     local envDir=env/$envName
+    shift && shift
 
     if [[ ! -d "$envDir" ]]; then
         echo "No environment called '$envName' exists!"
@@ -34,18 +35,19 @@ function k8sPipeline() {
 
     local envConfig=$(cat $configFile | jq -c)
 
-    local commonConfig=$(readJSON "$envConfig" '{ account, context, namespace, environment }')
-    local runtimeConfig=$(echo "$commonConfig" | jq -n \
-        --arg debugMode "$isDebugMode" \
-        --arg dryrunMode "$isDryrunMode" \
+    local commonConfig=$(readJSON "$envConfig" \
+        '{ account, context, namespace, environment, region, nodegroup, chartDefaults, deployments }')
+    local runtimeConfig=$(echo "$commonConfig" | jq -nc \
+        --arg isDebugMode "$isDebugMode" \
+        --arg isDryrunMode "$isDryrunMode" \
         --arg envName "$envName" \
         --arg envDir "$envDir" \
         '[inputs, {
         env: $envName,
         envDir: $envDir,
         flags: {
-            isDebugMode: ($debugMode != ""),
-            isDryrunMode: ($dryrunMode != "")
+            isDebugMode: ($isDebugMode != ""),
+            isDryrunMode: ($isDryrunMode != "")
         } }] | add')
 
     readJSON "$runtimeConfig" '.'
@@ -70,9 +72,9 @@ function k8sPipeline() {
     notSet $isDryrunMode && kubectx $cluster
 
     if [[ "$subCommand" = "init" ]]; then
-        k8sPipelineInit "$envConfig" "$runtimeConfig"
+        k8sPipelineInit "$runtimeConfig" $*
     elif [[ "$subCommand" = "deploy" ]]; then
-        k8sPipelineDeploy "$envConfig" "$runtimeConfig"
+        k8sPipelineDeploy "$runtimeConfig" $*
     else
         echo "Something went wrong; Subcommand '$subCommand' is not supported!"
         return 1
