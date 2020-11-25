@@ -14,20 +14,5 @@
             // set to true to enable the kubeconfig integration
             "enabled": false
         }
-    },
-    //you probably dont want to touch any of this
-    "dependencies": {
-        "jq": {
-            "version": "1.6",
-            "command": "jq --version | awk -F '-' '{ print $2 }'"
-        },
-        "yq": {
-            "version": "3.4.0",
-            "command": "yq --version 2>&1 | awk '{ print $3 }'"
-        },
-        "aws": {
-            "version": "2.0.57",
-            "command": "aws --version | awk '{ print $1 }' | sed 's/aws-cli\\///'"
-        }
     }
 }

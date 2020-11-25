@@ -18,6 +18,8 @@ function prettyYamlMultiple() {
     yq r -PCd'*' -
 }
 
+# reads (a value at a certain path from) a JSON File
+# args: json file path, jq path to read
 function readJSONFile() {
     requireArg "a filepath" "$1" || return 1
 
@@ -26,11 +28,11 @@ function readJSONFile() {
         return 1
     fi
 
-    cat "$1" | jq -c
+    cat "$1" | jq -cr "${2:-.}"
 }
 
 # reads the value at a certain path from a JSON object
-# args: minified json string, path to read
+# args: minified json string, jq path to read
 function readJSON() {
     requireArg "a JSON string" "$1" || return 1
     requireArg "a jq path" "$2" || return 1
@@ -52,4 +54,26 @@ function writeJSONToYamlFile() {
     requireArg "a target file path" "$2" || return 1
 
     echo "$1" | printYaml > "$2"
+}
+
+function convertJSON5() {
+    requireArg "a JSON5 filepath" "$1" || return 1
+
+    local json5filePath="$1"
+
+    if [[ "${json5filePath: -1}" != '5' ]]; then
+        dtBail "extension must be '.json5'!"
+        return 1
+    fi
+
+    local jsonfilePath="${json5filePath%?}"
+
+    # if we have json5 use it to spit out json, otherwise, poor-mans
+    if ! checkCommand json5; then
+        sed '/\/\//d' $json5filePath > $jsonfilePath
+    else
+        json5 -c $json5filePath
+    fi
+
+    echo $jsonfilePath
 }
