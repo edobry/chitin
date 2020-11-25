@@ -179,3 +179,21 @@ function getK8sImage() {
     kubectl get $resourceType $resourceId --namespace $namespace \
         -o=jsonpath='{$.spec.template.spec.containers[:1].image}'
 }
+
+function getServiceAccountToken() {
+    requireArg "a service account name" "$1" || return 1
+    checkAuthAndFail || return 1
+
+    local serviceAccountTokenName=$(kubectl get serviceaccounts $1 -o json | jq -r '.secrets[0].name')
+    kubectl get secrets $serviceAccountTokenName -o json | jq -r '.data.token' | base64 -D
+}
+
+function kubectlAsServiceAccount() {
+    requireArg "a service account name" "$1" || return 1
+    requireArg "a command to run" "$2" || return 1
+
+    local token=$(getServiceAccountToken "$1")
+    shift
+
+    kubectl --token $token $*
+}
