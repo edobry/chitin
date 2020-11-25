@@ -88,40 +88,9 @@ function checkJSONFlag() {
     echo "$2" | jq -r --arg flagName "$1" 'if .flags[$flagName] then "true" else "" end'
 }
 
-
-function targetMatches() {
-    requireArg "a chart name" "$1" || return 1
-    requireArg "a deployment name" "$2" || return 1
-
-    local chartName="$1"
-    local deploymentName="$2"
-    local deployTarget="$3"
-
-    # if limiting to "all", always pass
-    notSet $deployTarget && return 0
-
-    debug && echo -e "\nTesting instance '$deploymentName' of chart '$chartName'..."
-
-    local chartMatches=false;
-    (isSet $isChartMode && argsContain $chartName $deployTarget) && chartMatches=true
-
-    local nameMatches=false;
-    if notSet $isChartMode; then
-        (isSet $deployTarget && argsContain $deploymentName $deployTarget) && nameMatches=true
-    fi
-
-    if ! isTrue "$chartMatches" && ! isTrue "$nameMatches"; then
-        echo "Does not match!"
-        return 1
-    else
-        echo "Matches!"
-        return 0
-    fi
-}
-
 function k8sPipelineDeploy() {
-    local envConfig="$1"
-    local runtimeConfig="$2"
+    local runtimeConfig="$1"
+    shift
 
     local env=$(readJSON "$runtimeConfig" '.env')
     local envDir=$(readJSON "$runtimeConfig" '.envDir')
@@ -159,148 +128,206 @@ function k8sPipelineDeploy() {
         shift
     fi
 
-    shift
-    unset DP_TARGET
+    local target
     requireArg "deployments to limit to, or 'all' to not limit" "$1" || return 1
     if [[ "$1" = "all" ]]; then
         echo "Processing all deployments"
     else
-        DP_TARGET="$*"
+        target="$*"
 
         additionalMsg=$(isSet $isChartMode && echo " instances of chart" || echo "")
-        echo -e "\nLimiting to$additionalMsg: $(echo "$DP_TARGET" | sed 's/ /, /g')"
+        echo -e "\nLimiting to$additionalMsg: $(echo "$target" | sed 's/ /, /g')"
     fi
-
-    notSet $isDryrunMode && notSet $isTeardownMode && helm repo update
 
     # generate environment-specific configuration and write to a temporary file
     # TODO: add per-chart child-chart config
     local envFile=$envDir/env.json
-    local envValues=$(readJSON "$envConfig" '{ region, nodeSelector: { "eks.amazonaws.com/nodegroup": (.nodegroup // empty) } } ')
+
+    runtimeConfig=$(echo "$runtimeConfig" | jq -nc \
+        --arg envFile "$envFile" \
+        --arg target "$target" \
+        --arg isTeardownMode "$isTeardownMode" \
+        --arg isRenderMode "$isRenderMode" \
+        --arg isChartMode "$isChartMode" \
+        '[inputs, {
+        envFile: $envFile
+        target: $target
+        flags: {
+            isTeardownMode: ($isTeardownMode != ""),
+            isRenderMode: ($isRenderMode != ""),
+            isChartMode: ($isChartMode != "")
+        } }] | add')
+
+    local envValues=$(readJSON "$runtimeConfig" '{
+        region, nodeSelector: {
+            "eks.amazonaws.com/nodegroup": (.nodegroup // empty) } } ')
+
+    notSet $isDryrunMode && notSet $isTeardownMode && helm repo update
 
     isSet $isDryrunMode notSet $isTeardownMode && echo $envValues | prettyYaml
     notSet $isDryrunMode && notSet $isTeardownMode && echo $envValues > $envFile
 
-    function installChart() {
-        local deployment="$1"
-        local allChartDefaults="$2"
+    local chartDefaults=$(readJSON "$runtimeConfig" '.chartDefaults')
 
-        local name=$(readJSON "$deployment" '.key')
-        local config=$(readJSON "$deployment" '.value')
-        local chart=$(readJSON "$config" '.chart')
-
-        local chartDefaults
-        chartDefaults=$(readJSON "$allChartDefaults" ".\"$chart\" | del(.values)")
-        local chartDefaultCode=$?
-
-        local mergedConfig="$config"
-        if [[ $chartDefaultCode -eq 0 ]]; then
-            mergedConfig=$(mergeJSON "$config" "$chartDefaults")
-        fi
-
-        local source=$(readJSON "$mergedConfig" '.source // "remote"')
-        local expectedVersion=$(readJSON "$mergedConfig" '.version // ""')
-
-        if [[ "$source" == "local" ]]; then
-            local path="$chart"
-        elif [[ "$source" == "remote" ]]; then
-            local path="fimbulvetr/$chart"
-        else
-            echo "Invalid source '$source', set 'local' or 'remote'"
-            return 1
-        fi
-
-        (targetMatches "$chart" "$name" "$DP_TARGET") || return 0
-
-        echo -e "\n$(isSet $isRenderMode && echo 'Rendering' || echo 'Deploying') $name..."
-
-        ## version
-        local version
-        if [[ -z $expectedVersion ]]; then
-            local latestVersion
-            latestVersion=$(getLatestChartVersion "$source" "$path")
-            [[ $? -ne 0 ]] && { echo "Couldn't fetch latest version, skipping"; echo "$latestVersion"; return 1; }
-
-            echo "No version configured, using '$chart:$latestVersion'; consider locking the deployment to this version"
-            version=$latestVersion
-        elif ! checkChartVersion "$source" "$path" "$expectedVersion"; then
-            echo "Verson mismatch for $source chart '$path': expected $expectedVersion, not found"
-            return 1
-        else
-            version=$expectedVersion
-        fi
-
-        local helmVersionArg=$([ -n $version ] && echo "--version=$version" || echo "")
-        ##
-
-        ## values
-        local chartDefaultFilePath="$envDir/chartDefaults/$chart.yaml"
-        local chartDefaultFileArg=$([ -f $chartDefaultFilePath ] && echo "-f $chartDefaultFilePath" || echo "")
-
-        local deploymentFilePath="$envDir/deployments/$name.yaml"
-        local deploymentFileArg=$([ -f "$deploymentFilePath" ] && echo "-f $deploymentFilePath" || echo "")
-
-        local chartDefaultInlineValues=$(readJSON "$allChartDefaults" ".\"$chart\" | .values // {}")
-        local chartDefaultInlineValuesFile=$(tempFile)
-        writeJSONToYamlFile "$chartDefaultInlineValues" "$chartDefaultInlineValuesFile"
-
-        local inlineValues=$(readJSON "$mergedConfig" '.values // {}')
-        local inlineValuesFile=$(tempFile)
-        writeJSONToYamlFile "$inlineValues" "$inlineValuesFile"
-        ##
-
-        if [ $source == "local" ] && [ -d $path ] && notSet $isDryrunMode; then
-            if ! helm dep update $path; then
-                echo "Skipping due to missing dependency!"
-                return 1
-            fi
-        fi
-
-        local helmSubCommand=$(isSet $isRenderMode && echo "template" || echo "upgrade --install")
-
-        # precedence order
-        #
-        # chart default
-        #
-        # per env chart default (file)
-        # per env chart default (inlinr)
-        # deployment (file)
-        # deployment (inline)
-
-        local helmCommand="helm $helmSubCommand $name $path $helmVersionArg $helmEnvValues $chartDefaultFileArg \
-            -f $chartDefaultInlineValuesFile $deploymentFileArg -f $inlineValuesFile -f $envFile"
-
-        isSet $isDryrunMode echo $helmCommand
-        notSet $isDryrunMode && $helmCommand
-    }
-
-    function teardownChart() {
-        local name=$(readJSON $1 .key)
-        local source=$(readJSON $1 .value.source)
-        local chart=$(readJSON $1 .value.chart)
-
-        if ! targetMatches "$chart" "$name" "$DP_TARGET"; then return 0; fi
-
-        echo -e "\nUninstalling '$name'..."
-
-        helmCommand="helm uninstall $name"
-
-        isSet $isDryrunMode echo $helmCommand
-        notSet $isDryrunMode && $helmCommand
-    }
-
-    chartDefaults=$(readJSON "$envConfig" '.chartDefaults')
-
-    readJSON "$envConfig" '.deployments | to_entries[] | select(.value.disabled | not)' | \
-    while read -r args; do
+    readJSON "$runtimeConfig" '.deployments | to_entries[] | select(.value.disabled | not)' | \
+    while read -r deploymentOptions; do
         if notSet $isTeardownMode; then
-            installChart "$args" "$chartDefaults"
+            installChart "$runtimeConfig" "$deploymentOptions" "$chartDefaults"
         else
-            teardownChart "$args" "$chartDefaults"
+            teardownChart "$runtimeConfig" "$deploymentOptions" "$chartDefaults"
         fi
     done
 
     notSet $isDryrunMode && notSet $isTeardownMode && rm "$envFile"
+}
+
+function installChart() {
+    local runtimeConfig="$1"
+    local deploymentOptions="$2"
+    local allChartDefaults="$3"
+
+    local envDir=$(readJSON "$runtimeConfig" '.envDir')
+    local envFile=$(readJSON "$runtimeConfig" '.envFile')
+    local target=$(readJSON "$runtimeConfig" '.target')
+    local isRenderMode=$(checkJSONFlag isRenderMode "$runtimeConfig")
+    local isChartMode=$(checkJSONFlag isChartMode "$runtimeConfig")
+    local isDebugMode=$(checkJSONFlag isDebugMode "$runtimeConfig")
+    local isDryrunMode=$(checkJSONFlag isDryrunMode "$runtimeConfig")
+
+    local name=$(readJSON "$deploymentOptions" '.key')
+    local config=$(readJSON "$deploymentOptions" '.value')
+    local chart=$(readJSON "$config" '.chart')
+
+    local chartDefaults
+    chartDefaults=$(readJSON "$allChartDefaults" ".\"$chart\" | del(.values)")
+    local chartDefaultCode=$?
+
+    local mergedConfig="$config"
+    if [[ $chartDefaultCode -eq 0 ]]; then
+        mergedConfig=$(mergeJSON "$config" "$chartDefaults")
+    fi
+
+    local source=$(readJSON "$mergedConfig" '.source // "remote"')
+    local expectedVersion=$(readJSON "$mergedConfig" '.version // ""')
+
+    if [[ "$source" == "local" ]]; then
+        local path="$chart"
+    elif [[ "$source" == "remote" ]]; then
+        local path="fimbulvetr/$chart"
+    else
+        echo "Invalid source '$source', set 'local' or 'remote'"
+        return 1
+    fi
+
+    (targetMatches "$chart" "$name" "$target" "$isChartMode") || return 0
+
+    echo -e "\n$(isSet $isRenderMode && echo 'Rendering' || echo 'Deploying') $name..."
+
+    ## version
+    local version
+    if [[ -z $expectedVersion ]]; then
+        local latestVersion
+        latestVersion=$(getLatestChartVersion "$source" "$path")
+        [[ $? -ne 0 ]] && { echo "Couldn't fetch latest version, skipping"; echo "$latestVersion"; return 1; }
+
+        echo "No version configured, using '$chart:$latestVersion'; consider locking the deployment to this version"
+        version=$latestVersion
+    elif ! checkChartVersion "$source" "$path" "$expectedVersion"; then
+        echo "Verson mismatch for $source chart '$path': expected $expectedVersion, not found"
+        return 1
+    else
+        version=$expectedVersion
+    fi
+
+    local helmVersionArg=$([ -n $version ] && echo "--version=$version" || echo "")
+    ##
+
+    ## values
+    local chartDefaultFilePath="$envDir/chartDefaults/$chart.yaml"
+    local chartDefaultFileArg=$([ -f $chartDefaultFilePath ] && echo "-f $chartDefaultFilePath" || echo "")
+
+    local deploymentFilePath="$envDir/deployments/$name.yaml"
+    local deploymentFileArg=$([ -f "$deploymentFilePath" ] && echo "-f $deploymentFilePath" || echo "")
+
+    local chartDefaultInlineValues=$(readJSON "$allChartDefaults" ".\"$chart\" | .values // {}")
+    local chartDefaultInlineValuesFile=$(tempFile)
+    writeJSONToYamlFile "$chartDefaultInlineValues" "$chartDefaultInlineValuesFile"
+
+    local inlineValues=$(readJSON "$mergedConfig" '.values // {}')
+    local inlineValuesFile=$(tempFile)
+    writeJSONToYamlFile "$inlineValues" "$inlineValuesFile"
+    ##
+
+    if [ $source == "local" ] && [ -d $path ] && notSet $isDryrunMode; then
+        if ! helm dep update $path; then
+            echo "Skipping due to missing dependency!"
+            return 1
+        fi
+    fi
+
+    local helmSubCommand=$(isSet $isRenderMode && echo "template" || echo "upgrade --install")
+
+    # precedence order
+    #
+    # chart default
+    #
+    # per env chart default (file)
+    # per env chart default (inlinr)
+    # deployment (file)
+    # deployment (inline)
+
+    local helmCommand="helm $helmSubCommand $name $path $helmVersionArg $helmEnvValues $chartDefaultFileArg \
+        -f $chartDefaultInlineValuesFile $deploymentFileArg -f $inlineValuesFile -f $envFile"
+
+    isSet $isDryrunMode echo $helmCommand
+    notSet $isDryrunMode && $helmCommand
+}
+
+function teardownChart() {
+    local name=$(readJSON $1 .key)
+    local source=$(readJSON $1 .value.source)
+    local chart=$(readJSON $1 .value.chart)
+
+    if ! targetMatches "$chart" "$name" "$DP_TARGET" "$isChartMode"; then return 0; fi
+
+    echo -e "\nUninstalling '$name'..."
+
+    helmCommand="helm uninstall $name"
+
+    isSet $isDryrunMode echo $helmCommand
+    notSet $isDryrunMode && $helmCommand
+}
+
+function targetMatches() {
+    requireArg "a chart name" "$1" || return 1
+    requireArg "a deployment name" "$2" || return 1
+
+    local chartName="$1"
+    local deploymentName="$2"
+    local deployTarget="$3"
+
+    # if limiting to "all", always pass
+    notSet $deployTarget && return 0
+
+    local isChartMode="$4"
+
+    debug && echo -e "\nTesting instance '$deploymentName' of chart '$chartName'..."
+
+    local chartMatches=false;
+    (isSet $isChartMode && argsContain $chartName $deployTarget) && chartMatches=true
+
+    local nameMatches=false;
+    if notSet $isChartMode; then
+        (isSet $deployTarget && argsContain $deploymentName $deployTarget) && nameMatches=true
+    fi
+
+    if ! isTrue "$chartMatches" && ! isTrue "$nameMatches"; then
+        echo "Does not match!"
+        return 1
+    else
+        echo "Matches!"
+        return 0
+    fi
 }
 
 function k8sPipelineInit() {
