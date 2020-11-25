@@ -55,19 +55,28 @@ function initJq() {
     source $CA_DT_DIR/helpers/json.sh
 }
 
-export CA_DT_CONFIG_FILE="config.json"
-
 function readConfig() {
-    local json5FileName="${CA_DT_CONFIG_FILE}5"
+    local configLocation="${XDG_CONFIG_HOME:-$HOME/.config}/dataeng-tools"
+
+    local jsonConfigFileName="config.json"
+    local jsonConfigFilePath="$configLocation/$jsonConfigFileName"
+    local json5ConfigFileName="${jsonConfigFileName}5"
+    local json5ConfigFilePath="${jsonConfigFilePath}5"
+
+    if [[ ! -f $json5ConfigFilePath ]]; then
+        dtLog "initializing config file"
+        cp $CA_DT_DIR/$json5ConfigFileName $json5ConfigFilePath
+        dtLog "please update the file with your values: $json5ConfigFilePath"
+    fi
 
     # if we have json5 use it to spit out json, otherwise, poor-mans
     if ! checkCommand json5; then
-        sed '/\/\//d' $CA_DT_DIR/$json5FileName > $CA_DT_CONFIG_FILE
+        sed '/\/\//d' $json5ConfigFilePath > $jsonConfigFilePath
     else
-        json5 -c $CA_DT_DIR/$json5FileName
+        json5 -c $json5ConfigFilePath
     fi
 
-    export CA_DT_CONFIG=$(readJSONFile $CA_DT_DIR/$CA_DT_CONFIG_FILE)
+    export CA_DT_CONFIG=$(readJSONFile $jsonConfigFilePath)
 
     local projectDir=$(readJSON "$CA_DT_CONFIG" '.projectDir')
     [[ -z $CA_PROJECT_DIR ]] && export CA_PROJECT_DIR=$projectDir
