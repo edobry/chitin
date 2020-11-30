@@ -154,6 +154,9 @@ Functions:
 The K8s helper provides useful functions for interacting with clusters and various
 associated administrative tasks.
 
+> Note: these functions use the shell's current context/namespace. Please ensure you set them
+appropriately using `kubectx/kubens` before running.
+
 Functions:
  - `debugPod`: launches a debug pod in the cluster preloaded with common networking tools, drops you into its shell when created
  - `downDeploy/upDeploy/reDeploy`: stop/start/restart a deployment
