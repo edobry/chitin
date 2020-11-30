@@ -265,3 +265,33 @@ function deleteVolume() {
         aws ec2 delete-volume --volume-id $id
     done <<< "$volumeIds"
 }
+
+function createVolumeTags() {
+    requireArg "a namespace" "$1" || return 1
+    requireArg "a persistent volume claim name" "$2" || return 1
+    requireArg "a deployment" "$3" || return 1
+    requireArg "a product" "$4" || return 1
+
+    local namespace="$1"
+    local persistentVolumeClaimName="$2"
+    local deployment="$3"
+    local product="$4"
+
+    volumeName=$(kubectl -n $namespace get pvc --field-selector metadata.name=$persistentVolumeClaimName -o jsonpath='{.items[0].spec.volumeName}')
+
+    if [[ -z "$volumeName" ]]; then
+        echo "ERROR: trying to get volumeName for persistentVolumeClaimName $persistentVolumeClaimName in namespace $namespace"
+        return
+    fi
+
+    volumeId=$(kubectl -n $namespace get pv --field-selector metadata.name=$volumeName -o jsonpath='{.items[0].spec.csi.volumeHandle}')
+
+    if [[ -z "$volumeId" ]]; then
+        echo "ERROR: trying to get volumeId/volumeHandle for persistentVolume $volumeName in namespace $namespace"
+        return
+    fi
+
+    echo "tagging volumeId: $volumeId deployment: $deployment product=$product"
+    aws ec2 create-tags --resources $volumeId --tags Key=kube_deployment,Value=$deployment Key=Name,Value=$deployment Key=product,Value=$product
+
+}
