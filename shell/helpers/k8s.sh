@@ -167,6 +167,8 @@ function killDeploymentPods() {
     kubectl delete pods --selector app.kubernetes.io/instance=$deployment
 }
 
+# gets the container image for a given resource
+# args: resource type, resource id, namespace
 function getK8sImage() {
     requireArg "a resource type" "$1" || return 1
     requireArg "a resource identifier" "$2" || return 1
@@ -258,4 +260,70 @@ function snapshotAndScale() {
     kubectl -n $namespace scale deployment $deployment --replicas=$replicas
 }
 
+# gets the token for a given ServiceAccount
+# args: svc acc name
+function getServiceAccountToken() {
+    requireArg "a service account name" "$1" || return 1
+    checkAuthAndFail || return 1
 
+    local serviceAccountTokenName=$(kubectl get serviceaccounts $1 -o json | jq -r '.secrets[0].name')
+    kubectl get secrets $serviceAccountTokenName -o json | jq -r '.data.token' | base64 -D
+}
+
+# creates a temporary k8s context for a ServiceAccount
+# args: svc acc name
+function createTmpK8sSvcAccContext() {
+    requireArg "a service account name" "$1" || return 1
+    local svcAccountName="$1"
+
+    local token=$(getServiceAccountToken "$svcAccountName")
+    kubectl config set-credentials $svcAccountName --token $token > /dev/null
+
+    local currentCtx=$(getCurrentK8sContext)
+
+    local ctxName="tmp-ctx-svc-acc-$svcAccountName"
+    kubectl config set-context $ctxName \
+        --cluster $(readJSON "$currentCtx" '.cluster') \
+        --namespace $(readJSON "$currentCtx" '.namespace') \
+        --user $svcAccountName > /dev/null
+
+    echo "$ctxName"
+}
+
+# impersonates a given ServiceAccount and runs a command
+# args: svc acc name, command name, command args (optional[])
+function runAsServiceAccount() {
+    requireArg "a service account name" "$1" || return 1
+    requireArg "a command name" "$2" || return 1
+    checkAuthAndFail || return 1
+
+    local svcAccountName="$1"
+    local command="$2"
+    shift && shift
+
+    echo "Creating temporary service account context for '$svcAccountName'..."
+    local ctxName=$(createTmpK8sSvcAccContext $svcAccountName)
+    local currentCtx=$(kubectx -c)
+    kubectx $ctxName
+
+    echo "Running command in context..."
+    echo -e "\n------ START COMMAND OUTPUT ------"
+    $command $*
+    echo -e "------ END COMMAND OUTPUT ------\n"
+
+    echo "Cleaning up temporary context..."
+    kubectx $currentCtx
+    deleteK8sContext $ctxName
+}
+
+# impersonates a given ServiceAccount and runs a kubectl command using its token
+# args: svc acc name, kubectl command name, command args (optional[])
+function kubectlAsServiceAccount() {
+    requireArg "a service account name" "$1" || return 1
+    requireArg "a kubectl command to run" "$2" || return 1
+
+    local svcAccountName="$1"
+    shift
+
+    runAsServiceAccount $svcAccountName kubectl $*
+}
