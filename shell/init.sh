@@ -59,8 +59,12 @@ function initJq() {
     source $CA_DT_DIR/helpers/json.sh
 }
 
+function getDTConfigLocation() {
+    echo "${XDG_CONFIG_HOME:-$HOME/.config}/dataeng-tools"
+}
+
 function readConfig() {
-    local configLocation="${XDG_CONFIG_HOME:-$HOME/.config}/dataeng-tools"
+    local configLocation=$(getDTConfigLocation)
 
     local json5ConfigFileName="config.json5"
     local json5ConfigFilePath="$configLocation/$json5ConfigFileName"
@@ -78,7 +82,7 @@ function readConfig() {
 
     export CA_DT_CONFIG=$(readJSONFile $configFile)
 
-    if [[ ! -z $CA_PROJECT_DIR ]]; then
+    if [[ -z $CA_DT_ENV_INITIALIZED ]] && [[ ! -z $CA_PROJECT_DIR ]]; then
         dtLog "[DEPRECATION WARNING] you are using the legacy DT environment variables (ie CA_PROJECT_DIR)"
         dtLog "[DEPRECATION WARNING] these will no longer be respected in the next major release"
         dtLog "[DEPRECATION WARNING] please switch to setting your values in $json5ConfigFilePath ASAP"
@@ -131,6 +135,8 @@ function init() {
     if [ -n "$ZSH_VERSION" ]; then
         loadDir $CA_DT_DIR/helpers/*.zsh
     fi
+
+    export CA_DT_ENV_INITIALIZED=true
 }
 
 function reinitDT() {
