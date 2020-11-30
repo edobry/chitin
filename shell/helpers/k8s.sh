@@ -167,6 +167,8 @@ function killDeploymentPods() {
     kubectl delete pods --selector app.kubernetes.io/instance=$deployment
 }
 
+# gets the container image for a given resource
+# args: resource type, resource id, namespace
 function getK8sImage() {
     requireArg "a resource type" "$1" || return 1
     requireArg "a resource identifier" "$2" || return 1
@@ -178,4 +180,150 @@ function getK8sImage() {
 
     kubectl get $resourceType $resourceId --namespace $namespace \
         -o=jsonpath='{$.spec.template.spec.containers[:1].image}'
+}
+
+function findVolumeIdByPVC() {
+    requireArg "a namespace" "$1" || return 1
+    requireArg "a persistent volume claim name" "$2" || return 1
+
+    local namespace="$1"
+    local persistentVolumeClaimName="$2"
+
+    volumeName=$(kubectl -n $namespace get pvc --field-selector metadata.name=$persistentVolumeClaimName -o jsonpath='{.items[0].spec.volumeName}')
+
+    if [[ -z "$volumeName" ]]; then
+        echo "ERROR: trying to get volumeName for persistentVolumeClaimName $persistentVolumeClaimName in namespace $namespace"
+        return
+    fi
+
+    volumeId=$(kubectl -n $namespace get pv --field-selector metadata.name=$volumeName -o jsonpath='{.items[0].spec.csi.volumeHandle}')
+
+    if [[ -z "$volumeId" ]]; then
+        echo "ERROR: trying to get volumeId/volumeHandle for persistentVolume $volumeName in namespace $namespace"
+        return
+    fi
+
+    echo "$volumeId"
+}
+
+function createVolumeTags() {
+    requireArg "a namespace" "$1" || return 1
+    requireArg "a persistent volume claim name" "$2" || return 1
+    requireArg "a deployment" "$3" || return 1
+    requireArg "a product" "$4" || return 1
+
+    local namespace="$1"
+    local persistentVolumeClaimName="$2"
+    local deployment="$3"
+    local product="$4"
+
+    volumeId=$(findVolumeIdByPVC $1 $2)
+
+    if [[ -z "$volumeId" ]]; then
+        return
+    fi
+
+    echo "tagging volumeId: $volumeId deployment: $deployment product=$product"
+    aws ec2 create-tags --resources $volumeId --tags Key=kube_deployment,Value=$deployment Key=Name,Value=$deployment Key=product,Value=$product
+}
+
+function snapshotAndScale() {
+    requireArg "a namespace" "$1" || return 1
+    requireArg "a persistent volume claim name" "$2" || return 1
+    requireArg "a deployment" "$3" || return 1
+    requireArg "a template file" "$4" || return 1
+
+    local namespace="$1"
+    local persistentVolumeClaimName="$2"
+    local deployment="$3"
+    local templateFile="$4"
+
+    volumeId=$(findVolumeIdByPVC $1 $2)
+
+    if [[ -z "$volumeId" ]]; then
+        return
+    fi
+
+    replicas=$(kubectl get deployment $deployment -o jsonpath='{.spec.replicas}')
+
+    if [[ -z "$replicas" ]]; then
+        echo "ERROR: unable to get replicas for deployment: $deployment in namespace: $namespace"
+        return
+    fi
+
+    echo "scale deployment $deployment to zero"
+    kubectl -n $namespace scale deployment $deployment --replicas=0
+    echo "take snapshot of $volumeId"
+    cat $templateFile | sed -e "s/timestamp/$(date '+%Y%m%d%H%M')/g" > ~/snapshot.yaml    
+    kubectl -n $namespace apply -f ~/snapshot.yaml
+    echo "scale deployment $deployment to $replicas replicas"
+    kubectl -n $namespace scale deployment $deployment --replicas=$replicas
+}
+
+# gets the token for a given ServiceAccount
+# args: svc acc name
+function getServiceAccountToken() {
+    requireArg "a service account name" "$1" || return 1
+    checkAuthAndFail || return 1
+
+    local serviceAccountTokenName=$(kubectl get serviceaccounts $1 -o json | jq -r '.secrets[0].name')
+    kubectl get secrets $serviceAccountTokenName -o json | jq -r '.data.token' | base64 -D
+}
+
+# creates a temporary k8s context for a ServiceAccount
+# args: svc acc name
+function createTmpK8sSvcAccContext() {
+    requireArg "a service account name" "$1" || return 1
+    local svcAccountName="$1"
+
+    local token=$(getServiceAccountToken "$svcAccountName")
+    kubectl config set-credentials $svcAccountName --token $token > /dev/null
+
+    local currentCtx=$(getCurrentK8sContext)
+
+    local ctxName="tmp-ctx-svc-acc-$svcAccountName"
+    kubectl config set-context $ctxName \
+        --cluster $(readJSON "$currentCtx" '.cluster') \
+        --namespace $(readJSON "$currentCtx" '.namespace') \
+        --user $svcAccountName > /dev/null
+
+    echo "$ctxName"
+}
+
+# impersonates a given ServiceAccount and runs a command
+# args: svc acc name, command name, command args (optional[])
+function runAsServiceAccount() {
+    requireArg "a service account name" "$1" || return 1
+    requireArg "a command name" "$2" || return 1
+    checkAuthAndFail || return 1
+
+    local svcAccountName="$1"
+    local command="$2"
+    shift && shift
+
+    echo "Creating temporary service account context for '$svcAccountName'..."
+    local ctxName=$(createTmpK8sSvcAccContext $svcAccountName)
+    local currentCtx=$(kubectx -c)
+    kubectx $ctxName
+
+    echo "Running command in context..."
+    echo -e "\n------ START COMMAND OUTPUT ------"
+    $command $*
+    echo -e "------ END COMMAND OUTPUT ------\n"
+
+    echo "Cleaning up temporary context..."
+    kubectx $currentCtx
+    deleteK8sContext $ctxName
+}
+
+# impersonates a given ServiceAccount and runs a kubectl command using its token
+# args: svc acc name, kubectl command name, command args (optional[])
+function kubectlAsServiceAccount() {
+    requireArg "a service account name" "$1" || return 1
+    requireArg "a kubectl command to run" "$2" || return 1
+
+    local svcAccountName="$1"
+    shift
+
+    runAsServiceAccount $svcAccountName kubectl $*
 }
