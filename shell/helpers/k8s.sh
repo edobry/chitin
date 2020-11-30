@@ -182,6 +182,84 @@ function getK8sImage() {
         -o=jsonpath='{$.spec.template.spec.containers[:1].image}'
 }
 
+function findVolumeIdByPVC() {
+    requireArg "a namespace" "$1" || return 1
+    requireArg "a persistent volume claim name" "$2" || return 1
+
+    local namespace="$1"
+    local persistentVolumeClaimName="$2"
+
+    volumeName=$(kubectl -n $namespace get pvc --field-selector metadata.name=$persistentVolumeClaimName -o jsonpath='{.items[0].spec.volumeName}')
+
+    if [[ -z "$volumeName" ]]; then
+        echo "ERROR: trying to get volumeName for persistentVolumeClaimName $persistentVolumeClaimName in namespace $namespace"
+        return
+    fi
+
+    volumeId=$(kubectl -n $namespace get pv --field-selector metadata.name=$volumeName -o jsonpath='{.items[0].spec.csi.volumeHandle}')
+
+    if [[ -z "$volumeId" ]]; then
+        echo "ERROR: trying to get volumeId/volumeHandle for persistentVolume $volumeName in namespace $namespace"
+        return
+    fi
+
+    echo "$volumeId"
+}
+
+function createVolumeTags() {
+    requireArg "a namespace" "$1" || return 1
+    requireArg "a persistent volume claim name" "$2" || return 1
+    requireArg "a deployment" "$3" || return 1
+    requireArg "a product" "$4" || return 1
+
+    local namespace="$1"
+    local persistentVolumeClaimName="$2"
+    local deployment="$3"
+    local product="$4"
+
+    volumeId=$(findVolumeIdByPVC $1 $2)
+
+    if [[ -z "$volumeId" ]]; then
+        return
+    fi
+
+    echo "tagging volumeId: $volumeId deployment: $deployment product=$product"
+    aws ec2 create-tags --resources $volumeId --tags Key=kube_deployment,Value=$deployment Key=Name,Value=$deployment Key=product,Value=$product
+}
+
+function snapshotAndScale() {
+    requireArg "a namespace" "$1" || return 1
+    requireArg "a persistent volume claim name" "$2" || return 1
+    requireArg "a deployment" "$3" || return 1
+    requireArg "a template file" "$4" || return 1
+
+    local namespace="$1"
+    local persistentVolumeClaimName="$2"
+    local deployment="$3"
+    local templateFile="$4"
+
+    volumeId=$(findVolumeIdByPVC $1 $2)
+
+    if [[ -z "$volumeId" ]]; then
+        return
+    fi
+
+    replicas=$(kubectl get deployment $deployment -o jsonpath='{.spec.replicas}')
+
+    if [[ -z "$replicas" ]]; then
+        echo "ERROR: unable to get replicas for deployment: $deployment in namespace: $namespace"
+        return
+    fi
+
+    echo "scale deployment $deployment to zero"
+    kubectl -n $namespace scale deployment $deployment --replicas=0
+    echo "take snapshot of $volumeId"
+    cat $templateFile | sed -e "s/timestamp/$(date '+%Y%m%d%H%M')/g" > ~/snapshot.yaml    
+    kubectl -n $namespace apply -f ~/snapshot.yaml
+    echo "scale deployment $deployment to $replicas replicas"
+    kubectl -n $namespace scale deployment $deployment --replicas=$replicas
+}
+
 # gets the token for a given ServiceAccount
 # args: svc acc name
 function getServiceAccountToken() {
