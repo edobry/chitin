@@ -179,3 +179,27 @@ function getK8sImage() {
     kubectl get $resourceType $resourceId --namespace $namespace \
         -o=jsonpath='{$.spec.template.spec.containers[:1].image}'
 }
+
+function findVolumeIdByPVC() {
+    requireArg "a namespace" "$1" || return 1
+    requireArg "a persistent volume claim name" "$2" || return 1
+
+    local namespace="$1"
+    local persistentVolumeClaimName="$2"
+
+    volumeName=$(kubectl -n $namespace get pvc --field-selector metadata.name=$persistentVolumeClaimName -o jsonpath='{.items[0].spec.volumeName}')
+
+    if [[ -z "$volumeName" ]]; then
+        echo "ERROR: trying to get volumeName for persistentVolumeClaimName $persistentVolumeClaimName in namespace $namespace"
+        return
+    fi
+
+    volumeId=$(kubectl -n $namespace get pv --field-selector metadata.name=$volumeName -o jsonpath='{.items[0].spec.csi.volumeHandle}')
+
+    if [[ -z "$volumeId" ]]; then
+        echo "ERROR: trying to get volumeId/volumeHandle for persistentVolume $volumeName in namespace $namespace"
+        return
+    fi
+
+    echo "$volumeId"
+}

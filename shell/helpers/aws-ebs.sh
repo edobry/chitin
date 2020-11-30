@@ -277,21 +277,12 @@ function createVolumeTags() {
     local deployment="$3"
     local product="$4"
 
-    volumeName=$(kubectl -n $namespace get pvc --field-selector metadata.name=$persistentVolumeClaimName -o jsonpath='{.items[0].spec.volumeName}')
-
-    if [[ -z "$volumeName" ]]; then
-        echo "ERROR: trying to get volumeName for persistentVolumeClaimName $persistentVolumeClaimName in namespace $namespace"
-        return
-    fi
-
-    volumeId=$(kubectl -n $namespace get pv --field-selector metadata.name=$volumeName -o jsonpath='{.items[0].spec.csi.volumeHandle}')
+    volumeId=$(findVolumeIdByPVC $1 $2)
 
     if [[ -z "$volumeId" ]]; then
-        echo "ERROR: trying to get volumeId/volumeHandle for persistentVolume $volumeName in namespace $namespace"
         return
     fi
 
     echo "tagging volumeId: $volumeId deployment: $deployment product=$product"
     aws ec2 create-tags --resources $volumeId --tags Key=kube_deployment,Value=$deployment Key=Name,Value=$deployment Key=product,Value=$product
-
 }
