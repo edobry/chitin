@@ -78,6 +78,12 @@ function readConfig() {
 
     export CA_DT_CONFIG=$(readJSONFile $configFile)
 
+    if [[ ! -z $CA_PROJECT_DIR ]]; then
+        dtLog "[DEPRECATION WARNING] you are using the legacy DT environment variables (ie CA_PROJECT_DIR)"
+        dtLog "[DEPRECATION WARNING] these will no longer be respected in the next major release"
+        dtLog "[DEPRECATION WARNING] please switch to setting your values in $json5ConfigFilePath ASAP"
+    fi
+
     local projectDir=$(readJSON "$CA_DT_CONFIG" '.projectDir')
     [[ -z $CA_PROJECT_DIR ]] && export CA_PROJECT_DIR=$projectDir
 
