@@ -8,7 +8,11 @@ may change in the future.
 
 Make sure the following programs are installed on your computer (not every helper
 requires each one, but you may want to install them all to save time):
+
+Required:
 - `jq v1.6` [link](https://github.com/stedolan/jq)
+
+Optionally required:
 - `yq v3.3.2` [link](https://github.com/mikefarah/yq)
 - `aws`
 - `terraform`
@@ -25,11 +29,15 @@ Linux only:
 
 ### Setup
 
-1. Clone this repository
-2. Install the prerequisites for the module(s) you want to use (see docs below)
-3. Copy the contents of `chainalysis-env-template.sh` into your profile, and set the values accordingly
-4. Add `source $CA_PROJECT_DIR/dataeng-tools/shell/init.sh` to your profile, AFTER
-the lines you added in the previous step
+1. Install the prerequisites for the module(s) you want to use (see docs below)
+2. Clone this repository to your usual location
+3. Add the following line to your profile (ie `.bashrc` or `.zshrc`), substituting `<location>`:
+
+   `source <location>/dataeng-tools/shell/init.sh`
+
+4. Start a new shell session, and follow the instructions to modify the config file at `~/.config/dataeng-tools/config.json5` (or equivalent).
+
+### Modules
 
 #### AWS
 
