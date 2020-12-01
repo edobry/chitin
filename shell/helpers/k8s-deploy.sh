@@ -42,13 +42,13 @@ function k8sPipeline() {
         --arg isDryrunMode "$isDryrunMode" \
         --arg envName "$envName" \
         --arg envDir "$envDir" \
-        '[inputs, {
+        'inputs * {
         env: $envName,
         envDir: $envDir,
         flags: {
             isDebugMode: ($isDebugMode != ""),
             isDryrunMode: ($isDryrunMode != "")
-        } }] | add')
+        } }')
 
     isSet "$isDebugMode" && readJSON "$runtimeConfig" '.'
 
@@ -149,14 +149,14 @@ function k8sPipelineDeploy() {
         --arg isTeardownMode "$isTeardownMode" \
         --arg isRenderMode "$isRenderMode" \
         --arg isChartMode "$isChartMode" \
-        '[inputs, {
-        envFile: $envFile
-        target: $target
+        'inputs * {
+        envFile: $envFile,
+        target: $target,
         flags: {
             isTeardownMode: ($isTeardownMode != ""),
             isRenderMode: ($isRenderMode != ""),
             isChartMode: ($isChartMode != "")
-        } }] | add')
+        } }')
 
     local envValues=$(readJSON "$runtimeConfig" '{
         region, nodeSelector: {
