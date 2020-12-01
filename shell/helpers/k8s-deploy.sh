@@ -211,9 +211,9 @@ function installChart() {
     local expectedVersion=$(readJSON "$mergedConfig" '.version // ""')
 
     if [[ "$source" == "local" ]]; then
-        local path="$chart"
+        local chartPath="$chart"
     elif [[ "$source" == "remote" ]]; then
-        local path="fimbulvetr/$chart"
+        local chartPath="fimbulvetr/$chart"
     else
         echo "Invalid source '$source', set 'local' or 'remote'"
         return 1
@@ -227,13 +227,13 @@ function installChart() {
     local version
     if [[ -z $expectedVersion ]]; then
         local latestVersion
-        latestVersion=$(getLatestChartVersion "$source" "$path")
+        latestVersion=$(getLatestChartVersion "$source" "$chartPath")
         [[ $? -ne 0 ]] && { echo "Couldn't fetch latest version, skipping"; echo "$latestVersion"; return 1; }
 
         echo "No version configured, using '$chart:$latestVersion'; consider locking the deployment to this version"
         version=$latestVersion
-    elif ! checkChartVersion "$source" "$path" "$expectedVersion"; then
-        echo "Verson mismatch for $source chart '$path': expected $expectedVersion, not found"
+    elif ! checkChartVersion "$source" "$chartPath" "$expectedVersion"; then
+        echo "Verson mismatch for $source chart '$chartPath': expected $expectedVersion, not found"
         return 1
     else
         version=$expectedVersion
@@ -258,8 +258,8 @@ function installChart() {
     writeJSONToYamlFile "$inlineValues" "$inlineValuesFile"
     ##
 
-    if [ $source == "local" ] && [ -d $path ] && notSet $isDryrunMode; then
-        if ! helm dep update $path; then
+    if [[ $source == "local" ]] && [[ -d $chartPath ]] && notSet $isDryrunMode; then
+        if ! helm dep update $chartPath; then
             echo "Skipping due to missing dependency!"
             return 1
         fi
@@ -276,7 +276,7 @@ function installChart() {
     # deployment (file)
     # deployment (inline)
 
-    local helmCommand="helm $helmSubCommand $name $path $helmVersionArg $helmEnvValues $chartDefaultFileArg \
+    local helmCommand="helm $helmSubCommand $name $chartPath $helmVersionArg $helmEnvValues $chartDefaultFileArg \
         -f $chartDefaultInlineValuesFile $deploymentFileArg -f $inlineValuesFile -f $envFile"
 
     isSet "$isDryrunMode" && echo "$helmCommand"
@@ -424,7 +424,7 @@ function k8sPipelineInit() {
     }
 
     function installService() {
-        path=$1
+        chartPath=$1
         # grab just the filename, without the extension
         name=$(echo $1 | awk -F '/' '{ print $4 }' | sed 's/.yaml//')
         shift
@@ -445,7 +445,7 @@ function k8sPipelineInit() {
             fi
         fi
 
-        helmCommand="helm upgrade --install $name ../charts/external/external-service -f $path $* $helmCredsConf"
+        helmCommand="helm upgrade --install $name ../charts/external/external-service -f $chartPath $* $helmCredsConf"
         isSet $isDryrunMode echo $helmCommand
         notSet $isDryrunMode && $helmCommand
     }
