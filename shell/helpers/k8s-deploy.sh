@@ -50,7 +50,7 @@ function k8sPipeline() {
             isDryrunMode: ($isDryrunMode != "")
         } }] | add')
 
-    readJSON "$runtimeConfig" '.'
+    isSet "$isDebugMode" && readJSON "$runtimeConfig" '.'
 
     local account=$(readJSON "$runtimeConfig" '.account')
     local cluster=$(readJSON "$runtimeConfig" '.context')
@@ -219,7 +219,7 @@ function installChart() {
         return 1
     fi
 
-    (targetMatches "$chart" "$name" "$target" "$isChartMode") || return 0
+    (targetMatches "$chart" "$name" "$target" "$isChartMode" "$isDebugMode") || return 0
 
     echo -e "\n$(isSet $isRenderMode && echo 'Rendering' || echo 'Deploying') $name..."
 
@@ -279,8 +279,8 @@ function installChart() {
     local helmCommand="helm $helmSubCommand $name $path $helmVersionArg $helmEnvValues $chartDefaultFileArg \
         -f $chartDefaultInlineValuesFile $deploymentFileArg -f $inlineValuesFile -f $envFile"
 
-    isSet $isDryrunMode echo $helmCommand
-    notSet $isDryrunMode && $helmCommand
+    isSet "$isDryrunMode" && echo "$helmCommand"
+    notSet "$isDryrunMode" && $helmCommand
 }
 
 function teardownChart() {
@@ -310,8 +310,9 @@ function targetMatches() {
     notSet $deployTarget && return 0
 
     local isChartMode="$4"
+    local isDebugMode="$5"
 
-    debug && echo -e "\nTesting instance '$deploymentName' of chart '$chartName'..."
+    isSet $isDebugMode && echo -e "\nTesting instance '$deploymentName' of chart '$chartName'..."
 
     local chartMatches=false;
     (isSet $isChartMode && argsContain $chartName $deployTarget) && chartMatches=true
@@ -322,10 +323,10 @@ function targetMatches() {
     fi
 
     if ! isTrue "$chartMatches" && ! isTrue "$nameMatches"; then
-        echo "Does not match!"
+        isSet $isDebugMode && echo "Does not match!"
         return 1
     else
-        echo "Matches!"
+        isSet $isDebugMode && echo "Matches!"
         return 0
     fi
 }
