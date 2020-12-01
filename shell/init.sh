@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
 [[ -z "$CA_DT_DEBUG" ]] || set -x
 
 if [[ -z "$IS_DOCKER" ]]; then
