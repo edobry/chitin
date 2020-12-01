@@ -1,0 +1,18 @@
+{
+    // directory you clone git repositories to
+    "projectDir": "",
+    "modules": {
+        "aws-auth": {
+            // set to true to enable the aws authentication helper shell integration
+            "enabled": false,
+            // <username>@chainalysis.com
+            "googleUsername": "",
+            // optional, if you don't set this, use awsOrg to set interactively
+            "departmentRole": ""
+        },
+        "k8s-env": {
+            // set to true to enable the kubeconfig integration
+            "enabled": false
+        }
+    }
+}

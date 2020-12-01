@@ -8,7 +8,11 @@ may change in the future.
 
 Make sure the following programs are installed on your computer (not every helper
 requires each one, but you may want to install them all to save time):
+
+Required:
 - `jq v1.6` [link](https://github.com/stedolan/jq)
+
+Optionally required:
 - `yq v3.3.2` [link](https://github.com/mikefarah/yq)
 - `aws`
 - `terraform`
@@ -25,11 +29,15 @@ Linux only:
 
 ### Setup
 
-1. Clone this repository
-2. Install the prerequisites for the module(s) you want to use (see docs below)
-3. Copy the contents of `chainalysis-env-template.sh` into your profile, and set the values accordingly
-4. Add `source $CA_PROJECT_DIR/dataeng-tools/shell/init.sh` to your profile, AFTER
-the lines you added in the previous step
+1. Install the prerequisites for the module(s) you want to use (see docs below)
+2. Clone this repository to your usual location
+3. Add the following line to your profile (ie `.bashrc` or `.zshrc`), substituting `<location>`:
+
+   `source <location>/dataeng-tools/shell/init.sh`
+
+4. Start a new shell session, and follow the instructions to modify the config file at `~/.config/dataeng-tools/config.json5` (or equivalent).
+
+### Modules
 
 #### AWS
 
@@ -143,12 +151,19 @@ Functions:
 
 The `k8s-env` helper sets up your Kubernetes configuration for working with our EKS environments. It works by adding the `eksconfig.yaml` file to your `KUBECONFIG` environment variable. This shell integration is disabled by default, but you can enable it by setting `DE_K8S_CONFIG_ENABLED=true` in step 2 of the setup. This is recommended, but not required. If you do choose to use it, however, you may want to delete any existing EKS-relevant config from your `~/.kube/config` file, to avoid conflicts.
 
+Functions:
+- `getCurrentK8sContext`: gets the current k8s context config
+- `deleteK8sContext`: deletes a k8s context
+
 ##### Helpers
 
 > Requires: `kubectl`, `yq`, `jq`, `fzf` (optional)
 
 The K8s helper provides useful functions for interacting with clusters and various
 associated administrative tasks.
+
+> Note: these functions use the shell's current context/namespace. Please ensure you set them
+appropriately using `kubectx/kubens` before running.
 
 Functions:
  - `debugPod`: launches a debug pod in the cluster preloaded with common networking tools, drops you into its shell when created
@@ -158,6 +173,11 @@ Functions:
  - `getServiceExternalUrl`: fetches the external url, with port, for a Service with a load balancer configured
  - `getServiceEndpoint`: fetches the endpoint url for both services and proxies to zen garden
  - `killDeploymentPods`: kills all pods for a deployment, useful for forcing a restart during dev
+ - `getK8sImage`: gets the container image for a given resource
+ - `getServiceAccountToken`: gets the token for a given ServiceAccount
+ - `createTmpK8sSvcAccContext`: creates a temporary k8s context for a ServiceAccount
+ - `runAsServiceAccount`: impersonates a given ServiceAccount and runs a command
+ - `kubectlAsServiceAccount`: impersonates a given ServiceAccount and runs a kubectl command using its token
 
 #### Kafka
 

@@ -14,3 +14,9 @@ function checkEmbeddedDTVersion() {
     git describe HEAD --tags
     popd > /dev/null
 }
+
+function modifyDTConfig() {
+    nano $(getDTConfigLocation)/config.json5
+    echo "DT config updated, reinitializing..."
+    reinitDT
+}
