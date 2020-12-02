@@ -256,6 +256,20 @@ function installChart() {
     writeJSONToYamlFile "$inlineValues" "$inlineValuesFile"
     ##
 
+    ## secrets
+    # only use SSM credentials for postgres services
+    local helmCredsConf
+    if [[ $name == "postgres-"* ]]; then
+        resourceOverride=$(cat $CONFIG_FILE | jq -r ".resourcesOverrides.\"$name\" // empty")
+
+        if [[ -z $resourceOverride ]]; then
+            helmCredsConf="--set credentials.username=$rdsUsername,credentials.password=$rdsPassword"
+        elif [[ $resourceOverride == "readonly" ]]; then
+            helmCredsConf="--set credentials.username=$readonlyUsername,credentials.password=$readonlyPassword"
+        fi
+    fi
+    ##
+
     if [[ $source == "local" ]] && [[ -d $chartPath ]] && notSet $isDryrunMode; then
         if ! helm dep update $chartPath; then
             echo "Skipping due to missing dependency!"
@@ -275,7 +289,7 @@ function installChart() {
     # deployment (inline)
 
     local helmCommand="helm $helmSubCommand $name $chartPath $helmVersionArg $helmEnvValues $chartDefaultFileArg \
-        -f $chartDefaultInlineValuesFile $deploymentFileArg -f $inlineValuesFile -f $envFile"
+        -f $chartDefaultInlineValuesFile $deploymentFileArg -f $inlineValuesFile -f $envFile $helmCredsConf"
 
     isSet "$isDryrunMode" && echo "$helmCommand"
     notSet "$isDryrunMode" && $helmCommand
@@ -440,17 +454,6 @@ function k8sPipelineInit() {
 
         echo -e "\nInstalling service '$name'..."
 
-        #only use SSM credentials for postgres services
-        local helmCredsConf
-        if [[ $name == "postgres"* ]]; then
-            resourceOverride=$(cat $CONFIG_FILE | jq -r ".resourcesOverrides.\"$name\" // empty")
-
-            if [[ -z $resourceOverride ]]; then
-                helmCredsConf="--set credentials.username=$rdsUsername,credentials.password=$rdsPassword"
-            elif [[ $resourceOverride == "readonly" ]]; then
-                helmCredsConf="--set credentials.username=$readonlyUsername,credentials.password=$readonlyPassword"
-            fi
-        fi
 
         helmCommand="helm upgrade --install $name ../charts/external/external-service -f $chartPath $* $helmCredsConf"
         isSet $isDryrunMode echo $helmCommand
