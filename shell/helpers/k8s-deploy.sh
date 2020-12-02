@@ -221,6 +221,14 @@ function installChart() {
 
     echo -e "\n$(isSet $isRenderMode && echo 'Rendering' || echo 'Deploying') $name..."
 
+    # update chart deps
+    if [[ $source == "local" ]] && [[ -d $chartPath ]] && notSet $isDryrunMode; then
+        if ! helm dep update $chartPath; then
+            echo "Skipping due to missing dependency!"
+            return 1
+        fi
+    fi
+
     ## version
     local version
     if [[ -z $expectedVersion ]]; then
@@ -260,7 +268,7 @@ function installChart() {
     # only use SSM credentials for postgres services
     local helmCredsConf
     if [[ $name == "postgres-"* ]]; then
-        resourceOverride=$(cat $CONFIG_FILE | jq -r ".resourcesOverrides.\"$name\" // empty")
+        local resourceOverride=$(cat $CONFIG_FILE | jq -r ".resourcesOverrides.\"$name\" // empty")
 
         if [[ -z $resourceOverride ]]; then
             helmCredsConf="--set credentials.username=$rdsUsername,credentials.password=$rdsPassword"
@@ -269,13 +277,6 @@ function installChart() {
         fi
     fi
     ##
-
-    if [[ $source == "local" ]] && [[ -d $chartPath ]] && notSet $isDryrunMode; then
-        if ! helm dep update $chartPath; then
-            echo "Skipping due to missing dependency!"
-            return 1
-        fi
-    fi
 
     local helmSubCommand=$(isSet $isRenderMode && echo "template" || echo "upgrade --install")
 
