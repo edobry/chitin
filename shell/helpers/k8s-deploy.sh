@@ -141,7 +141,7 @@ function k8sPipelineDeploy() {
 
     # generate environment-specific configuration and write to a temporary file
     # TODO: add per-chart child-chart config
-    local envFile=$envDir/env.json
+    local envFile=$(tempFile)
 
     runtimeConfig=$(echo "$runtimeConfig" | jq -nc \
         --arg envFile "$envFile" \
