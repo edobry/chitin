@@ -107,7 +107,7 @@ function k8sPipelineDeploy() {
 
     # to use, call with `teardown` as the second arg (after env)
     local isTeardownMode
-    if [[ "$2" == "teardown" ]]; then
+    if [[ "$1" == "teardown" ]]; then
         isTeardownMode=true
         echo -e "\n-- TEARDOWN MODE --"
         shift
@@ -115,7 +115,7 @@ function k8sPipelineDeploy() {
 
     # to use, call with `render` as the second arg (after env)
     local isRenderMode
-    if [[ "$2" == "render" ]]; then
+    if [[ "$1" == "render" ]]; then
         isRenderMode=true
         echo -e "\n-- RENDER MODE --"
         shift
@@ -123,7 +123,7 @@ function k8sPipelineDeploy() {
 
     # to use, call with `chart` as the second arg (after env)
     local isChartMode
-    if [[ "$2" == "chart" ]]; then
+    if [[ "$1" == "chart" ]]; then
         isChartMode=true
         shift
     fi
@@ -169,13 +169,11 @@ function k8sPipelineDeploy() {
 
     local chartDefaults=$(readJSON "$runtimeConfig" '.chartDefaults')
 
+    local modeCommand=$(notSet $isTeardownMode && echo installChart || echo teardownChart)
+
     readJSON "$runtimeConfig" '.deployments | to_entries[] | select(.value.disabled | not)' | \
     while read -r deploymentOptions; do
-        if notSet $isTeardownMode; then
-            installChart "$runtimeConfig" "$deploymentOptions" "$chartDefaults"
-        else
-            teardownChart "$runtimeConfig" "$deploymentOptions" "$chartDefaults"
-        fi
+         $modeCommand "$runtimeConfig" "$deploymentOptions" "$chartDefaults"
     done
 
     notSet $isDryrunMode && notSet $isTeardownMode && rm "$envFile"
@@ -284,18 +282,27 @@ function installChart() {
 }
 
 function teardownChart() {
-    local name=$(readJSON $1 .key)
-    local source=$(readJSON $1 .value.source)
-    local chart=$(readJSON $1 .value.chart)
+    local runtimeConfig="$1"
+    local deploymentOptions="$2"
+    local allChartDefaults="$3"
 
-    if ! targetMatches "$chart" "$name" "$DP_TARGET" "$isChartMode"; then return 0; fi
+    local target=$(readJSON "$runtimeConfig" '.target')
+    local isChartMode=$(checkJSONFlag isChartMode "$runtimeConfig")
+    local isDebugMode=$(checkJSONFlag isDebugMode "$runtimeConfig")
+    local isDryrunMode=$(checkJSONFlag isDryrunMode "$runtimeConfig")
 
-    echo -e "\nUninstalling '$name'..."
+    local name=$(readJSON "$deploymentOptions" '.key')
+    local config=$(readJSON "$deploymentOptions" '.value')
+    local chart=$(readJSON "$config" '.chart')
+
+    (targetMatches "$chart" "$name" "$target" "$isChartMode" "$isDebugMode") || return 0
+
+    echo -e "\nTearing down '$name'..."
 
     helmCommand="helm uninstall $name"
 
-    isSet $isDryrunMode echo $helmCommand
-    notSet $isDryrunMode && $helmCommand
+    isSet "$isDryrunMode" echo "$helmCommand"
+    notSet "$isDryrunMode" && $helmCommand
 }
 
 function targetMatches() {
