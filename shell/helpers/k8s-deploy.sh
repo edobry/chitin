@@ -19,7 +19,7 @@ function k8sPipeline() {
         shift
     fi
 
-    requireArgOptions "a subcommand" "$1" 'init deploy' || return 1
+    requireArgOptions "a subcommand" "$1" 'render deploy teardown' || return 1
     requireArg "the environment name" "$2" || return 1
     local subCommand="$1"
     local envName="$2"
@@ -31,21 +31,73 @@ function k8sPipeline() {
         return 1
     fi
 
+    # to use, call with `teardown` as the second arg (after env)
+    local isTeardownMode
+    if [[ "$1" == "teardown" ]]; then
+        isTeardownMode=true
+        echo -e "\n-- TEARDOWN MODE --"
+        shift
+    fi
+
+    # to use, call with `render` as the second arg (after env)
+    local isRenderMode
+    if [[ "$1" == "render" ]]; then
+        isRenderMode=true
+        echo -e "\n-- RENDER MODE --"
+        shift
+    fi
+
+    # to use, call with `deploy` as the second arg (after env)
+    local isDeployMode
+    if [[ "$1" == "deploy" ]]; then
+        isDeployMode=true
+        echo -e "\n-- DEPLOY MODE --"
+        shift
+    fi
+
+    # to use, call with `chart` as the second arg (after env)
+    local isChartMode
+    if [[ "$1" == "chart" ]]; then
+        isChartMode=true
+        shift
+    fi
+
+    local target
+    requireArg "deployments to limit to, or 'all' to not limit" "$1" || return 1
+    if [[ "$1" = "all" ]]; then
+        echo "Processing all deployments"
+    else
+        target="$*"
+
+        additionalMsg=$(isSet $isChartMode && echo " instances of chart" || echo "")
+        echo -e "\nLimiting to$additionalMsg: $(echo "$target" | sed 's/ /, /g')"
+    fi
+
     local configFile=$envDir/config.json
 
     local envConfig=$(cat $configFile | jq -c)
 
     local runtimeConfig=$(echo "$envConfig" | jq -nc \
-        --arg isDebugMode "$isDebugMode" \
-        --arg isDryrunMode "$isDryrunMode" \
         --arg envName "$envName" \
         --arg envDir "$envDir" \
+        --arg envFile "$envFile" \
+        --arg target "$target" \
+        --arg isDebugMode "$isDebugMode" \
+        --arg isDryrunMode "$isDryrunMode" \
+        --arg isTeardownMode "$isTeardownMode" \
+        --arg isRenderMode "$isRenderMode" \
+        --arg isChartMode "$isChartMode" \
         'inputs * {
         env: $envName,
         envDir: $envDir,
+        envFile: $envFile,
+        target: $target,
         flags: {
             isDebugMode: ($isDebugMode != ""),
-            isDryrunMode: ($isDryrunMode != "")
+            isDryrunMode: ($isDryrunMode != ""),
+            isTeardownMode: ($isTeardownMode != ""),
+            isRenderMode: ($isRenderMode != ""),
+            isChartMode: ($isChartMode != "")
         } }')
 
     isSet "$isDebugMode" && readJSON "$runtimeConfig" '.'
@@ -68,63 +120,7 @@ function k8sPipeline() {
     echo
 
     notSet $isDryrunMode && kubectx $cluster
-
-    if [[ "$subCommand" = "init" ]]; then
-        k8sPipelineInit "$runtimeConfig" $*
-    elif [[ "$subCommand" = "deploy" ]]; then
-        k8sPipelineDeploy "$runtimeConfig" $*
-    else
-        echo "Something went wrong; Subcommand '$subCommand' is not supported!"
-        return 1
-    fi
-}
-
-function checkJSONFlag() {
-    requireArg "a flag name" "$1" || return 1
-    requireArg "a JSON string" "$2" || return 1
-
-    echo "$2" | jq -r --arg flagName "$1" 'if .flags[$flagName] then "true" else "" end'
-}
-
-function k8sPipelineDeploy() {
-    local runtimeConfig="$1"
-    shift
-
-    local env=$(readJSON "$runtimeConfig" '.env')
-    local envDir=$(readJSON "$runtimeConfig" '.envDir')
-
-    local account=$(readJSON "$runtimeConfig" '.account')
-    local cluster=$(readJSON "$runtimeConfig" '.context')
-    local namespace=$(readJSON "$runtimeConfig" '.namespace')
-    local tfEnv=$(readJSON "$runtimeConfig" '.environment')
-
-    local isDebugMode=$(checkJSONFlag isDebugMode "$runtimeConfig")
-    local isDryrunMode=$(checkJSONFlag isDryrunMode "$runtimeConfig")
-
     notSet $isDryrunMode && kubens $namespace
-
-    # to use, call with `teardown` as the second arg (after env)
-    local isTeardownMode
-    if [[ "$1" == "teardown" ]]; then
-        isTeardownMode=true
-        echo -e "\n-- TEARDOWN MODE --"
-        shift
-    fi
-
-    # to use, call with `render` as the second arg (after env)
-    local isRenderMode
-    if [[ "$1" == "render" ]]; then
-        isRenderMode=true
-        echo -e "\n-- RENDER MODE --"
-        shift
-    fi
-
-    # to use, call with `chart` as the second arg (after env)
-    local isChartMode
-    if [[ "$1" == "chart" ]]; then
-        isChartMode=true
-        shift
-    fi
 
     ## SSM
     echo -e "\nFetching SSM parameters..."
@@ -157,35 +153,9 @@ function k8sPipelineDeploy() {
     fi
     ##
 
-    local target
-    requireArg "deployments to limit to, or 'all' to not limit" "$1" || return 1
-    if [[ "$1" = "all" ]]; then
-        echo "Processing all deployments"
-    else
-        target="$*"
-
-        additionalMsg=$(isSet $isChartMode && echo " instances of chart" || echo "")
-        echo -e "\nLimiting to$additionalMsg: $(echo "$target" | sed 's/ /, /g')"
-    fi
-
     # generate environment-specific configuration and write to a temporary file
     # TODO: add per-chart child-chart config
     local envFile=$(tempFile)
-
-    runtimeConfig=$(echo "$runtimeConfig" | jq -nc \
-        --arg envFile "$envFile" \
-        --arg target "$target" \
-        --arg isTeardownMode "$isTeardownMode" \
-        --arg isRenderMode "$isRenderMode" \
-        --arg isChartMode "$isChartMode" \
-        'inputs * {
-        envFile: $envFile,
-        target: $target,
-        flags: {
-            isTeardownMode: ($isTeardownMode != ""),
-            isRenderMode: ($isRenderMode != ""),
-            isChartMode: ($isChartMode != "")
-        } }')
 
     local envValues=$(readJSON "$runtimeConfig" '{
         region, nodeSelector: {
@@ -210,6 +180,13 @@ function k8sPipelineDeploy() {
     done <<< $externalResourceDeployments <<< $deployments
 
     notSet $isDryrunMode && notSet $isTeardownMode && rm "$envFile"
+}
+
+function checkJSONFlag() {
+    requireArg "a flag name" "$1" || return 1
+    requireArg "a JSON string" "$2" || return 1
+
+    echo "$2" | jq -r --arg flagName "$1" 'if .flags[$flagName] then "true" else "" end'
 }
 
 function installChart() {
