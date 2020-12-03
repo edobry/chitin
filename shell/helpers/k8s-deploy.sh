@@ -125,7 +125,7 @@ function k8sPipeline() {
     ## SSM
     echo -e "\nFetching SSM parameters..."
     # if the environment specifies an S3 bucket, use that, otherwise default
-    local baseSsmPath=$(echo "$runtimeConfig" | jq --arg envName dev \
+    local baseSsmPath=$(echo "$runtimeConfig" | jq -r --arg envName dev \
         '"/\(.ssmOverride // "dataeng-\($envName)")"')
 
     isSet $isDryrunMode && echo "Base SSM Path: '$baseSsmPath'"
