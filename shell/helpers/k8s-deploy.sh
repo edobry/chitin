@@ -126,6 +126,37 @@ function k8sPipelineDeploy() {
         shift
     fi
 
+    ## SSM
+    echo -e "\nFetching SSM parameters..."
+    # if the environment specifies an S3 bucket, use that, otherwise default
+    local baseSsmPath=$(echo "$runtimeConfig" | jq --arg envName dev \
+        '"/\(.ssmOverride // "dataeng-\($envName)")"')
+
+    isSet $isDryrunMode && echo "Base SSM Path: '$baseSsmPath'"
+
+    local ccSsmPath="$baseSsmPath/coin-collection"
+    echo "Fetching from '$ccSsmPath'..."
+    local rdsUsername=$(getSecureParam $ccSsmPath/RDS_INSTANCES_USERNAME)
+    local rdsPassword=$(getSecureParam $ccSsmPath/RDS_INSTANCES_PASSWORD)
+
+    local readonlySsmPath="$baseSsmPath/readonly"
+    echo "Fetching from '$readonlySsmPath'..."
+    local readonlyUsername=$(getSecureParam $readonlySsmPath/username)
+    local readonlyPassword=$(getSecureParam $readonlySsmPath/password)
+
+    local k8sSsmPath="$baseSsmPath/kubernetes/system"
+    echo "Fetching from '$k8sSsmPath'..."
+    local dockerUsername=$(getSecureParam $k8sSsmPath/DOCKER_USERNAME)
+    local dockerPassword=$(getSecureParam $k8sSsmPath/DOCKER_PASSWORD)
+    ##
+
+    ## env init
+    kubectl get namespaces coin-collection-dev --output=json > /dev/null 2>&1
+    if [[ ! $? -eq 0 ]]; then
+        k8sPipelineInitEnv $namespace $dockerUsername $dockerPassword
+    fi
+    ##
+
     local target
     requireArg "deployments to limit to, or 'all' to not limit" "$1" || return 1
     if [[ "$1" = "all" ]]; then
@@ -355,96 +386,64 @@ function targetMatches() {
     fi
 }
 
-function k8sPipelineInit() {
-    k8sDeployCommon $*
-    shift
+function k8sPipelineInitEnv() {
+    requireArg "an environment name" "$1" || return 1
+    requireArg "the Docker username" "$2" || return 1
+    requireArg "the Docker password" "$3" || return 1
 
-    local env=$(readJSON "$runtimeConfig" '.env')
-    local envDir=$(readJSON "$runtimeConfig" '.envDir')
+    local name="$1"
+    local dockerUsername="$2"
+    local dockerPassword="$3"
 
-    local account=$(readJSON "$runtimeConfig" '.account')
-    local cluster=$(readJSON "$runtimeConfig" '.context')
-    local namespace=$(readJSON "$runtimeConfig" '.namespace')
-    local tfEnv=$(readJSON "$runtimeConfig" '.environment')
+    # TODO: impute namespace name from env name
+    local namespace="$name"
 
-    local isDebugMode=$(checkJSONFlag isDebugMode "$runtimeConfig")
-    local isDryrunMode=$(checkJSONFlag isDryrunMode "$runtimeConfig")
-
-    notSet $isDryrunMode && kubens $namespace
-
-    local tfModule=coin-collection/$(readJSON "$envConfig" ".tfModule // \"$envName\"")
+    echo "Initializing environment '$name'..."
 
     echo "Creating namespace..."
-    namespaceResource=$(kubectl create namespace $namespace \
+    local namespaceResource=$(kubectl create namespace $namespace \
         --dry-run=true -o=json --save-config)
-    isSet $isDryrunMode echo $namespaceResource | jq '.'
-    notSet $isDryrunMode && echo $namespaceResource | kubectl apply -f -
+
+    isSet $isDryrunMode && echo "$namespaceResource" | prettyJson
+    notSet $isDryrunMode && echo "$namespaceResource" | kubectl apply -f -
 
     #switch to the newly-created namespace
     notSet $isDryrunMode && kubens $namespace
 
-    shift
-    unset DP_TARGET
-    if [ ! -z "$*" ]; then
-        DP_TARGET="$*"
-
-        echo -e "\nLimiting to: $(echo "$DP_TARGET" | sed 's/ /, /g')"
-    fi
-
-    echo -e "\nFetching SSM parameters..."
-    # if the environment specifies an S3 bucket, use that, otherwise default
-    ssmOverride=$(cat $CONFIG_FILE | jq -r '.ssmOverride // empty')
-    baseSsmPath=$([[ ! -z $ssmOverride ]] && \
-        echo "/$ssmOverride" || \
-        echo "/dataeng-$envName")
-
-    isSet $isDryrunMode echo "Base SSM Path: '$baseSsmPath'"
-
-    ccSsmPath=$baseSsmPath/coin-collection
-    echo "Fetching from '$ccSsmPath'..."
-    rdsUsername=$(getSecureParam $ccSsmPath/RDS_INSTANCES_USERNAME)
-    rdsPassword=$(getSecureParam $ccSsmPath/RDS_INSTANCES_PASSWORD)
-
-    readonlySsmPath=$baseSsmPath/readonly
-    echo "Fetching from '$readonlySsmPath'..."
-    readonlyUsername=$(getSecureParam $readonlySsmPath/username)
-    readonlyPassword=$(getSecureParam $readonlySsmPath/password)
-
-    k8sSsmPath=$baseSsmPath/kubernetes/system
-    echo "Fetching from '$k8sSsmPath'..."
-    dockerUsername=$(getSecureParam $k8sSsmPath/DOCKER_USERNAME)
-    dockerPassword=$(getSecureParam $k8sSsmPath/DOCKER_PASSWORD)
-
     echo -e "\nCreating image pull secret..."
-    regcredResource="$(kubectl create secret docker-registry regcred \
+    local regcredResource="$(kubectl create secret docker-registry regcred \
         --docker-server=$CHAINALYSIS_ARTIFACTORY \
         --docker-username=$dockerUsername \
         --docker-password=$dockerPassword \
         --docker-email=$dockerUsername@chainalysis.com \
         --dry-run=true -o=json --save-config)"
-    isSet $isDryrunMode echo $regcredResource | jq '.'
+
+    isSet $isDryrunMode echo $regcredResource | prettyJson
     notSet $isDryrunMode && echo $regcredResource | kubectl apply -f -
 
-    DP_RESOURCES_DIR=$envDir/resources
-    function createDatabaseServicesFromTerraform() {
-        echo -e "\nParsing Terraform output from module '$tfEnv/$tfModule'..."
+    echo "Environment initialized!"
+}
 
-        local tfCommand="runTF $tfEnv $tfModule output -json rds_instance_endpoints"
-        isSet $isDryrunMode echo $tfCommand
+local tfModule=coin-collection/$(readJSON "$envConfig" ".tfModule // \"$envName\"")
 
-        # read the terraform state for this environment, grab the databases
-        local rdsInstances=$($tfCommand \
-            | jq -c 'to_entries[] | { name: "postgres-\(.key)", externalName: (.value | split(":") | first) }')
+DP_RESOURCES_DIR=$envDir/resources
+function createDatabaseServicesFromTerraform() {
+    echo -e "\nParsing Terraform output from module '$tfEnv/$tfModule'..."
 
-        for instance in $rdsInstances; do
-            isSet $isDryrunMode echo $instance | jq '.'
+    local tfCommand="runTF $tfEnv $tfModule output -json rds_instance_endpoints"
+    isSet $isDryrunMode echo $tfCommand
 
-            local name=$(echo $instance | jq -r '.name')
+    # read the terraform state for this environment, grab the databases
+    local rdsInstances=$($tfCommand \
+        | jq -c 'to_entries[] | { name: "postgres-\(.key)", externalName: (.value | split(":") | first) }')
 
-            # generate service file json, convert to yaml, then write
-            echo $instance | jq '{ externalName }' \
-                | yq r -P - > $DP_RESOURCES_DIR/$name.yaml
-        done
-    }
+    for instance in $rdsInstances; do
+        isSet $isDryrunMode echo $instance | jq '.'
 
+        local name=$(echo $instance | jq -r '.name')
+
+        # generate service file json, convert to yaml, then write
+        echo $instance | jq '{ externalName }' \
+            | yq r -P - > $DP_RESOURCES_DIR/$name.yaml
+    done
 }
