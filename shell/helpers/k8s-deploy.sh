@@ -65,6 +65,7 @@ function k8sPipeline() {
     local configFile=$envDir/config.json
 
     local envConfig=$(cat $configFile | jq -c)
+    local envFile=$(tempFile)
 
     local runtimeConfig=$(echo "$envConfig" | jq -nc \
         --arg envName "$envName" \
@@ -144,8 +145,6 @@ function k8sPipeline() {
 
     # generate environment-specific configuration and write to a temporary file
     # TODO: add per-chart child-chart config
-    local envFile=$(tempFile)
-
     local envValues=$(readJSON "$runtimeConfig" '{
         region, nodeSelector: {
             "eks.amazonaws.com/nodegroup": (.nodegroup // empty) } } ')
