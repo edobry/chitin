@@ -35,9 +35,7 @@ function k8sPipeline() {
 
     local envConfig=$(cat $configFile | jq -c)
 
-    local commonConfig=$(readJSON "$envConfig" \
-        '{ account, context, namespace, environment, region, nodegroup, chartDefaults, deployments }')
-    local runtimeConfig=$(echo "$commonConfig" | jq -nc \
+    local runtimeConfig=$(echo "$envConfig" | jq -nc \
         --arg isDebugMode "$isDebugMode" \
         --arg isDryrunMode "$isDryrunMode" \
         --arg envName "$envName" \
