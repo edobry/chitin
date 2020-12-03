@@ -31,29 +31,18 @@ function k8sPipeline() {
         return 1
     fi
 
-    # to use, call with `teardown` as the second arg (after env)
     local isTeardownMode
-    if [[ "$1" == "teardown" ]]; then
+    if [[ "$subCommand" == "teardown" ]]; then
         isTeardownMode=true
         echo -e "\n-- TEARDOWN MODE --"
-        shift
-    fi
-
-    # to use, call with `render` as the second arg (after env)
-    local isRenderMode
-    if [[ "$1" == "render" ]]; then
+    elif [[ "$subCommand" == "render" ]]; then
         isRenderMode=true
         echo -e "\n-- RENDER MODE --"
-        shift
-    fi
-
-    # to use, call with `deploy` as the second arg (after env)
-    local isDeployMode
-    if [[ "$1" == "deploy" ]]; then
+    elif [[ "$subCommand" == "deploy" ]]; then
         isDeployMode=true
         echo -e "\n-- DEPLOY MODE --"
-        shift
     fi
+
 
     # to use, call with `chart` as the second arg (after env)
     local isChartMode
