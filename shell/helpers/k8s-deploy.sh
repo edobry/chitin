@@ -169,10 +169,14 @@ function k8sPipelineDeploy() {
 
     local modeCommand=$(notSet $isTeardownMode && echo installChart || echo teardownChart)
 
-    readJSON "$runtimeConfig" '.deployments | to_entries[] | select(.value.disabled | not)' | \
+    local externalResourceDeployments=$(readJSON "$runtimeConfig" '.externalResources | to_entries |
+        map({ key: .key, value: { chart: "external-service", values: .value } })[]')
+
+    local deployments=$(readJSON "$runtimeConfig" '.deployments | to_entries[] | select(.value.disabled | not)')
+
     while read -r deploymentOptions; do
          $modeCommand "$runtimeConfig" "$deploymentOptions" "$chartDefaults"
-    done
+    done <<< $externalResourceDeployments <<< $deployments
 
     notSet $isDryrunMode && notSet $isTeardownMode && rm "$envFile"
 }
@@ -443,30 +447,4 @@ function k8sPipelineInit() {
         done
     }
 
-    function installService() {
-        chartPath=$1
-        # grab just the filename, without the extension
-        name=$(echo $1 | awk -F '/' '{ print $4 }' | sed 's/.yaml//')
-        shift
-
-        if [ ! -z "$DP_TARGET" ] && ! argsContain $name $DP_TARGET; then return 0; fi
-
-        echo -e "\nInstalling service '$name'..."
-
-
-        helmCommand="helm upgrade --install $name ../charts/external/external-service -f $chartPath $* $helmCredsConf"
-        isSet $isDryrunMode echo $helmCommand
-        notSet $isDryrunMode && $helmCommand
-    }
-
-    # generate service files
-    # createDatabaseServicesFromTerraform
-
-    # install services
-    for service in $DP_RESOURCES_DIR/*; do
-        # check if the file exists, just in case
-        if [[ -f $service ]]; then
-            installService $service;
-        fi
-    done
 }
