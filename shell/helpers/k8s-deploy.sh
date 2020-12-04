@@ -165,7 +165,7 @@ function k8sPipeline() {
 
     while read -r deploymentOptions; do
          $modeCommand "$runtimeConfig" "$deploymentOptions" "$chartDefaults"
-    done <<< $externalResourceDeployments <<< $deployments
+    done <<< $externalResourceDeployments $deployments
 
     notSet $isDryrunMode && notSet $isTeardownMode && rm "$envFile"
 }
@@ -184,7 +184,6 @@ function installChart() {
 
     local envDir=$(readJSON "$runtimeConfig" '.envDir')
     local envFile=$(readJSON "$runtimeConfig" '.envFile')
-    local target=$(readJSON "$runtimeConfig" '.target')
     local isRenderMode=$(checkJSONFlag isRenderMode "$runtimeConfig")
     local isChartMode=$(checkJSONFlag isChartMode "$runtimeConfig")
     local isDebugMode=$(checkJSONFlag isDebugMode "$runtimeConfig")
@@ -215,7 +214,7 @@ function installChart() {
         return 1
     fi
 
-    (targetMatches "$chart" "$name" "$target" "$isChartMode" "$isDebugMode") || return 0
+    (targetMatches "$runtimeConfig" "$deploymentOptions") || return 0
 
     echo -e "\n$(isSet $isRenderMode && echo 'Rendering' || echo 'Deploying') $name..."
 
@@ -308,7 +307,7 @@ function teardownChart() {
     local config=$(readJSON "$deploymentOptions" '.value')
     local chart=$(readJSON "$config" '.chart')
 
-    (targetMatches "$chart" "$name" "$target" "$isChartMode" "$isDebugMode") || return 0
+    (targetMatches "$runtimeConfig" "$deploymentOptions") || return 0
 
     echo -e "\nTearing down '$name'..."
 
@@ -319,27 +318,31 @@ function teardownChart() {
 }
 
 function targetMatches() {
-    requireArg "a chart name" "$1" || return 1
-    requireArg "a deployment name" "$2" || return 1
+    requireArg "the runtime config" "$1" || return 1
+    requireArg "the deployment options" "$2" || return 1
 
-    local chartName="$1"
-    local deploymentName="$2"
-    local deployTarget="$3"
+    local runtimeConfig="$1"
+    local deploymentOptions="$2"
+
+    local deployTarget=$(readJSON "$runtimeConfig" '.target // empty')
+    local isChartMode=$(checkJSONFlag isChartMode "$runtimeConfig")
+    local isDebugMode=$(checkJSONFlag isDebugMode "$runtimeConfig")
+
+    local deploymentName=$(readJSON "$deploymentOptions" '.key')
+    local config=$(readJSON "$deploymentOptions" '.value')
+    local chartName=$(readJSON "$config" '.chart')
 
     # if limiting to "all", always pass
     notSet $deployTarget && return 0
 
-    local isChartMode="$4"
-    local isDebugMode="$5"
-
     isSet $isDebugMode && echo -e "\nTesting instance '$deploymentName' of chart '$chartName'..."
 
     local chartMatches=false;
-    (isSet $isChartMode && argsContain $chartName $deployTarget) && chartMatches=true
+    (isSet $isChartMode && argsContain "$chartName" $deployTarget) && chartMatches=true
 
     local nameMatches=false;
     if notSet $isChartMode; then
-        (isSet $deployTarget && argsContain $deploymentName $deployTarget) && nameMatches=true
+        (isSet $deployTarget && argsContain "$deploymentName" $deployTarget) && nameMatches=true
     fi
 
     if ! isTrue "$chartMatches" && ! isTrue "$nameMatches"; then
