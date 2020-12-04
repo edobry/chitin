@@ -23,7 +23,7 @@ function argsContain() {
     local target="$1"
     shift
 
-    for i in $@ ; do
+    for i in $( echo $* ); do
         [[ "$i" == "$target" ]] && return 0
     done
 
