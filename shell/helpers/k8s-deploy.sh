@@ -266,7 +266,7 @@ function installChart() {
     # only use SSM credentials for postgres services
     local helmCredsConf
     if [[ $name == "postgres-"* ]]; then
-        local resourceOverride=$(cat $CONFIG_FILE | jq -r ".resourcesOverrides.\"$name\" // empty")
+        local resourceOverride=$(readJSON "$runtimeConfig" '.resourcesOverrides[$name] // empty' --arg name $name)
 
         if [[ -z $resourceOverride ]]; then
             helmCredsConf="--set credentials.username=$rdsUsername,credentials.password=$rdsPassword"
