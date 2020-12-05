@@ -164,7 +164,7 @@ function k8sPipeline() {
 
     while read -r deploymentOptions; do
          $modeCommand "$runtimeConfig" "$deploymentOptions" "$chartDefaults"
-    done <<< $externalResourceDeployments $deployments
+    done <<< $externalResourceDeployments <<< $deployments
 
     notSet $isDryrunMode && notSet $isTeardownMode && rm "$envFile"
 
