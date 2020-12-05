@@ -291,7 +291,7 @@ function installChart() {
         -f $chartDefaultInlineValuesFile $deploymentFileArg -f $inlineValuesFile -f $envFile $helmCredsConf"
 
     isSet "$isDryrunMode" && echo "$helmCommand"
-    notSet "$isDryrunMode" && $helmCommand
+    notSet "$isDryrunMode" && helm $(echo "$helmCommand")
 
     return 0
 }
