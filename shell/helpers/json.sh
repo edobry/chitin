@@ -37,7 +37,11 @@ function readJSON() {
     requireArg "a JSON string" "$1" || return 1
     requireArg "a jq path" "$2" || return 1
 
-    jq -cr "$2" <<< $1
+    local jsonString=$1
+    local jqPath="$2"
+    shift && shift
+
+    jq -cr $* "$jqPath" <<< $jsonString
 }
 
 # merges two JSON objects together
