@@ -168,6 +168,8 @@ function k8sPipeline() {
     done <<< $externalResourceDeployments $deployments
 
     notSet $isDryrunMode && notSet $isTeardownMode && rm "$envFile"
+
+    return 0
 }
 
 function checkJSONFlag() {
@@ -291,6 +293,8 @@ function installChart() {
 
     isSet "$isDryrunMode" && echo "$helmCommand"
     notSet "$isDryrunMode" && $helmCommand
+
+    return 0
 }
 
 function teardownChart() {
