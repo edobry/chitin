@@ -268,11 +268,18 @@ function installChart() {
     if [[ $name == "postgres-"* ]]; then
         local resourceOverride=$(readJSON "$runtimeConfig" '.resourcesOverrides[$name] // empty' --arg name $name)
 
-        if [[ -z $resourceOverride ]]; then
-            helmCredsConf="--set credentials.username=$rdsUsername,credentials.password=$rdsPassword"
+        local credUsername
+        local credPassword
+
+        if notSet $resourceOverride; then
+            credUsername=$rdsUsername
+            credPassword=$rdsPassword
         elif [[ $resourceOverride == "readonly" ]]; then
-            helmCredsConf="--set credentials.username=$readonlyUsername,credentials.password=$readonlyPassword"
+            credUsername=$readonlyUsername
+            credPassword=$readonlyPassword
         fi
+
+        helmCredsConf="--set credentials.username=$credUsername,credentials.password=$credPassword"
     fi
     ##
 
