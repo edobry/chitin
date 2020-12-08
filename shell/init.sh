@@ -25,8 +25,8 @@ function dtBail() {
 }
 
 function loadDTDir() {
-    for f in "$@";
-        do source $f;
+    for f in "$@"; do
+        source $f;
     done
 }
 
@@ -116,8 +116,10 @@ function checkDTDeps() {
 }
 
 function initDT() {
+    shopt -s globstar
+
     # load init scripts
-    loadDTDir $CA_DT_DIR/helpers/init/*.sh
+    loadDTDir $CA_DT_DIR/helpers/init/**/*.sh
 
     initJq
     readDTConfig
@@ -127,13 +129,14 @@ function initDT() {
     export CA_DP_DIR=$CA_PROJECT_DIR/dataeng-pipeline
 
     # load helpers
-    loadDTDir $CA_DT_DIR/helpers/*.sh
+    loadDTDir $(ls $CA_DT_DIR/helpers/**/*.sh | grep -v "/init")
 
     # zsh completions only loaded on zsh shells
     if [ -n "$ZSH_VERSION" ]; then
-        loadDTDir $CA_DT_DIR/helpers/*.zsh
+        loadDTDir $CA_DT_DIR/helpers/**/*.zsh
     fi
 
+    shopt -u globstar
     export CA_DT_ENV_INITIALIZED=true
 }
 
