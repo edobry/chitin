@@ -78,6 +78,11 @@ The `config.json` file sets up the environment, including the relevant account, 
 - `externalResources`: instances of the `external-service` chart to be deployed, takes only values
 - `resourcesOverrides`: overrides credentials passed to `externalResources`
 
+###### Notes
+
+- `chartDefaults`: applies values to all deployments of a certain chart in an environment, ie versions, resources, etc
+- `externalResources`: enables creation of K8s Services to facilitate access to extra-cluster resources, ie databases, MSK clusters, or Hetzner services
+
 ###### Subdirectory Mappings
 - `chartDefaults`: files map to the equivalent config entry's `values` field
 - `deployments`: files map to the equivalent config entry's `values` field
