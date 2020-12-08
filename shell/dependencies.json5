@@ -1,5 +1,5 @@
 {
-    //you probably dont want to touch any of this
+    // you probably dont want to touch any of this
     "dependencies": {
         "jq": {
             "version": "1.6",

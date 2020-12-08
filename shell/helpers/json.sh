@@ -74,7 +74,7 @@ function convertJSON5() {
 
     # if we have json5 use it to spit out json, otherwise, poor-mans
     if ! checkCommand json5; then
-        sed '/\/\//d' $json5filePath > $jsonfilePath
+        sed '/\/\/ /d' $json5filePath > $jsonfilePath
     else
         json5 -c $json5filePath
     fi
