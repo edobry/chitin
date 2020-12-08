@@ -25,24 +25,24 @@ with the components being as follows:
 
 ##### Examples
 
-This command deploys the `eth-node` deployment in the `dev` environment:
+This command pushes the `eth-node` deployment to the `dev` environment:
 ```
 k8sPipeline deploy dev eth-node
 ```
 
-This command does the same thing, except prints out the actions that would have been done instead of doing them:
+This command does almost the same thing, but prints out the actions that would have been done instead:
 ```
 k8sPipeline dryrun deploy dev eth-node
 ```
 
-This command deploys all instances of the `ib-backend` chart in the `prod` environment, for example, if releasing a new version:
+This command deploys all instances of the `ib-backend` chart in the `prod` environment, ie, if releasing a new version:
 ```
 k8sPipeline deploy prod chart ib-backend
 ```
 
-This command renders the templates for all deployments in the `dev` environment and outputs them to a single manifest:
+This command generates the manifests for all deployments in the `dev` environment and outputs them to a single file:
 ```
-k8sPipeline template dev all > dev-release.yaml
+k8sPipeline render dev all > dev-release.yaml
 ```
 
 This command uninstalls the `eth-seeder` and `eth-backend` deployments from the `dev` environment:
