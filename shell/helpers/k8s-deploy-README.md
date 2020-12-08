@@ -10,7 +10,7 @@ The exposed `k8sPipeline` function can be used to `render` charts `deploy` them 
 
 The basic form these commands take is:
 ```
-k8sPipeline [flags...] [subcommand] [(optional: chart) target... | all]
+k8sPipeline [flags...] [subcommand] [environment] [(optional: chart) target... | all]
 ```
 with the components being as follows:
 - `flags`: keywords which, when set, modify the operation of the function
@@ -20,7 +20,35 @@ with the components being as follows:
    - `deploy`: the most common mode; `render` and then deploy the targeted deployments to the cluster
    - `render`: substitutes values and templates the targeted deployments, but prints out the results instead of deploying
    - `teardown`: uninstalls the targeted deployments from the cluster
+- `environment`: which environment to operate in, corresponds to a directory
 - `target`: which deployments to operate on. if `all`, no limiting. if prepended with `chart`, args will be interpreted as chart names, rather than deployment names.
+
+##### Examples
+
+This command deploys the `eth-node` deployment in the `dev` environment:
+```
+k8sPipeline deploy dev eth-node
+```
+
+This command does the same thing, except prints out the actions that would have been done instead of doing them:
+```
+k8sPipeline dryrun deploy dev eth-node
+```
+
+This command deploys all instances of the `ib-backend` chart in the `prod` environment, for example, if releasing a new version:
+```
+k8sPipeline deploy prod chart ib-backend
+```
+
+This command renders the templates for all deployments in the `dev` environment and outputs them to a single manifest:
+```
+k8sPipeline template dev all > dev-release.yaml
+```
+
+This command uninstalls the `eth-seeder` and `eth-backend` deployments from the `dev` environment:
+```
+k8sPipeline teardown dev eth-seeder eth-backend
+```
 
 #### Configuration
 
