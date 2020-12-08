@@ -290,7 +290,7 @@ function installChart() {
     # chart default
     #
     # per env chart default (file)
-    # per env chart default (inlinr)
+    # per env chart default (inline)
     # deployment (file)
     # deployment (inline)
 
