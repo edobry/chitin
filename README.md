@@ -179,6 +179,13 @@ Functions:
  - `runAsServiceAccount`: impersonates a given ServiceAccount and runs a command
  - `kubectlAsServiceAccount`: impersonates a given ServiceAccount and runs a kubectl command using its token
 
+##### Deploy
+
+The `k8s-deploy` helper module adds functionality which helps deploy workloads to K8s clusters, please see [the README](shell/helpers/k8s-deploy-README.md) for details
+
+Functions:
+- `k8sPipeline`: automates Helm operations, enabling simple deployments
+
 #### Kafka
 
 > Requires: `docker`, `python`
