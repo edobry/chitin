@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-[[ -z "$CA_DT_DEBUG" ]] || set -x
-
 if [[ -z "$IS_DOCKER" ]]; then
     SOURCE_DIR=$(dirname -- "$0")
 
@@ -117,7 +115,12 @@ function checkDeps() {
     done
 }
 
-function init() {
+function autoinitDT() {
+    [[ "$CA_DT_AUTOINIT_DISABLED" = "true" ]] || initDT
+}
+
+alias dtShell=initDT
+function initDT() {
     # load init scripts
     loadDir $CA_DT_DIR/helpers/init/*.sh
 
@@ -143,4 +146,4 @@ function reinitDT() {
     source $CA_DT_DIR/init.sh
 }
 
-init
+autoinitDT
