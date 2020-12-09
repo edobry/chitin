@@ -1,3 +1,7 @@
+notSet () [[ -z $1 ]]
+isSet () [[ ! -z $1 ]]
+isTrue () [[ "$1" = true ]]
+
 #args: length of string
 function randomString() {
     cat /dev/urandom | LC_ALL=C tr -dc 'a-z0-9' | fold -w $1 | head -n 1

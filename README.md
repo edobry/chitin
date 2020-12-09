@@ -37,6 +37,8 @@ Linux only:
 
 4. Start a new shell session, and follow the instructions to modify the config file at `~/.config/dataeng-tools/config.json5` (or equivalent).
 
+> Note: if you would prefer to not automatically load these modules (for performance reasons), set CA_DT_AUTOINIT_DISABLED=true, and use the command `dtShell` when you want to use them
+
 ### Modules
 
 #### AWS
