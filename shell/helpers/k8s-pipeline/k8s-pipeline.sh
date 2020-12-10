@@ -243,7 +243,7 @@ function installChart() {
 
     ## secrets
     local secretPresets=$(readJSON "$runtimeConfig" '.externalResources.secretPresets // {}')
-    local secretPreset=$(readJSON "$inlineValues" '.secretPreset // empty')
+    local secretPreset=$(readJSON "$inlineValues" '."$secretPreset" // empty')
     if isSet $secretPreset; then
         local externalSecretsValues=$(readJSON "$secretPresets" '.[$name] // {}' --arg name $secretPreset)
 
