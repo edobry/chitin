@@ -24,13 +24,13 @@ function dtBail() {
     return 1
 }
 
-function loadDir() {
-    for f in "$@";
-        do source $f;
+function loadDTDir() {
+    for f in "$@"; do
+        source $f;
     done
 }
 
-function checkDep() {
+function checkDTDep() {
     local depName=$(readJSON "$1" '.key')
     local expectedVersion=$(readJSON "$1" '.value.version')
     local versionCommand=$(readJSON "$1" '.value.command')
@@ -61,7 +61,7 @@ function getDTConfigLocation() {
     echo "${XDG_CONFIG_HOME:-$HOME/.config}/dataeng-tools"
 }
 
-function readConfig() {
+function readDTConfig() {
     local configLocation=$(getDTConfigLocation)
 
     local json5ConfigFileName="config.json5"
@@ -102,7 +102,7 @@ function readConfig() {
     [[ -z $CA_DT_K8S_CONFIG_ENABLED ]] && export CA_DT_K8S_CONFIG_ENABLED=$k8sEnvEnabled
 }
 
-function checkDeps() {
+function checkDTDeps() {
     local json5DepFilePath="$CA_DT_DIR/dependencies.json5"
 
     local depFilePath
@@ -111,7 +111,7 @@ function checkDeps() {
 
     readJSONFile "$depFilePath" '.dependencies | to_entries[]' | \
     while read -r dep; do
-        checkDep "$dep" || return 1
+        checkDTDep "$dep" || return 1
     done
 }
 
@@ -121,24 +121,26 @@ function autoinitDT() {
 
 alias dtShell=initDT
 function initDT() {
+    shopt -s globstar
     # load init scripts
-    loadDir $CA_DT_DIR/helpers/init/*.sh
+    loadDTDir $CA_DT_DIR/helpers/init/**/*.sh
 
     initJq
-    readConfig
+    readDTConfig
 
-    ([[ -z "$IS_DOCKER" ]] && ! checkDeps) && (dtBail && return 1)
+    ([[ -z "$IS_DOCKER" ]] && ! checkDTDeps) && (dtBail && return 1)
 
     export CA_DP_DIR=$CA_PROJECT_DIR/dataeng-pipeline
 
     # load helpers
-    loadDir $CA_DT_DIR/helpers/*.sh
+    loadDTDir $(ls $CA_DT_DIR/helpers/**/*.sh | grep -v "/init")
 
     # zsh completions only loaded on zsh shells
     if [ -n "$ZSH_VERSION" ]; then
-        loadDir $CA_DT_DIR/helpers/*.zsh
+        loadDTDir $CA_DT_DIR/helpers/**/*.zsh
     fi
 
+    shopt -u globstar
     export CA_DT_ENV_INITIALIZED=true
 }
 

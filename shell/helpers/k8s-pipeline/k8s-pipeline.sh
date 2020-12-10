@@ -1,0 +1,427 @@
+notSet () [[ -z $1 ]]
+isSet () [[ ! -z $1 ]]
+isTrue () [[ "$1" = true ]]
+
+function k8sPipeline() {
+    # to use, call with `debug` as the first arg
+    local isDebugMode
+    if [[ "$1" == "debug" ]]; then
+        isDebugMode=true
+        echo "-- DEBUG MODE --"
+        shift
+    fi
+
+    # to use, call with `dryrun` as the first arg
+    local isDryrunMode
+    if [[ $1 == "dryrun" ]]; then
+        isDryrunMode=true
+        echo "-- DRYRUN MODE --"
+        shift
+    fi
+
+    requireArgOptions "a subcommand" "$1" 'render deploy teardown' || return 1
+    requireArg "the environment name" "$2" || return 1
+    local subCommand="$1"
+    local envName="$2"
+    local envDir=env/$envName
+    shift && shift
+
+    if [[ ! -d "$envDir" ]]; then
+        echo "No environment called '$envName' exists!"
+        return 1
+    fi
+
+    local isTeardownMode
+    if [[ "$subCommand" == "teardown" ]]; then
+        isTeardownMode=true
+        echo -e "\n-- TEARDOWN MODE --"
+    elif [[ "$subCommand" == "render" ]]; then
+        isRenderMode=true
+        echo -e "\n-- RENDER MODE --"
+    elif [[ "$subCommand" == "deploy" ]]; then
+        isDeployMode=true
+        echo -e "\n-- DEPLOY MODE --"
+    fi
+
+
+    # to use, call with `chart` as the second arg (after env)
+    local isChartMode
+    if [[ "$1" == "chart" ]]; then
+        isChartMode=true
+        shift
+    fi
+
+    local target
+    requireArg "deployments to limit to, or 'all' to not limit" "$1" || return 1
+    if [[ "$1" = "all" ]]; then
+        echo "Processing all deployments"
+    else
+        target="$*"
+
+        additionalMsg=$(isSet $isChartMode && echo " instances of chart" || echo "")
+        echo -e "\nLimiting to$additionalMsg: $(echo "$target" | sed 's/ /, /g')"
+    fi
+
+    local configFile=$envDir/config.json
+
+    local envConfig=$(cat $configFile | jq -c)
+    local envFile=$(tempFile)
+
+    local runtimeConfig=$(echo "$envConfig" | jq -nc \
+        --arg envName "$envName" \
+        --arg envDir "$envDir" \
+        --arg envFile "$envFile" \
+        --arg target "$target" \
+        --arg isDebugMode "$isDebugMode" \
+        --arg isDryrunMode "$isDryrunMode" \
+        --arg isTeardownMode "$isTeardownMode" \
+        --arg isRenderMode "$isRenderMode" \
+        --arg isChartMode "$isChartMode" \
+        'inputs * {
+        env: $envName,
+        envDir: $envDir,
+        envFile: $envFile,
+        target: $target,
+        flags: {
+            isDebugMode: ($isDebugMode != ""),
+            isDryrunMode: ($isDryrunMode != ""),
+            isTeardownMode: ($isTeardownMode != ""),
+            isRenderMode: ($isRenderMode != ""),
+            isChartMode: ($isChartMode != "")
+        } }')
+
+    isSet "$isDebugMode" && readJSON "$runtimeConfig" '.'
+
+    local account=$(readJSON "$runtimeConfig" '.account')
+    local cluster=$(readJSON "$runtimeConfig" '.context')
+    local namespace=$(readJSON "$runtimeConfig" '.namespace')
+    local tfEnv=$(readJSON "$runtimeConfig" '.environment')
+
+    local tfModule=coin-collection/$(readJSON "$envConfig" ".tfModule // \"$envName\"")
+
+    checkAccountAuthAndFail "$account" || return 1
+
+    echo "Initializing DP environment '$envName'..."
+    echo "AWS account: 'ca-aws-$account'"
+    echo "Terraform environment: '$tfEnv'"
+    echo "Terraform module: '$tfModule'"
+    echo "EKS cluster: '$cluster'"
+    echo "EKS namespace: '$namespace'"
+    echo
+
+    notSet $isDryrunMode && kubectx $cluster
+    notSet $isDryrunMode && kubens $namespace
+
+    ## SSM
+    echo -e "\nFetching SSM parameters..."
+    # if the environment specifies an S3 bucket, use that, otherwise default
+    local baseSsmPath=$(readJSON "$runtimeConfig" '"/\(.ssmOverride // "dataeng-\($envName)")"' --arg envName dev)
+
+    isSet $isDryrunMode && echo "Base SSM Path: '$baseSsmPath'"
+
+    local ccSsmPath="$baseSsmPath/coin-collection"
+    echo "Fetching from '$ccSsmPath'..."
+    local rdsUsername=$(getSecureParam $ccSsmPath/RDS_INSTANCES_USERNAME)
+    local rdsPassword=$(getSecureParam $ccSsmPath/RDS_INSTANCES_PASSWORD)
+
+    local readonlySsmPath="$baseSsmPath/readonly"
+    echo "Fetching from '$readonlySsmPath'..."
+    local readonlyUsername=$(getSecureParam $readonlySsmPath/username)
+    local readonlyPassword=$(getSecureParam $readonlySsmPath/password)
+
+    local k8sSsmPath="$baseSsmPath/kubernetes/system"
+    echo "Fetching from '$k8sSsmPath'..."
+    local dockerUsername=$(getSecureParam $k8sSsmPath/DOCKER_USERNAME)
+    local dockerPassword=$(getSecureParam $k8sSsmPath/DOCKER_PASSWORD)
+    ##
+
+    ## env init
+    kubectl get namespaces coin-collection-dev --output=json > /dev/null 2>&1
+    if [[ ! $? -eq 0 ]]; then
+        k8sPipelineInitEnv $namespace $dockerUsername $dockerPassword
+    fi
+    ##
+
+    # generate environment-specific configuration and write to a temporary file
+    # TODO: add per-chart child-chart config
+    local envValues=$(readJSON "$runtimeConfig" '{
+        region, nodeSelector: {
+            "eks.amazonaws.com/nodegroup": (.nodegroup // empty) } } ')
+
+    notSet $isDryrunMode && notSet $isTeardownMode && helm repo update
+
+    isSet $isDryrunMode notSet $isTeardownMode && echo $envValues | prettyYaml
+    notSet $isDryrunMode && notSet $isTeardownMode && echo $envValues > $envFile
+
+    local chartDefaults=$(readJSON "$runtimeConfig" '.chartDefaults')
+
+    local modeCommand=$(notSet $isTeardownMode && echo installChart || echo teardownChart)
+
+    local externalResourceDeployments=$(readJSON "$runtimeConfig" '.externalResources | to_entries |
+        map({ key: .key, value: { chart: "external-service", values: .value } })[]')
+
+    local deployments=$(readJSON "$runtimeConfig" '.deployments | to_entries[] | select(.value.disabled | not)')
+
+    while read -r deploymentOptions; do
+         $modeCommand "$runtimeConfig" "$deploymentOptions" "$chartDefaults"
+    done <<< $externalResourceDeployments <<< $deployments
+
+    notSet $isDryrunMode && notSet $isTeardownMode && rm "$envFile"
+
+    return 0
+}
+
+function checkJSONFlag() {
+    requireArg "a flag name" "$1" || return 1
+    requireArg "a JSON string" "$2" || return 1
+
+    echo "$2" | jq -r --arg flagName "$1" 'if .flags[$flagName] then "true" else "" end'
+}
+
+function installChart() {
+    local runtimeConfig="$1"
+    local deploymentOptions="$2"
+    local allChartDefaults="$3"
+
+    local envDir=$(readJSON "$runtimeConfig" '.envDir')
+    local envFile=$(readJSON "$runtimeConfig" '.envFile')
+    local isRenderMode=$(checkJSONFlag isRenderMode "$runtimeConfig")
+    local isChartMode=$(checkJSONFlag isChartMode "$runtimeConfig")
+    local isDebugMode=$(checkJSONFlag isDebugMode "$runtimeConfig")
+    local isDryrunMode=$(checkJSONFlag isDryrunMode "$runtimeConfig")
+
+    local name=$(readJSON "$deploymentOptions" '.key')
+    local config=$(readJSON "$deploymentOptions" '.value')
+    local chart=$(readJSON "$config" '.chart')
+
+    local chartDefaults
+    chartDefaults=$(readJSON "$allChartDefaults" ".\"$chart\" | del(.values)")
+    local chartDefaultCode=$?
+
+    local mergedConfig="$config"
+    if [[ $chartDefaultCode -eq 0 ]]; then
+        mergedConfig=$(mergeJSON "$config" "$chartDefaults")
+    fi
+
+    local source=$(readJSON "$mergedConfig" '.source // "remote"')
+    local expectedVersion=$(readJSON "$mergedConfig" '.version // ""')
+
+    if [[ "$source" == "local" ]]; then
+        local chartPath="$chart"
+    elif [[ "$source" == "remote" ]]; then
+        local chartPath="fimbulvetr/$chart"
+    else
+        echo "Invalid source '$source', set 'local' or 'remote'"
+        return 1
+    fi
+
+    (targetMatches "$runtimeConfig" "$deploymentOptions") || return 0
+
+    echo -e "\n$(isSet $isRenderMode && echo 'Rendering' || echo 'Deploying') $name..."
+
+    # update chart deps
+    if [[ $source == "local" ]] && [[ -d $chartPath ]] && notSet $isDryrunMode; then
+        if ! helm dep update $chartPath; then
+            echo "Skipping due to missing dependency!"
+            return 1
+        fi
+    fi
+
+    ## version
+    local version
+    if [[ -z $expectedVersion ]]; then
+        local latestVersion
+        latestVersion=$(getLatestChartVersion "$source" "$chartPath")
+        [[ $? -ne 0 ]] && { echo "Couldn't fetch latest version, skipping"; echo "$latestVersion"; return 1; }
+
+        echo "No version configured, using '$chart:$latestVersion'; consider locking the deployment to this version"
+        version=$latestVersion
+    elif ! checkChartVersion "$source" "$chartPath" "$expectedVersion"; then
+        echo "Verson mismatch for $source chart '$chartPath': expected $expectedVersion, not found"
+        return 1
+    else
+        version=$expectedVersion
+    fi
+
+    local helmVersionArg=$([ -n $version ] && echo "--version=$version" || echo "")
+    ##
+
+    ## values
+    local chartDefaultFilePath="$envDir/chartDefaults/$chart.yaml"
+    local chartDefaultFileArg=$([ -f $chartDefaultFilePath ] && echo "-f $chartDefaultFilePath" || echo "")
+
+    local deploymentFilePath="$envDir/deployments/$name.yaml"
+    local deploymentFileArg=$([ -f "$deploymentFilePath" ] && echo "-f $deploymentFilePath" || echo "")
+
+    local chartDefaultInlineValues=$(readJSON "$allChartDefaults" ".\"$chart\" | .values // {}")
+    local chartDefaultInlineValuesFile=$(tempFile)
+    writeJSONToYamlFile "$chartDefaultInlineValues" "$chartDefaultInlineValuesFile"
+
+    local inlineValues=$(readJSON "$mergedConfig" '.values // {}')
+    local inlineValuesFile=$(tempFile)
+    writeJSONToYamlFile "$inlineValues" "$inlineValuesFile"
+    ##
+
+    ## secrets
+    # only use SSM credentials for postgres services
+    local helmCredsConf
+    if [[ $name == "postgres-"* ]]; then
+        local resourceOverride=$(readJSON "$runtimeConfig" '.resourcesOverrides[$name] // empty' --arg name $name)
+
+        local credUsername
+        local credPassword
+
+        if notSet $resourceOverride; then
+            credUsername=$rdsUsername
+            credPassword=$rdsPassword
+        elif [[ $resourceOverride == "readonly" ]]; then
+            credUsername=$readonlyUsername
+            credPassword=$readonlyPassword
+        fi
+
+        helmCredsConf="--set credentials.username=$credUsername,credentials.password=$credPassword"
+    fi
+    ##
+
+    local helmSubCommand=$(isSet $isRenderMode && echo "template" || echo "upgrade --install")
+
+    # precedence order
+    #
+    # chart default
+    #
+    # per env chart default (file)
+    # per env chart default (inline)
+    # deployment (file)
+    # deployment (inline)
+
+    local helmCommand="helm $helmSubCommand $name $chartPath $helmVersionArg $helmEnvValues $chartDefaultFileArg \
+        -f $chartDefaultInlineValuesFile $deploymentFileArg -f $inlineValuesFile -f $envFile $helmCredsConf"
+
+    isSet "$isDryrunMode" && echo "$helmCommand"
+    notSet "$isDryrunMode" && helm $(echo "$helmCommand")
+
+    return 0
+}
+
+function teardownChart() {
+    local runtimeConfig="$1"
+    local deploymentOptions="$2"
+    local allChartDefaults="$3"
+
+    local target=$(readJSON "$runtimeConfig" '.target')
+    local isChartMode=$(checkJSONFlag isChartMode "$runtimeConfig")
+    local isDebugMode=$(checkJSONFlag isDebugMode "$runtimeConfig")
+    local isDryrunMode=$(checkJSONFlag isDryrunMode "$runtimeConfig")
+
+    local name=$(readJSON "$deploymentOptions" '.key')
+    local config=$(readJSON "$deploymentOptions" '.value')
+    local chart=$(readJSON "$config" '.chart')
+
+    (targetMatches "$runtimeConfig" "$deploymentOptions") || return 0
+
+    echo -e "\nTearing down '$name'..."
+
+    helmCommand="helm uninstall $name"
+
+    isSet "$isDryrunMode" echo "$helmCommand"
+    notSet "$isDryrunMode" && $helmCommand
+}
+
+function targetMatches() {
+    requireArg "the runtime config" "$1" || return 1
+    requireArg "the deployment options" "$2" || return 1
+
+    local runtimeConfig="$1"
+    local deploymentOptions="$2"
+
+    local deployTarget=$(readJSON "$runtimeConfig" '.target // empty')
+    local isChartMode=$(checkJSONFlag isChartMode "$runtimeConfig")
+    local isDebugMode=$(checkJSONFlag isDebugMode "$runtimeConfig")
+
+    local deploymentName=$(readJSON "$deploymentOptions" '.key')
+    local config=$(readJSON "$deploymentOptions" '.value')
+    local chartName=$(readJSON "$config" '.chart')
+
+    # if limiting to "all", always pass
+    notSet $deployTarget && return 0
+
+    isSet $isDebugMode && echo -e "\nTesting instance '$deploymentName' of chart '$chartName'..."
+
+    local chartMatches=false;
+    (isSet $isChartMode && argsContain "$chartName" $deployTarget) && chartMatches=true
+
+    local nameMatches=false;
+    if notSet $isChartMode; then
+        (isSet $deployTarget && argsContain "$deploymentName" $deployTarget) && nameMatches=true
+    fi
+
+    if ! isTrue "$chartMatches" && ! isTrue "$nameMatches"; then
+        isSet $isDebugMode && echo "Does not match!"
+        return 1
+    else
+        isSet $isDebugMode && echo "Matches!"
+        return 0
+    fi
+}
+
+function k8sPipelineInitEnv() {
+    requireArg "an environment name" "$1" || return 1
+    requireArg "the Docker username" "$2" || return 1
+    requireArg "the Docker password" "$3" || return 1
+
+    local name="$1"
+    local dockerUsername="$2"
+    local dockerPassword="$3"
+
+    # TODO: impute namespace name from env name
+    local namespace="$name"
+
+    echo "Initializing environment '$name'..."
+
+    echo "Creating namespace..."
+    local namespaceResource=$(kubectl create namespace $namespace \
+        --dry-run=true -o=json --save-config)
+
+    isSet $isDryrunMode && echo "$namespaceResource" | prettyJson
+    notSet $isDryrunMode && echo "$namespaceResource" | kubectl apply -f -
+
+    #switch to the newly-created namespace
+    notSet $isDryrunMode && kubens $namespace
+
+    echo -e "\nCreating image pull secret..."
+    local regcredResource="$(kubectl create secret docker-registry regcred \
+        --docker-server=$CHAINALYSIS_ARTIFACTORY \
+        --docker-username=$dockerUsername \
+        --docker-password=$dockerPassword \
+        --docker-email=$dockerUsername@chainalysis.com \
+        --dry-run=true -o=json --save-config)"
+
+    isSet $isDryrunMode echo $regcredResource | prettyJson
+    notSet $isDryrunMode && echo $regcredResource | kubectl apply -f -
+
+    echo "Environment initialized!"
+}
+
+local tfModule=coin-collection/$(readJSON "$envConfig" ".tfModule // \"$envName\"")
+
+DP_RESOURCES_DIR=$envDir/resources
+function createDatabaseServicesFromTerraform() {
+    echo -e "\nParsing Terraform output from module '$tfEnv/$tfModule'..."
+
+    local tfCommand="runTF $tfEnv $tfModule output -json rds_instance_endpoints"
+    isSet $isDryrunMode echo $tfCommand
+
+    # read the terraform state for this environment, grab the databases
+    local rdsInstances=$($tfCommand \
+        | jq -c 'to_entries[] | { name: "postgres-\(.key)", externalName: (.value | split(":") | first) }')
+
+    for instance in $rdsInstances; do
+        isSet $isDryrunMode echo $instance | jq '.'
+
+        local name=$(echo $instance | jq -r '.name')
+
+        # generate service file json, convert to yaml, then write
+        echo $instance | jq '{ externalName }' \
+            | yq r -P - > $DP_RESOURCES_DIR/$name.yaml
+    done
+}
