@@ -114,20 +114,13 @@ function k8sPipeline() {
 
     ## SSM
     echo -e "\nFetching SSM parameters..."
-    # if the environment specifies an S3 bucket, use that, otherwise default
+    # if the environment specifies a base SSM path, use that, otherwise default
     local baseSsmPath=$(readJSON "$runtimeConfig" '"/\(.ssmOverride // "dataeng-\($envName)")"' --arg envName dev)
 
     isSet $isDryrunMode && echo "Base SSM Path: '$baseSsmPath'"
 
     local ccSsmPath="$baseSsmPath/coin-collection"
-    echo "Fetching from '$ccSsmPath'..."
-    local rdsUsername=$(getSecureParam $ccSsmPath/RDS_INSTANCES_USERNAME)
-    local rdsPassword=$(getSecureParam $ccSsmPath/RDS_INSTANCES_PASSWORD)
-
     local readonlySsmPath="$baseSsmPath/readonly"
-    echo "Fetching from '$readonlySsmPath'..."
-    local readonlyUsername=$(getSecureParam $readonlySsmPath/username)
-    local readonlyPassword=$(getSecureParam $readonlySsmPath/password)
 
     local k8sSsmPath="$baseSsmPath/kubernetes/system"
     echo "Fetching from '$k8sSsmPath'..."
@@ -374,6 +367,9 @@ function k8sPipelineInitEnv() {
     echo "Creating namespace..."
     local namespaceResource=$(kubectl create namespace $namespace \
         --dry-run=true -o=json --save-config)
+
+    # TODO: annotate with:
+    #     externalsecrets.kubernetes-client.io/permitted-key-name: "/dev/cluster1/core-namespace/.*"
 
     isSet $isDryrunMode && echo "$namespaceResource" | prettyJson
     notSet $isDryrunMode && echo "$namespaceResource" | kubectl apply -f -
