@@ -157,7 +157,7 @@ function k8sPipeline() {
 
     local modeCommand=$(notSet $isTeardownMode && echo installChart || echo teardownChart)
 
-    local externalResourceDeployments=$(readJSON "$runtimeConfig" '.externalResources | to_entries |
+    local externalResourceDeployments=$(readJSON "$runtimeConfig" '.externalResources.deployments | to_entries |
         map({ key: .key, value: { chart: "external-service", values: .value } })[]')
 
     local deployments=$(readJSON "$runtimeConfig" '.deployments | to_entries[] | select(.value.disabled | not)')
