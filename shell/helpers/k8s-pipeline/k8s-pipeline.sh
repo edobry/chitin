@@ -246,6 +246,21 @@ function installChart() {
     local helmVersionArg=$([ -n $version ] && echo "--version=$version" || echo "")
     ##
 
+    local inlineValues=$(readJSON "$mergedConfig" '.values // {}')
+
+    ## secrets
+    local secretPresets=$(readJSON "$runtimeConfig" '.externalResources.secretPresets // {}')
+    local secretPreset=$(readJSON "$inlineValues" '.secretPreset // empty')
+    if isSet $secretPreset; then
+        local externalSecretsValues=$(readJSON "$secretPresets" '.[$name] // {}' --arg name $secretPreset)
+
+        # substitute the secret preset values
+        inlineValues=$(echo "$inlineValues" | jq -nc \
+            --argjson externalSecretsValues "$externalSecretsValues" \
+            'inputs * { externalSecrets: $externalSecretsValues } | del(.secretPreset)')
+    fi
+    ##
+
     ## values
     local chartDefaultFilePath="$envDir/chartDefaults/$chart.yaml"
     local chartDefaultFileArg=$([ -f $chartDefaultFilePath ] && echo "-f $chartDefaultFilePath" || echo "")
@@ -257,30 +272,8 @@ function installChart() {
     local chartDefaultInlineValuesFile=$(tempFile)
     writeJSONToYamlFile "$chartDefaultInlineValues" "$chartDefaultInlineValuesFile"
 
-    local inlineValues=$(readJSON "$mergedConfig" '.values // {}')
     local inlineValuesFile=$(tempFile)
     writeJSONToYamlFile "$inlineValues" "$inlineValuesFile"
-    ##
-
-    ## secrets
-    # only use SSM credentials for postgres services
-    local helmCredsConf
-    if [[ $name == "postgres-"* ]]; then
-        local resourceOverride=$(readJSON "$runtimeConfig" '.resourcesOverrides[$name] // empty' --arg name $name)
-
-        local credUsername
-        local credPassword
-
-        if notSet $resourceOverride; then
-            credUsername=$rdsUsername
-            credPassword=$rdsPassword
-        elif [[ $resourceOverride == "readonly" ]]; then
-            credUsername=$readonlyUsername
-            credPassword=$readonlyPassword
-        fi
-
-        helmCredsConf="--set credentials.username=$credUsername,credentials.password=$credPassword"
-    fi
     ##
 
     local helmSubCommand=$(isSet $isRenderMode && echo "template" || echo "upgrade --install")
@@ -295,10 +288,10 @@ function installChart() {
     # deployment (inline)
 
     local helmCommand="helm $helmSubCommand $name $chartPath $helmVersionArg $helmEnvValues $chartDefaultFileArg \
-        -f $chartDefaultInlineValuesFile $deploymentFileArg -f $inlineValuesFile -f $envFile $helmCredsConf"
+        -f $chartDefaultInlineValuesFile $deploymentFileArg -f $inlineValuesFile -f $envFile"
 
     isSet "$isDryrunMode" && echo "$helmCommand"
-    notSet "$isDryrunMode" && helm $(echo "$helmCommand")
+    notSet "$isDryrunMode" && $(echo "$helmCommand")
 
     return 0
 }
