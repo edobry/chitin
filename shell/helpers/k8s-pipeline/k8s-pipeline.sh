@@ -112,21 +112,9 @@ function k8sPipeline() {
     notSet $isDryrunMode && kubectx $cluster
     notSet $isDryrunMode && kubens $namespace
 
-    ## SSM
-    echo -e "\nFetching SSM parameters..."
     # if the environment specifies a base SSM path, use that, otherwise default
     local baseSsmPath=$(readJSON "$runtimeConfig" '"/\(.ssmOverride // "dataeng-\($envName)")"' --arg envName dev)
-
     isSet $isDryrunMode && echo "Base SSM Path: '$baseSsmPath'"
-
-    local ccSsmPath="$baseSsmPath/coin-collection"
-    local readonlySsmPath="$baseSsmPath/readonly"
-
-    local k8sSsmPath="$baseSsmPath/kubernetes/system"
-    echo "Fetching from '$k8sSsmPath'..."
-    local dockerUsername=$(getSecureParam $k8sSsmPath/DOCKER_USERNAME)
-    local dockerPassword=$(getSecureParam $k8sSsmPath/DOCKER_PASSWORD)
-    ##
 
     ## env init
     kubectl get namespaces coin-collection-dev --output=json > /dev/null 2>&1
@@ -376,14 +364,6 @@ function k8sPipelineInitEnv() {
 
     #switch to the newly-created namespace
     notSet $isDryrunMode && kubens $namespace
-
-    echo -e "\nCreating image pull secret..."
-    local regcredResource="$(kubectl create secret docker-registry regcred \
-        --docker-server=$CHAINALYSIS_ARTIFACTORY \
-        --docker-username=$dockerUsername \
-        --docker-password=$dockerPassword \
-        --docker-email=$dockerUsername@chainalysis.com \
-        --dry-run=true -o=json --save-config)"
 
     isSet $isDryrunMode echo $regcredResource | prettyJson
     notSet $isDryrunMode && echo $regcredResource | kubectl apply -f -
