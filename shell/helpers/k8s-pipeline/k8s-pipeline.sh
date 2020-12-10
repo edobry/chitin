@@ -58,6 +58,13 @@ function k8sPipeline() {
         shift
     fi
 
+    local configFile=$envDir/config.json
+
+    local envConfig=$(readJSONFile $configFile)
+    local apiVersion=$(readJSON "$envConfig" '.apiVersion')
+    checkDTVersion "$apiVersion" || return 1
+
+    ## parse target
     local target
     requireArg "deployments to limit to, or 'all' to not limit" "$1" || return 1
     if [[ "$1" = "all" ]]; then
@@ -68,12 +75,9 @@ function k8sPipeline() {
         additionalMsg=$(isSet $isChartMode && echo " instances of chart" || echo "")
         echo -e "\nLimiting to$additionalMsg: $(echo "$target" | sed 's/ /, /g')"
     fi
+    ##
 
-    local configFile=$envDir/config.json
-
-    local envConfig=$(cat $configFile | jq -c)
     local envFile=$(tempFile)
-
     local runtimeConfig=$(echo "$envConfig" | jq -nc \
         --arg envName "$envName" \
         --arg envDir "$envDir" \
@@ -100,7 +104,6 @@ function k8sPipeline() {
         } }')
 
     isSet "$isDebugMode" && readJSON "$runtimeConfig" '.'
-
     local account=$(readJSON "$runtimeConfig" '.account')
     local cluster=$(readJSON "$runtimeConfig" '.context')
     local namespace=$(readJSON "$runtimeConfig" '.namespace')
