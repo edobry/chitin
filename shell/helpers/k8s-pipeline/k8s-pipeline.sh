@@ -19,6 +19,14 @@ function k8sPipeline() {
         shift
     fi
 
+    # to use, call with `testing` as the first arg
+    local isTestingMode
+    if [[ $1 == "testing" ]]; then
+        isTestingMode=true
+        echo "-- TESTING MODE --"
+        shift
+    fi
+
     requireArgOptions "a subcommand" "$1" 'render deploy teardown' || return 1
     requireArg "the environment name" "$2" || return 1
     local subCommand="$1"
@@ -42,7 +50,6 @@ function k8sPipeline() {
         isDeployMode=true
         echo -e "\n-- DEPLOY MODE --"
     fi
-
 
     # to use, call with `chart` as the second arg (after env)
     local isChartMode
@@ -74,6 +81,7 @@ function k8sPipeline() {
         --arg target "$target" \
         --arg isDebugMode "$isDebugMode" \
         --arg isDryrunMode "$isDryrunMode" \
+        --arg isTestingMode "$isTestingMode" \
         --arg isTeardownMode "$isTeardownMode" \
         --arg isRenderMode "$isRenderMode" \
         --arg isChartMode "$isChartMode" \
@@ -85,6 +93,7 @@ function k8sPipeline() {
         flags: {
             isDebugMode: ($isDebugMode != ""),
             isDryrunMode: ($isDryrunMode != ""),
+            isTestingMode: ($isTestingMode != ""),
             isTeardownMode: ($isTeardownMode != ""),
             isRenderMode: ($isRenderMode != ""),
             isChartMode: ($isChartMode != "")
@@ -129,7 +138,7 @@ function k8sPipeline() {
         region, nodeSelector: {
             "eks.amazonaws.com/nodegroup": (.nodegroup // empty) } } ')
 
-    notSet $isDryrunMode && notSet $isTeardownMode && helm repo update
+    notSet $isTestingMode && notSet $isDryrunMode && notSet $isTeardownMode && helm repo update
 
     isSet $isDryrunMode notSet $isTeardownMode && echo $envValues | prettyYaml
     notSet $isDryrunMode && notSet $isTeardownMode && echo $envValues > $envFile
@@ -170,6 +179,7 @@ function installChart() {
     local isChartMode=$(checkJSONFlag isChartMode "$runtimeConfig")
     local isDebugMode=$(checkJSONFlag isDebugMode "$runtimeConfig")
     local isDryrunMode=$(checkJSONFlag isDryrunMode "$runtimeConfig")
+    local isTestingMode=$(checkJSONFlag isTestingMode "$runtimeConfig")
 
     local name=$(readJSON "$deploymentOptions" '.key')
     local config=$(readJSON "$deploymentOptions" '.value')
@@ -210,6 +220,7 @@ function installChart() {
 
     ## version
     local version
+    if notSet $isTestingMode; then
     if [[ -z $expectedVersion ]]; then
         local latestVersion
         latestVersion=$(getLatestChartVersion "$source" "$chartPath")
@@ -222,6 +233,7 @@ function installChart() {
         return 1
     else
         version=$expectedVersion
+    fi
     fi
 
     local helmVersionArg=$([ -n $version ] && echo "--version=$version" || echo "")
