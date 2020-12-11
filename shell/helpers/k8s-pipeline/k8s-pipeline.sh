@@ -219,7 +219,7 @@ function installChart() {
     echo -e "\n$(isSet $isRenderMode && echo 'Rendering' || echo 'Deploying') $name..."
 
     # update chart deps
-    if [[ $source == "local" ]] && [[ -d $chartPath ]] && notSet $isDryrunMode; then
+    if notSet $isDryrunMode && [[ $source == "local" ]] && [[ -d $chartPath ]]; then
         if ! helm dep update $chartPath; then
             echo "Skipping due to missing dependency!"
             return 1
@@ -237,7 +237,7 @@ function installChart() {
         echo "No version configured, using '$chart:$latestVersion'; consider locking the deployment to this version"
         version=$latestVersion
     elif ! checkChartVersion "$source" "$chartPath" "$expectedVersion"; then
-        echo "Verson mismatch for $source chart '$chartPath': expected $expectedVersion, not found"
+        echo "Could not find expected version for $source chart: '$chartPath':$expectedVersion"
         return 1
     else
         version=$expectedVersion
