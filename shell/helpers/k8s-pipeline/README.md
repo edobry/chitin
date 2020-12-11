@@ -16,6 +16,7 @@ with the components being as follows:
 - `flags`: keywords which, when set, modify the operation of the function
    - `debug`: enables more detailed logging
    - `dryrun` simulates a run, printing out commands that would be executed
+   - `testing` disables validations and updates, to allow faster iteration
 - `subcommand`: the operation to be executed
    - `deploy`: the most common mode; `render` and then deploy the targeted deployments to the cluster
    - `render`: substitutes values and templates the targeted deployments, but prints out the results instead of deploying
@@ -59,6 +60,7 @@ Environments are configured within a directory called `env` in the root of a rep
 The `config.json` file sets up the environment, including the relevant account, region, cluster, namespace, and node group. It also configures each deployment, setting the name, chart, and source.
 
 ###### Fields
+- `apiVersion`: minimum version of `dataeng-tools` required
 - `environment`: name of the Terraform environment
 - `tfModule`: Terraform module to reference
 - `account`: AWS account to use
@@ -67,6 +69,7 @@ The `config.json` file sets up the environment, including the relevant account, 
 - `namespace`: K8s namespace to create/use
 - `nodegroup`: EKS nodegroup to deploy to
 - `chartDefaults`: defaults to apply to any instance of a chart, fields same as `deployments`
+  applies values to all deployments of a certain chart in an environment, ie versions, resources, etc
 - `deployments`: workloads to be deployed, each is an instance of a chart with these fields:
    - `chart`: name/path of the Helm chart to use
    - `source`: where to pull the chart from, options are:
@@ -75,18 +78,19 @@ The `config.json` file sets up the environment, including the relevant account, 
       - `remote`: pull from a remote repository
    - `version`: version of the chart to require [optional]
    - `values`: an inline values object, will be converted to YAML and passed to Helm
-- `externalResources`: instances of the `external-service` chart to be deployed, takes only values
-- `resourcesOverrides`: overrides credentials passed to `externalResources`
+- `externalResources`: enables creation of K8s Services/Secrets to facilitate access to extra-cluster resources, ie databases, MSK clusters, Hetzner services, or external APIs
+  - `secretPresets`: defines common `externalSecret` combinations which can be referenced in specific `externalResources.deployment`s using `$secretPreset`
+  - `deployments`: instances of the `external-service` chart to be deployed, takes only values
 
-###### Notes
+###### Secrets Management
+We use the [`external-secrets`](https://github.com/external-secrets/kubernetes-external-secrets) module to poplate K8s `Secret`s from parameters stored in AWS SSM, which allows us to avoid manually shuffling around sensitive values or accidentally committing them to Git. To use this functionality, we create an `ExternalSecret` resource with a map of secret key to SSM parameter path, and then reference the automatically created `Secret` using a `secretEnvMap` block or the equivalent.
 
-- `chartDefaults`: applies values to all deployments of a certain chart in an environment, ie versions, resources, etc
-- `externalResources`: enables creation of K8s Services to facilitate access to extra-cluster resources, ie databases, MSK clusters, or Hetzner services
+Note that the `external-service` chart provides an easy way of setting up these resources by adding an item to the `externalResources.deployments` section, see the example below for details.
 
 ###### Subdirectory Mappings
 - `chartDefaults`: files map to the equivalent config entry's `values` field
 - `deployments`: files map to the equivalent config entry's `values` field
-- `externalResources`: files map to the equivalent config entry's value
+- `externalResources`: files map to the equivalent config entry's value (in the `deployments` subsection)
 
 ###### Overrides & Precedence
 
@@ -101,6 +105,7 @@ The subdirectories/files are simply a way to extract complex configuration from 
 
 ```json
 {
+    "apiVersion": "4.13.0",
     "environment": "dataeng-dev",
     "tfModule": "legacy-dev",
     "account": "dataeng-dev",
@@ -140,22 +145,32 @@ The subdirectories/files are simply a way to extract complex configuration from 
         }
     },
     "externalResources": {
-        "bison-eos": {
-            "externalName": "[...].eos.bison.run"
+        "secretPresets": {
+            "preset-1": {
+                "username": "/dataeng-dev/some-param/username",
+                "password": "/dataeng-dev/some-param/password"
+            }
         },
-        "postgres-cascade": {
-            "externalIP": "10.0.0.18",
-            "externalPort": 5432
-        },
-        "postgres-eth": {
-            "externalName": "dataeng-dev-coin-collection-eth.[...].rds.amazonaws.com"
-        },
-        "tx-producer-kafka-1": {
-            "externalName": "b-1.kafka-nonprod-tx-produ.[...].amazonaws.com"
+        "deployments": {
+            "bison-eos": {
+                "externalName": "[...].eos.bison.run",
+                "externalSecrets": {
+                    "username": "/dataeng-dev/bison-eos/username",
+                    "password": "/dataeng-dev/bison-eos/password"
+                }
+            },
+            "postgres-cascade": {
+                "externalIP": "10.0.0.18",
+                "externalPort": 5432
+            },
+            "postgres-eth": {
+                "externalName": "dataeng-dev-coin-collection-eth.[...].rds.amazonaws.com",
+                "$secretPreset": "preset-1"
+            },
+            "tx-producer-kafka-1": {
+                "externalName": "b-1.kafka-nonprod-tx-produ.[...].amazonaws.com"
+            }
         }
-    },
-    "resourcesOverrides": {
-        "postgres-cascade": "readonly"
     }
 }
 ```
