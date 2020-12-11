@@ -17,5 +17,5 @@ function setSecureParam() {
     requireArg "a parameter path" "$1" || return 1
     requireArg "the parameter value" "$2" || return 1
 
-   aws ssm put-parameter --name "$1" --value "$2" --overwrite
+   aws ssm put-parameter --name "$1" --value "$2" --type SecureString --overwrite
 }
