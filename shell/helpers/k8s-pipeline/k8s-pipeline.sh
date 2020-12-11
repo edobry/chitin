@@ -40,6 +40,8 @@ function k8sPipeline() {
     fi
 
     local isTeardownMode
+    local isRenderMode
+    local isDeployMode
     if [[ "$subCommand" == "teardown" ]]; then
         isTeardownMode=true
         echo -e "\n-- TEARDOWN MODE --"
@@ -87,6 +89,7 @@ function k8sPipeline() {
         --arg isDryrunMode "$isDryrunMode" \
         --arg isTestingMode "$isTestingMode" \
         --arg isTeardownMode "$isTeardownMode" \
+        --arg isDeployMode "$isDeployMode" \
         --arg isRenderMode "$isRenderMode" \
         --arg isChartMode "$isChartMode" \
         'inputs * {
@@ -99,6 +102,7 @@ function k8sPipeline() {
             isDryrunMode: ($isDryrunMode != ""),
             isTestingMode: ($isTestingMode != ""),
             isTeardownMode: ($isTeardownMode != ""),
+            isDeployMode: ($isDeployMode != ""),
             isRenderMode: ($isRenderMode != ""),
             isChartMode: ($isChartMode != "")
         } }')
@@ -178,6 +182,7 @@ function installChart() {
 
     local envDir=$(readJSON "$runtimeConfig" '.envDir')
     local envFile=$(readJSON "$runtimeConfig" '.envFile')
+    local isDeployMode=$(checkJSONFlag isDeployMode "$runtimeConfig")
     local isRenderMode=$(checkJSONFlag isRenderMode "$runtimeConfig")
     local isChartMode=$(checkJSONFlag isChartMode "$runtimeConfig")
     local isDebugMode=$(checkJSONFlag isDebugMode "$runtimeConfig")
@@ -313,7 +318,7 @@ function teardownChart() {
     helmCommand="helm uninstall $name"
 
     isSet "$isDryrunMode" echo "$helmCommand"
-    notSet "$isDryrunMode" && $helmCommand
+    notSet "$isDryrunMode" && $(echo "$helmCommand")
 }
 
 function targetMatches() {
