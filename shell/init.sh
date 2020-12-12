@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+if [[ -z "$CA_FAIL_ON_ERROR" ]]; then
+    set -e
+fi
+
 if [[ -z "$IS_DOCKER" ]]; then
     SOURCE_DIR=$(dirname -- "$0")
 
