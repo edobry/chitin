@@ -360,13 +360,8 @@ function targetMatches() {
 
 function k8sPipelineInitEnv() {
     requireArg "an environment name" "$1" || return 1
-    requireArg "the Docker username" "$2" || return 1
-    requireArg "the Docker password" "$3" || return 1
 
     local name="$1"
-    local dockerUsername="$2"
-    local dockerPassword="$3"
-
     # TODO: impute namespace name from env name
     local namespace="$name"
 
@@ -384,10 +379,6 @@ function k8sPipelineInitEnv() {
 
     #switch to the newly-created namespace
     notSet $isDryrunMode && kubens $namespace
-
-    isSet $isDryrunMode echo $regcredResource | prettyJson
-    notSet $isDryrunMode && echo $regcredResource | kubectl apply -f -
-
     echo "Environment initialized!"
 }
 
