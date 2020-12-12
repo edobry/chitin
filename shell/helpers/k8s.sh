@@ -41,7 +41,7 @@ function debugPod() {
     local debugPodName="$baseName-$(randomString 8)"
 
     echo -e "\nGenerating '$baseName' manifest..."
-    local chartDir=$CA_DT_DIR/../charts/debug-pod
+    local chartDir=$CA_DT_DIR/charts/debug-pod
     pushd $chartDir > /dev/null
 
     npm run compile
@@ -254,7 +254,7 @@ function snapshotAndScale() {
     echo "scale deployment $deployment to zero"
     kubectl -n $namespace scale deployment $deployment --replicas=0
     echo "take snapshot of $volumeId"
-    cat $templateFile | sed -e "s/timestamp/$(date '+%Y%m%d%H%M')/g" > ~/snapshot.yaml    
+    cat $templateFile | sed -e "s/timestamp/$(date '+%Y%m%d%H%M')/g" > ~/snapshot.yaml
     kubectl -n $namespace apply -f ~/snapshot.yaml
     echo "scale deployment $deployment to $replicas replicas"
     kubectl -n $namespace scale deployment $deployment --replicas=$replicas

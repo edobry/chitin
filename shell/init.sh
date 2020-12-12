@@ -11,7 +11,7 @@ if [[ -z "$IS_DOCKER" ]]; then
         SCRIPT_PATH="$SOURCE_DIR/init.sh"
     fi
 
-    export CA_DT_DIR="$(dirname $SCRIPT_PATH)"
+    export CA_DT_DIR="$(dirname $(dirname $SCRIPT_PATH))"
 fi
 
 function dtLog() {
@@ -54,7 +54,7 @@ function initJq() {
     fi
 
     # bring in jq helpers
-    source $CA_DT_DIR/helpers/json.sh
+    source $CA_DT_DIR/shell/helpers/json.sh
 }
 
 function getDTConfigLocation() {
@@ -70,7 +70,7 @@ function readDTConfig() {
     if [[ ! -f $json5ConfigFilePath ]]; then
         dtLog "initializing config file"
         mkdir -p $configLocation
-        cp $CA_DT_DIR/$json5ConfigFileName $json5ConfigFilePath
+        cp $CA_DT_DIR/shell/$json5ConfigFileName $json5ConfigFilePath
         dtLog "please update the file with your values: $json5ConfigFilePath"
     fi
 
@@ -103,7 +103,7 @@ function readDTConfig() {
 }
 
 function checkDTDeps() {
-    local json5DepFilePath="$CA_DT_DIR/dependencies.json5"
+    local json5DepFilePath="$CA_DT_DIR/shell/dependencies.json5"
 
     local depFilePath
     depFilePath=$(convertJSON5 "$json5DepFilePath")
@@ -123,7 +123,7 @@ alias dtShell=initDT
 function initDT() {
     shopt -s globstar
     # load init scripts
-    loadDTDir $CA_DT_DIR/helpers/init/**/*.sh
+    loadDTDir $CA_DT_DIR/shell/helpers/init/**/*.sh
 
     initJq
     readDTConfig
@@ -133,11 +133,11 @@ function initDT() {
     export CA_DP_DIR=$CA_PROJECT_DIR/dataeng-pipeline
 
     # load helpers
-    loadDTDir $(ls $CA_DT_DIR/helpers/**/*.sh | grep -v "/init")
+    loadDTDir $(ls $CA_DT_DIR/shell/helpers/**/*.sh | grep -v "/init")
 
     # zsh completions only loaded on zsh shells
     if [ -n "$ZSH_VERSION" ]; then
-        loadDTDir $CA_DT_DIR/helpers/**/*.zsh
+        loadDTDir $CA_DT_DIR/shell/helpers/**/*.zsh
     fi
 
     shopt -u globstar
@@ -145,7 +145,7 @@ function initDT() {
 }
 
 function reinitDT() {
-    source $CA_DT_DIR/init.sh
+    source $CA_DT_DIR/shell/init.sh
 }
 
 autoinitDT

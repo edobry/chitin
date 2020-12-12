@@ -6,7 +6,7 @@ function initAwsAuth() {
         return 1
     fi
 
-    local embeddedAwsConfig=$CA_DT_DIR/terraform/util/aws/config
+    local embeddedAwsConfig=$CA_DT_DIR/shell/terraform/util/aws/config
 
     # if we're already initialized, we're done
     ([[ $CA_DT_AWS_AUTH_INIT = "true" ]] && [[ -f $embeddedAwsConfig ]]) && return 0
@@ -24,7 +24,7 @@ function initAwsAuth() {
     export TF_VAR_aws_sessionname=${CA_GOOGLE_USERNAME}
 
     # download generated AWS config
-    sparseCheckout git@github.com:chainalysis/terraform.git $CA_DT_DIR/terraform util/aws/config
+    sparseCheckout git@github.com:chainalysis/terraform.git $CA_DT_DIR/shell/terraform util/aws/config
     export AWS_CONFIG_FILE=$embeddedAwsConfig
 
     export CA_DT_AWS_AUTH_INIT=true
