@@ -327,3 +327,9 @@ function kubectlAsServiceAccount() {
 
     runAsServiceAccount $svcAccountName kubectl $*
 }
+
+function k8sNamespaceExists() {
+    requireArg "a namespace" "$1" || return 1
+
+    kubectl get namespaces "$1" --output=json > /dev/null 2>&1
+}

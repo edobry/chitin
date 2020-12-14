@@ -133,8 +133,7 @@ function k8sPipeline() {
     isSet $isDryrunMode && echo "Base SSM Path: '$baseSsmPath'"
 
     ## env init
-    kubectl get namespaces coin-collection-dev --output=json > /dev/null 2>&1
-    if [[ ! $? -eq 0 ]]; then
+    if ! k8sNamespaceExists; then
         k8sPipelineInitEnv $namespace $dockerUsername $dockerPassword
     fi
     ##
