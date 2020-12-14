@@ -135,7 +135,7 @@ function k8sPipeline() {
     isSet $isDryrunMode && echo "Base SSM Path: '$baseSsmPath'"
 
     ## env init
-    if ! k8sNamespaceExists; then
+    if ! k8sNamespaceExists $namespace; then
         k8sPipelineInitEnv $namespace $dockerUsername $dockerPassword
     fi
     ##
@@ -380,7 +380,7 @@ function k8sPipelineInitEnv() {
 
     #switch to the newly-created namespace
     notSet $isDryrunMode && kubens $namespace
-    echo "Environment initialized!"
+    echo -e "Environment initialized!\n"
 }
 
 local tfModule=coin-collection/$(readJSON "$envConfig" ".tfModule // \"$envName\"")
