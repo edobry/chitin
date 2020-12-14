@@ -68,6 +68,10 @@ function k8sPipeline() {
         checkDTVersion "$apiVersion" || return 1
     fi
 
+    local account=$(readJSON "$envConfig" '.environment.awsAccount')
+    checkAccountAuthAndFail "$account" || return 1
+    local region=$(getAwsRegion)
+
     ## parse target
     local target
     requireArg "deployments to limit to, or 'all' to not limit" "$1" || return 1
@@ -143,8 +147,8 @@ function k8sPipeline() {
     # generate environment-specific configuration and write to a temporary file
     # TODO: add per-chart child-chart config
     local envValues=$(readJSON "$runtimeConfig" '{
-        region, nodeSelector: {
-            "eks.amazonaws.com/nodegroup": (.nodegroup // empty) } } ')
+        region: $region, nodeSelector: {
+            "eks.amazonaws.com/nodegroup": (.nodegroup // empty) } }' --region $region)
 
     notSet $isTestingMode && notSet $isDryrunMode && notSet $isTeardownMode && helm repo update
 
