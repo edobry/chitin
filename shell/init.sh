@@ -1,9 +1,5 @@
 #!/usr/bin/env bash
 
-if [[ -z "$CA_FAIL_ON_ERROR" ]]; then
-    set -e
-fi
-
 if [[ -z "$IS_DOCKER" ]]; then
     SOURCE_DIR=$(dirname -- "$0")
 
@@ -125,6 +121,10 @@ function autoinitDT() {
 
 alias dtShell=initDT
 function initDT() {
+    if [[ -z "$CA_FAIL_ON_ERROR" ]]; then
+        set -e
+    fi
+
     shopt -s globstar
     # load init scripts
     loadDTDir $CA_DT_DIR/shell/helpers/init/**/*.sh
@@ -146,6 +146,10 @@ function initDT() {
 
     shopt -u globstar
     export CA_DT_ENV_INITIALIZED=true
+
+    if [[ -z "$CA_FAIL_ON_ERROR" ]]; then
+        set +e
+    fi
 }
 
 function reinitDT() {
