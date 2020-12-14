@@ -114,14 +114,12 @@ function k8sPipeline() {
         } }')
 
     isSet "$isDebugMode" && readJSON "$runtimeConfig" '.'
-    local account=$(readJSON "$runtimeConfig" '.account')
-    local cluster=$(readJSON "$runtimeConfig" '.context')
-    local namespace=$(readJSON "$runtimeConfig" '.namespace')
-    local tfEnv=$(readJSON "$runtimeConfig" '.environment')
+    local cluster=$(readJSON "$runtimeConfig" '.environment.k8sContext')
+    local namespace=$(readJSON "$runtimeConfig" '.environment.k8sNamespace')
 
-    local tfModule=coin-collection/$(readJSON "$envConfig" ".tfModule // \"$envName\"")
+    local tfEnv=$(readJSON "$runtimeConfig" '.environment.tfEnv')
+    local tfModule=coin-collection/$(readJSON "$envConfig" ".environment.tfModule // \"$envName\"")
 
-    checkAccountAuthAndFail "$account" || return 1
 
     echo "Initializing DP environment '$envName'..."
     echo "AWS account: 'ca-aws-$account'"
@@ -135,8 +133,8 @@ function k8sPipeline() {
     notSet $isDryrunMode && kubens $namespace
 
     # if the environment specifies a base SSM path, use that, otherwise default
-    local baseSsmPath=$(readJSON "$runtimeConfig" '"/\(.ssmOverride // "dataeng-\($envName)")"' --arg envName dev)
-    isSet $isDryrunMode && echo "Base SSM Path: '$baseSsmPath'"
+    local baseSsmPath=$(readJSON "$runtimeConfig" '"/\(.environment.ssmOverride // "dataeng-\($envName)")"' --arg envName dev)
+    # isSet $isDryrunMode && echo "Base SSM Path: '$baseSsmPath'"
 
     ## env init
     if ! k8sNamespaceExists $namespace; then
@@ -148,7 +146,7 @@ function k8sPipeline() {
     # TODO: add per-chart child-chart config
     local envValues=$(readJSON "$runtimeConfig" '{
         region: $region, nodeSelector: {
-            "eks.amazonaws.com/nodegroup": (.nodegroup // empty) } }' --region $region)
+            "eks.amazonaws.com/nodegroup": (.environment.nodegroup // empty) } }' --region $region)
 
     notSet $isTestingMode && notSet $isDryrunMode && notSet $isTeardownMode && helm repo update
 
