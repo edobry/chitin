@@ -63,8 +63,10 @@ function k8sPipeline() {
     local configFile=$envDir/config.json
 
     local envConfig=$(readJSONFile $configFile)
-    local apiVersion=$(readJSON "$envConfig" '.apiVersion')
-    checkDTVersion "$apiVersion" || return 1
+    local apiVersion=$(readJSON "$envConfig" '.apiVersion // empty')
+    if isSet $apiVersion; then
+        checkDTVersion "$apiVersion" || return 1
+    fi
 
     ## parse target
     local target
