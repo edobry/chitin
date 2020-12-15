@@ -146,7 +146,7 @@ function k8sPipeline() {
     # TODO: add per-chart child-chart config
     local envValues=$(readJSON "$runtimeConfig" '{
         region: $region, nodeSelector: {
-            "eks.amazonaws.com/nodegroup": (.environment.nodegroup // empty) } }' --region $region)
+            "eks.amazonaws.com/nodegroup": (.environment.nodegroup // empty) } }' --arg region $region)
 
     notSet $isTestingMode && notSet $isDryrunMode && notSet $isTeardownMode && helm repo update
 
