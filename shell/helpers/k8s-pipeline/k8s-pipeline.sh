@@ -114,7 +114,7 @@ function k8sPipeline() {
         } }')
 
     isSet "$isDebugMode" && readJSON "$runtimeConfig" '.'
-    local cluster=$(readJSON "$runtimeConfig" '.environment.k8sContext')
+    local context=$(readJSON "$runtimeConfig" '.environment.k8sContext')
     local namespace=$(readJSON "$runtimeConfig" '.environment.k8sNamespace')
 
     local tfEnv=$(readJSON "$runtimeConfig" '.environment.tfEnv')
@@ -125,11 +125,11 @@ function k8sPipeline() {
     echo "AWS account: 'ca-aws-$account'"
     echo "Terraform environment: '$tfEnv'"
     echo "Terraform module: '$tfModule'"
-    echo "EKS cluster: '$cluster'"
+    echo "EKS context: '$context'"
     echo "EKS namespace: '$namespace'"
     echo
 
-    notSet $isDryrunMode && kubectx $cluster
+    notSet $isDryrunMode && kubectx $context
     notSet $isDryrunMode && kubens $namespace
 
     # if the environment specifies a base SSM path, use that, otherwise default
