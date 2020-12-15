@@ -72,6 +72,32 @@ function k8sPipeline() {
     checkAccountAuthAndFail "$account" || return 1
     local region=$(getAwsRegion)
 
+    ## load env config
+    local context=$(readJSON "$envConfig" '.environment.k8sContext')
+    local namespace=$(readJSON "$envConfig" '.environment.k8sNamespace')
+
+    local tfEnv=$(readJSON "$envConfig" '.environment.tfEnv')
+    local tfModule=coin-collection/$(readJSON "$envConfig" ".environment.tfModule // \"$envName\"")
+
+    echo "Initializing DP environment '$envName'..."
+    echo "AWS account: 'ca-aws-$account'"
+    echo "Terraform environment: '$tfEnv'"
+    echo "Terraform module: '$tfModule'"
+    echo "EKS context: '$context'"
+    echo "EKS namespace: '$namespace'"
+    echo
+    ##
+
+    ## env init
+    if ! k8sNamespaceExists $namespace; then
+        k8sPipelineInitEnv $namespace $dockerUsername $dockerPassword
+    fi
+    ##
+
+    notSet $isDryrunMode && kubectx $context
+    notSet $isDryrunMode && kubens $namespace
+
+
     ## parse target
     local target
     requireArg "deployments to limit to, or 'all' to not limit" "$1" || return 1
@@ -114,33 +140,10 @@ function k8sPipeline() {
         } }')
 
     isSet "$isDebugMode" && readJSON "$runtimeConfig" '.'
-    local context=$(readJSON "$runtimeConfig" '.environment.k8sContext')
-    local namespace=$(readJSON "$runtimeConfig" '.environment.k8sNamespace')
-
-    local tfEnv=$(readJSON "$runtimeConfig" '.environment.tfEnv')
-    local tfModule=coin-collection/$(readJSON "$envConfig" ".environment.tfModule // \"$envName\"")
-
-
-    echo "Initializing DP environment '$envName'..."
-    echo "AWS account: 'ca-aws-$account'"
-    echo "Terraform environment: '$tfEnv'"
-    echo "Terraform module: '$tfModule'"
-    echo "EKS context: '$context'"
-    echo "EKS namespace: '$namespace'"
-    echo
-
-    notSet $isDryrunMode && kubectx $context
-    notSet $isDryrunMode && kubens $namespace
 
     # if the environment specifies a base SSM path, use that, otherwise default
     local baseSsmPath=$(readJSON "$runtimeConfig" '"/\(.environment.ssmOverride // "dataeng-\($envName)")"' --arg envName dev)
     # isSet $isDryrunMode && echo "Base SSM Path: '$baseSsmPath'"
-
-    ## env init
-    if ! k8sNamespaceExists $namespace; then
-        k8sPipelineInitEnv $namespace $dockerUsername $dockerPassword
-    fi
-    ##
 
     # generate environment-specific configuration and write to a temporary file
     # TODO: add per-chart child-chart config
