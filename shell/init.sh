@@ -121,7 +121,7 @@ function autoinitDT() {
 
 alias dtShell=initDT
 function initDT() {
-    if [[ -z "$CA_FAIL_ON_ERROR" ]]; then
+    if [[ ! -z "$CA_FAIL_ON_ERROR" ]]; then
         set -e
     fi
 
