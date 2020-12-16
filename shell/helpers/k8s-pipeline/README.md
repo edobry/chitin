@@ -61,16 +61,16 @@ The `config.json` file sets up the environment, including the relevant account, 
 
 ###### Fields
 - `apiVersion`: minimum version of `dataeng-tools` required
-- `environment`: name of the Terraform environment
-- `tfModule`: Terraform module to reference
-- `account`: AWS account to use
-- `region`: AWS region to use
-- `context`: pre-configured K8s context to use
-- `namespace`: K8s namespace to create/use
-- `nodegroup`: EKS nodegroup to deploy to
+- `environment`: environment configuration
+   - `awsAccount` (required): AWS account to use
+   - `k8sContext` (required): pre-configured K8s context to use
+   - `k8sNamespace` (required): K8s namespace to create/use
+   - `eksNodegroup`: EKS nodegroup to deploy to
+   - `tfEnv`: name of the Terraform environment
+   - `tfModule`: Terraform module to reference
 - `chartDefaults`: defaults to apply to any instance of a chart, fields same as `deployments`
   applies values to all deployments of a certain chart in an environment, ie versions, resources, etc
-- `deployments`: workloads to be deployed, each is an instance of a chart with these fields:
+- `deployments` (required): workloads to be deployed, each is an instance of a chart with these fields:
    - `chart`: name/path of the Helm chart to use
    - `source`: where to pull the chart from, options are:
       - `local`: local filesystem, expects a path (relative or absolute)
