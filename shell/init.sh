@@ -121,11 +121,13 @@ function autoinitDT() {
 
 alias dtShell=initDT
 function initDT() {
-    if [[ -z "$CA_FAIL_ON_ERROR" ]]; then
+    if [[ ! -z "$CA_FAIL_ON_ERROR" ]]; then
         set -e
     fi
 
-    if [[ -n "$ZSH_VERSION" ]]; then
+    if [[ -z "$ZSH_VERSION" ]]; then
+        shopt -s globstar
+    else
         setopt ksh_glob
     fi
 
