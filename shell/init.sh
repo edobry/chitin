@@ -125,7 +125,10 @@ function initDT() {
         set -e
     fi
 
-    shopt -s globstar
+    if [[ -n "$ZSH_VERSION" ]]; then
+        setopt ksh_glob
+    fi
+
     # load init scripts
     loadDTDir $CA_DT_DIR/shell/helpers/init/**/*.sh
 
@@ -144,7 +147,6 @@ function initDT() {
         loadDTDir $CA_DT_DIR/shell/helpers/**/*.zsh
     fi
 
-    shopt -u globstar
     export CA_DT_ENV_INITIALIZED=true
 
     if [[ -z "$CA_FAIL_ON_ERROR" ]]; then
