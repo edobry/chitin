@@ -102,7 +102,7 @@ function k8sPipeline() {
     local target
     requireArg "deployments to limit to, or 'all' to not limit" "$1" || return 1
     if [[ "$1" = "all" ]]; then
-        echo "Processing all deployments"
+        echo -e "\nProcessing all deployments"
     else
         target="$*"
 
@@ -165,9 +165,14 @@ function k8sPipeline() {
 
     local deployments=$(readJSON "$runtimeConfig" '.deployments | to_entries[] | select(.value.disabled | not)')
 
+    local mergedDeployments=$(echo -e "$externalResourceDeployments\n$deployments")
+    if [[ -z $mergedDeployments ]]; then
+        echo "No deployments configured, nothing to do. Exiting!"
+        return 0
+    fi
     while read -r deploymentOptions; do
          $modeCommand "$runtimeConfig" "$deploymentOptions" "$chartDefaults"
-    done <<< $externalResourceDeployments <<< $deployments
+    done <<< $mergedDeployments
 
     notSet $isDryrunMode && notSet $isTeardownMode && rm "$envFile"
 
@@ -208,7 +213,7 @@ function createK8sPipelineEnv() {
         },
         chartDefaults: {},
         deployments: {},
-        externalSecrets: {}
+        externalResources: { deployments: {} }
     }')
 
     if [[ ! -d "env" ]]; then
