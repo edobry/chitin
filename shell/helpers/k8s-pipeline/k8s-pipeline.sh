@@ -181,6 +181,55 @@ function checkJSONFlag() {
     echo "$2" | jq -r --arg flagName "$1" 'if .flags[$flagName] then "true" else "" end'
 }
 
+function createK8sPipelineEnv() {
+    requireArg "an environment name" "$1" || return 1
+    requireArg "an AWS account name" "$2" || return 1
+    requireArg "a K8s context name" "$3" || return 1
+    requireArg "a K8s namespace name" "$4" || return 1
+
+    local envName="$1"
+    local awsAccount="$2"
+    local k8sContext="$3"
+    local k8sNamespace="$4"
+
+    local apiVersion=$(getReleasedDTVersion)
+    local config=$(jq -n \
+        --arg apiVersion $apiVersion \
+        --arg envName $envName \
+        --arg awsAccount $awsAccount \
+        --arg k8sContext $k8sContext \
+        --arg k8sNamespace $k8sNamespace \
+    '{
+        apiVersion: $apiVersion,
+        environment: {
+            awsAccount: $awsAccount,
+            k8sContext: $k8sContext,
+            k8sNamespace: $k8sNamespace
+        },
+        chartDefaults: {},
+        deployments: {},
+        externalSecrets: {}
+    }')
+
+    if [[ ! -d "env" ]]; then
+        echo "Are you in the right directory? No 'env' dir found!"
+        return 1
+    fi
+
+    local envDir="env/$envName"
+    local configPath="$envDir/config.json"
+
+    if [[ -f $configPath ]]; then
+        echo "Environment '$envName' already initialized."
+        return 0
+    fi
+
+    echo "Creating new environment directory for '$envName'..."
+    mkdir -p $envDir/deployments $envDir/chartDefaults $envDir/externalResources
+    echo $config > $configPath
+    echo "Environment initialized! You can configure it at '$configPath'."
+}
+
 function installChart() {
     local runtimeConfig="$1"
     local deploymentOptions="$2"
