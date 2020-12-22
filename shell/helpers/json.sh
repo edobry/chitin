@@ -18,6 +18,12 @@ function prettyYamlMultiple() {
     yq r -PCd'*' -
 }
 
+function validateJSONFile() {
+    requireArg "a filepath" "$1" || return 1
+
+    cat "$1" | jq -e . > /dev/null 2>&1
+}
+
 # reads (a value at a certain path from) a JSON File
 # args: json file path, jq path to read
 function readJSONFile() {
