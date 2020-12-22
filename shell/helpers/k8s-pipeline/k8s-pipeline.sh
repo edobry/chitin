@@ -60,6 +60,7 @@ function k8sPipeline() {
         shift
     fi
 
+    ## load env config
     local configFile=$envDir/config.json
 
     local envConfig=$(readJSONFile $configFile)
@@ -70,16 +71,19 @@ function k8sPipeline() {
         checkDTVersion "$apiVersion" || return 1
     fi
 
+    local tfEnv=$(readJSON "$envConfig" '.environment.tfEnv // empty')
+    local tfModule=$(readJSON "$envConfig" ".environment.tfModule // empty")
+
     local account=$(readJSON "$envConfig" '.environment.awsAccount')
+    requireArg "the AWS account name" "$account" || return 1
     checkAccountAuthAndFail "$account" || return 1
     local region=$(getAwsRegion)
 
-    ## load env config
     local context=$(readJSON "$envConfig" '.environment.k8sContext')
-    local namespace=$(readJSON "$envConfig" '.environment.k8sNamespace')
+    requireArg "the K8s context name" "$context" || return 1
 
-    local tfEnv=$(readJSON "$envConfig" '.environment.tfEnv')
-    local tfModule=coin-collection/$(readJSON "$envConfig" ".environment.tfModule // \"$envName\"")
+    local namespace=$(readJSON "$envConfig" '.environment.k8sNamespace')
+    requireArg "the K8s namespace name" "$namespace" || return 1
 
     echo "Initializing DP environment '$envName'..."
     isSet "$tfEnv" && echo "Terraform environment: '$tfEnv'"
