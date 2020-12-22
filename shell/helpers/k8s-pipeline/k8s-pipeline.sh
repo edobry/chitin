@@ -63,6 +63,8 @@ function k8sPipeline() {
     local configFile=$envDir/config.json
 
     local envConfig=$(readJSONFile $configFile)
+    isSet "$isDebugMode" && echo "envConfig:" && readJSON "$envConfig" '.'
+
     local apiVersion=$(readJSON "$envConfig" '.apiVersion // empty')
     if isSet $apiVersion; then
         checkDTVersion "$apiVersion" || return 1
@@ -96,7 +98,6 @@ function k8sPipeline() {
 
     notSet $isDryrunMode && kubectx $context
     notSet $isDryrunMode && kubens $namespace
-
 
     ## parse target
     local target
