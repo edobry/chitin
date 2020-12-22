@@ -91,13 +91,14 @@ function k8sPipeline() {
     ##
 
     ## env init
+    notSet $isDryrunMode && kubectx $context
+
     if ! k8sNamespaceExists $namespace; then
         k8sPipelineInitEnv $namespace $dockerUsername $dockerPassword
     fi
-    ##
 
-    notSet $isDryrunMode && kubectx $context
     notSet $isDryrunMode && kubens $namespace
+    ##
 
     ## parse target
     local target
