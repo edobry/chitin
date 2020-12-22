@@ -86,19 +86,19 @@ function readDTConfig() {
         dtLog "[DEPRECATION WARNING] please switch to setting your values in $json5ConfigFilePath ASAP"
     fi
 
-    local projectDir=$(readJSON "$CA_DT_CONFIG" '.projectDir')
+    local projectDir=$(readJSON "$CA_DT_CONFIG" '.projectDir // empty')
     [[ -z $CA_PROJECT_DIR ]] && export CA_PROJECT_DIR=$projectDir
 
-    local awsAuthEnabled=$(readJSON "$CA_DT_CONFIG" '.modules."aws-auth".enabled')
+    local awsAuthEnabled=$(readJSON "$CA_DT_CONFIG" '.modules."aws-auth".enabled // empty')
     [[ -z $CA_DT_AWS_AUTH_ENABLED ]] && export CA_DT_AWS_AUTH_ENABLED=$awsAuthEnabled
 
-    local googleUsername=$(readJSON "$CA_DT_CONFIG" '.modules."aws-auth".googleUsername')
+    local googleUsername=$(readJSON "$CA_DT_CONFIG" '.modules."aws-auth".googleUsername // empty')
     [[ -z $CA_GOOGLE_USERNAME ]] && export CA_GOOGLE_USERNAME=$googleUsername
 
-    local departmentRole=$(readJSON "$CA_DT_CONFIG" '.modules."aws-auth".departmentRole')
+    local departmentRole=$(readJSON "$CA_DT_CONFIG" '.modules."aws-auth".departmentRole // empty')
     [[ -z $CA_DEPT_ROLE ]] && export CA_DEPT_ROLE=$departmentRole
 
-    local k8sEnvEnabled=$(readJSON "$CA_DT_CONFIG" '.modules."k8s-env".enabled')
+    local k8sEnvEnabled=$(readJSON "$CA_DT_CONFIG" '.modules."k8s-env".enabled // empty')
     [[ -z $CA_DT_K8S_CONFIG_ENABLED ]] && export CA_DT_K8S_CONFIG_ENABLED=$k8sEnvEnabled
 }
 
