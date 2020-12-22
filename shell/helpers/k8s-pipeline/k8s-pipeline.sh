@@ -44,13 +44,13 @@ function k8sPipeline() {
     local isDeployMode
     if [[ "$subCommand" == "teardown" ]]; then
         isTeardownMode=true
-        echo -e "\n-- TEARDOWN MODE --"
+        echo "-- TEARDOWN MODE --"
     elif [[ "$subCommand" == "render" ]]; then
         isRenderMode=true
-        echo -e "\n-- RENDER MODE --"
+        echo "-- RENDER MODE --"
     elif [[ "$subCommand" == "deploy" ]]; then
         isDeployMode=true
-        echo -e "\n-- DEPLOY MODE --"
+        echo "-- DEPLOY MODE --"
     fi
 
     # to use, call with `chart` as the second arg (after env)
@@ -85,8 +85,8 @@ function k8sPipeline() {
     isSet "$tfEnv" && echo "Terraform environment: '$tfEnv'"
     isSet "$tfModule" && echo "Terraform module: '$tfModule'"
     echo "AWS account: 'ca-aws-$account'"
-    echo "EKS context: '$context'"
-    echo "EKS namespace: '$namespace'"
+    echo "K8s context: '$context'"
+    echo "K8s namespace: '$namespace'"
     echo
     ##
 
