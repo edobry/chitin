@@ -62,6 +62,10 @@ function k8sPipeline() {
 
     ## load env config
     local configFile=$envDir/config.json
+    if ! validateJSONFile $configFile; then
+        echo "Config file at '$configFile' is not valid JSON, exiting!"
+        return 1
+    fi
 
     local envConfig=$(readJSONFile $configFile)
     isSet "$isDebugMode" && echo "envConfig:" && readJSON "$envConfig" '.'
