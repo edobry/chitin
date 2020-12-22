@@ -82,9 +82,9 @@ function k8sPipeline() {
     local tfModule=coin-collection/$(readJSON "$envConfig" ".environment.tfModule // \"$envName\"")
 
     echo "Initializing DP environment '$envName'..."
+    isSet "$tfEnv" && echo "Terraform environment: '$tfEnv'"
+    isSet "$tfModule" && echo "Terraform module: '$tfModule'"
     echo "AWS account: 'ca-aws-$account'"
-    echo "Terraform environment: '$tfEnv'"
-    echo "Terraform module: '$tfModule'"
     echo "EKS context: '$context'"
     echo "EKS namespace: '$namespace'"
     echo
@@ -152,10 +152,10 @@ function k8sPipeline() {
         region: $region, nodeSelector: {
             "eks.amazonaws.com/nodegroup": (.environment.nodegroup // empty) } }' --arg region $region)
 
-    notSet $isTestingMode && notSet $isDryrunMode && notSet $isTeardownMode && helm repo update
+    notSet "$isTestingMode" && notSet "$isDryrunMode" && notSet "$isTeardownMode" && helm repo update
 
-    isSet $isDryrunMode notSet $isTeardownMode && echo $envValues | prettyYaml
-    notSet $isDryrunMode && notSet $isTeardownMode && echo $envValues > $envFile
+    isSet "$isDryrunMode" && notSet "$isTeardownMode" && echo "$envValues" | prettyYaml
+    notSet "$isDryrunMode" && notSet "$isTeardownMode" && echo "$envValues" > $envFile
 
     local chartDefaults=$(readJSON "$runtimeConfig" '.chartDefaults')
 
