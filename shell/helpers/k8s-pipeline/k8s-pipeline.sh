@@ -28,6 +28,12 @@ function k8sPipeline() {
     fi
 
     requireArgOptions "a subcommand" "$1" 'render deploy teardown' || return 1
+    local isAuthMode
+    if [[ $1 == "auth" ]]; then
+        isAuthMode=true
+        shift
+    fi
+
     requireArg "the environment name" "$2" || return 1
     local subCommand="$1"
     local envName="$2"
@@ -81,7 +87,7 @@ function k8sPipeline() {
     local accountPath="environment.awsAccount"
     local account=$(readJSON "$envConfig" ".$accountPath // empty")
     requireArg "the AWS account name as '$accountPath'" "$account" || return 1
-    checkAccountAuthAndFail "$account" || return 1
+
     local region=$(getAwsRegion)
 
     local contextPath="environment.k8sContext"
@@ -100,6 +106,13 @@ function k8sPipeline() {
     echo "K8s namespace: '$namespace'"
     echo
     ##
+
+    # aws auth
+    if isSet "$isAuthMode"; then
+        awsAuth "$account-admin"
+    else
+        checkAccountAuthAndFail "$account" || return 1
+    fi
 
     ## env init
     notSet $isDryrunMode && kubectx $context
