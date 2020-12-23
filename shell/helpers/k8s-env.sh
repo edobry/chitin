@@ -26,5 +26,7 @@ function k9sEnv() {
     requireArg "a K8s namespace name" "$3" || return 1
 
     checkAuth "$1" || awsAuth "$1"
+
+    echo "Launching K9s in context '$2', namespace '$3'"
     k9s --context "$2" --namespace "$3" -c deployments
 }
