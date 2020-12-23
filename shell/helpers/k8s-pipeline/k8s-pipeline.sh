@@ -27,13 +27,14 @@ function k8sPipeline() {
         shift
     fi
 
-    requireArgOptions "a subcommand" "$1" 'render deploy teardown' || return 1
+    # to use, call with `auth` as the first arg
     local isAuthMode
     if [[ $1 == "auth" ]]; then
         isAuthMode=true
         shift
     fi
 
+    requireArgOptions "a subcommand" "$1" 'render deploy teardown k9s' || return 1
     requireArg "the environment name" "$2" || return 1
     local subCommand="$1"
     local envName="$2"
@@ -48,6 +49,7 @@ function k8sPipeline() {
     local isTeardownMode
     local isRenderMode
     local isDeployMode
+    local isK9sMode
     if [[ "$subCommand" == "teardown" ]]; then
         isTeardownMode=true
         echo "-- TEARDOWN MODE --"
@@ -57,6 +59,8 @@ function k8sPipeline() {
     elif [[ "$subCommand" == "deploy" ]]; then
         isDeployMode=true
         echo "-- DEPLOY MODE --"
+    elif [[ "$subCommand" == "k9s" ]]; then
+        isK9sMode=true
     fi
 
     # to use, call with `chart` as the second arg (after env)
@@ -123,6 +127,11 @@ function k8sPipeline() {
 
     notSet $isDryrunMode && kubens $namespace
     ##
+
+    if isSet "$isK9sMode"; then
+        k9sEnv $account-admin $context $namespace
+        return 0
+    fi
 
     ## parse target
     local target
