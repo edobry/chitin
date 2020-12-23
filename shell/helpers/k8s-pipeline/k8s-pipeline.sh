@@ -2,6 +2,12 @@ notSet () [[ -z $1 ]]
 isSet () [[ ! -z $1 ]]
 isTrue () [[ "$1" = true ]]
 
+function k9sPipeline() {
+    requireArg "the environment name" "$1" || return 1
+
+    k8sPipeline auth k9s "$1"
+}
+
 function k8sPipeline() {
     # to use, call with `debug` as the first arg
     local isDebugMode
