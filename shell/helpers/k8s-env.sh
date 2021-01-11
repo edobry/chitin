@@ -19,3 +19,14 @@ function deleteK8sContext() {
 
     kubectl config delete-context $contextName
 }
+
+function k9sEnv() {
+    requireArg "an AWS account name" "$1" || return 1
+    requireArg "a K8s context name" "$2" || return 1
+    requireArg "a K8s namespace name" "$3" || return 1
+
+    checkAuth "$1" || awsAuth "$1"
+
+    echo "Launching K9s in context '$2', namespace '$3'"
+    k9s --context "$2" --namespace "$3" -c deployments --request-timeout 30s
+}

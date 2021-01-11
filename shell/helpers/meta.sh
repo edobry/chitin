@@ -31,6 +31,10 @@ function checkEmbeddedDTVersion() {
     popd > /dev/null
 }
 
+function showDTConfig() {
+    cat $(getDTConfigLocation)/config.json | prettyJson
+}
+
 function modifyDTConfig() {
     nano $(getDTConfigLocation)/config.json5
     echo "DT config updated, reinitializing..."
