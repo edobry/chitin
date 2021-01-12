@@ -4,12 +4,16 @@ function getDTVersion() {
     popd > /dev/null
 }
 
+function getReleasedDTVersion() {
+    getDTVersion | cut -d '-' -f 1
+}
+
 function checkDTVersion() {
     requireArg "the minimum version" "$1" || return 1
 
     local minimumVersion="$1"
-    local installedVersion=$(getDTVersion | sed 's/v//')
-    
+    local installedVersion=$(getDTVersion)
+
     if ! checkVersion $minimumVersion $installedVersion; then
         echo "Installed DT version $installedVersion does not meet minimum of $minimumVersion!"
         return 1
@@ -25,6 +29,10 @@ function checkEmbeddedDTVersion() {
     pushd dataeng-tools > /dev/null
     git describe HEAD --tags
     popd > /dev/null
+}
+
+function showDTConfig() {
+    cat $(getDTConfigLocation)/config.json | prettyJson
 }
 
 function modifyDTConfig() {

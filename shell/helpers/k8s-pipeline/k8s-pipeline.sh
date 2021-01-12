@@ -2,6 +2,12 @@ notSet () [[ -z $1 ]]
 isSet () [[ ! -z $1 ]]
 isTrue () [[ "$1" = true ]]
 
+function k9sPipeline() {
+    requireArg "the environment name" "$1" || return 1
+
+    k8sPipeline auth k9s "$1"
+}
+
 function k8sPipeline() {
     # to use, call with `debug` as the first arg
     local isDebugMode
@@ -27,7 +33,14 @@ function k8sPipeline() {
         shift
     fi
 
-    requireArgOptions "a subcommand" "$1" 'render deploy teardown' || return 1
+    # to use, call with `auth` as the first arg
+    local isAuthMode
+    if [[ $1 == "auth" ]]; then
+        isAuthMode=true
+        shift
+    fi
+
+    requireArgOptions "a subcommand" "$1" 'render deploy teardown k9s' || return 1
     requireArg "the environment name" "$2" || return 1
     local subCommand="$1"
     local envName="$2"
@@ -42,15 +55,18 @@ function k8sPipeline() {
     local isTeardownMode
     local isRenderMode
     local isDeployMode
+    local isK9sMode
     if [[ "$subCommand" == "teardown" ]]; then
         isTeardownMode=true
-        echo -e "\n-- TEARDOWN MODE --"
+        echo "-- TEARDOWN MODE --"
     elif [[ "$subCommand" == "render" ]]; then
         isRenderMode=true
-        echo -e "\n-- RENDER MODE --"
+        echo "-- RENDER MODE --"
     elif [[ "$subCommand" == "deploy" ]]; then
         isDeployMode=true
-        echo -e "\n-- DEPLOY MODE --"
+        echo "-- DEPLOY MODE --"
+    elif [[ "$subCommand" == "k9s" ]]; then
+        isK9sMode=true
     fi
 
     # to use, call with `chart` as the second arg (after env)
@@ -60,19 +76,74 @@ function k8sPipeline() {
         shift
     fi
 
+    ## load env config
     local configFile=$envDir/config.json
+    if ! validateJSONFile $configFile; then
+        echo "Config file at '$configFile' is not valid JSON, exiting!"
+        return 1
+    fi
 
     local envConfig=$(readJSONFile $configFile)
+    isSet "$isDebugMode" && echo "envConfig:" && readJSON "$envConfig" '.'
+
     local apiVersion=$(readJSON "$envConfig" '.apiVersion // empty')
     if isSet $apiVersion; then
         checkDTVersion "$apiVersion" || return 1
+    fi
+
+    local tfEnv=$(readJSON "$envConfig" '.environment.tfEnv // empty')
+    local tfModule=$(readJSON "$envConfig" ".environment.tfModule // empty")
+
+    local accountPath="environment.awsAccount"
+    local account=$(readJSON "$envConfig" ".$accountPath // empty")
+    requireArg "the AWS account name as '$accountPath'" "$account" || return 1
+
+    local region=$(getAwsRegion)
+
+    local contextPath="environment.k8sContext"
+    local context=$(readJSON "$envConfig" ".$contextPath // empty")
+    requireArg "the K8s context name as '$contextPath'" "$context" || return 1
+
+    local namespacePath="environment.k8sNamespace"
+    local namespace=$(readJSON "$envConfig" ".$namespacePath // empty")
+    requireArg "the K8s namespace name as '$namespacePath'" "$namespace" || return 1
+
+    echo "Initializing DP environment '$envName'..."
+    isSet "$tfEnv" && echo "Terraform environment: '$tfEnv'"
+    isSet "$tfModule" && echo "Terraform module: '$tfModule'"
+    echo "AWS account: 'ca-aws-$account'"
+    echo "K8s context: '$context'"
+    echo "K8s namespace: '$namespace'"
+    echo
+    ##
+
+    # aws auth
+    if isSet "$isAuthMode"; then
+        awsAuth "$account-admin"
+    else
+        checkAccountAuthAndFail "$account" || return 1
+    fi
+
+    ## env init
+    notSet $isDryrunMode && kubectx $context
+
+    if ! k8sNamespaceExists $namespace; then
+        k8sPipelineInitEnv $namespace $dockerUsername $dockerPassword
+    fi
+
+    notSet $isDryrunMode && kubens $namespace
+    ##
+
+    if isSet "$isK9sMode"; then
+        k9sEnv $account-admin $context $namespace
+        return 0
     fi
 
     ## parse target
     local target
     requireArg "deployments to limit to, or 'all' to not limit" "$1" || return 1
     if [[ "$1" = "all" ]]; then
-        echo "Processing all deployments"
+        echo -e "\nProcessing all deployments"
     else
         target="$*"
 
@@ -110,46 +181,21 @@ function k8sPipeline() {
         } }')
 
     isSet "$isDebugMode" && readJSON "$runtimeConfig" '.'
-    local account=$(readJSON "$runtimeConfig" '.account')
-    local cluster=$(readJSON "$runtimeConfig" '.context')
-    local namespace=$(readJSON "$runtimeConfig" '.namespace')
-    local tfEnv=$(readJSON "$runtimeConfig" '.environment')
-
-    local tfModule=coin-collection/$(readJSON "$envConfig" ".tfModule // \"$envName\"")
-
-    checkAccountAuthAndFail "$account" || return 1
-
-    echo "Initializing DP environment '$envName'..."
-    echo "AWS account: 'ca-aws-$account'"
-    echo "Terraform environment: '$tfEnv'"
-    echo "Terraform module: '$tfModule'"
-    echo "EKS cluster: '$cluster'"
-    echo "EKS namespace: '$namespace'"
-    echo
-
-    notSet $isDryrunMode && kubectx $cluster
-    notSet $isDryrunMode && kubens $namespace
 
     # if the environment specifies a base SSM path, use that, otherwise default
-    local baseSsmPath=$(readJSON "$runtimeConfig" '"/\(.ssmOverride // "dataeng-\($envName)")"' --arg envName dev)
-    isSet $isDryrunMode && echo "Base SSM Path: '$baseSsmPath'"
-
-    ## env init
-    if ! k8sNamespaceExists $namespace; then
-        k8sPipelineInitEnv $namespace $dockerUsername $dockerPassword
-    fi
-    ##
+    local baseSsmPath=$(readJSON "$runtimeConfig" '"/\(.environment.ssmOverride // "dataeng-\($envName)")"' --arg envName dev)
+    # isSet $isDryrunMode && echo "Base SSM Path: '$baseSsmPath'"
 
     # generate environment-specific configuration and write to a temporary file
     # TODO: add per-chart child-chart config
     local envValues=$(readJSON "$runtimeConfig" '{
-        region, nodeSelector: {
-            "eks.amazonaws.com/nodegroup": (.nodegroup // empty) } } ')
+        region: $region, nodeSelector: {
+            "eks.amazonaws.com/nodegroup": (.environment.nodegroup // empty) } }' --arg region $region)
 
-    notSet $isTestingMode && notSet $isDryrunMode && notSet $isTeardownMode && helm repo update
+    notSet "$isTestingMode" && notSet "$isDryrunMode" && notSet "$isTeardownMode" && helm repo update
 
-    isSet $isDryrunMode notSet $isTeardownMode && echo $envValues | prettyYaml
-    notSet $isDryrunMode && notSet $isTeardownMode && echo $envValues > $envFile
+    isSet "$isDryrunMode" && notSet "$isTeardownMode" && echo "$envValues" | prettyYaml
+    notSet "$isDryrunMode" && notSet "$isTeardownMode" && echo "$envValues" > $envFile
 
     local chartDefaults=$(readJSON "$runtimeConfig" '.chartDefaults')
 
@@ -160,9 +206,14 @@ function k8sPipeline() {
 
     local deployments=$(readJSON "$runtimeConfig" '.deployments | to_entries[] | select(.value.disabled | not)')
 
+    local mergedDeployments=$(echo -e "$externalResourceDeployments\n$deployments")
+    if [[ -z $mergedDeployments ]]; then
+        echo "No deployments configured, nothing to do. Exiting!"
+        return 0
+    fi
     while read -r deploymentOptions; do
          $modeCommand "$runtimeConfig" "$deploymentOptions" "$chartDefaults"
-    done <<< $externalResourceDeployments <<< $deployments
+    done <<< $mergedDeployments
 
     notSet $isDryrunMode && notSet $isTeardownMode && rm "$envFile"
 
@@ -174,6 +225,55 @@ function checkJSONFlag() {
     requireArg "a JSON string" "$2" || return 1
 
     echo "$2" | jq -r --arg flagName "$1" 'if .flags[$flagName] then "true" else "" end'
+}
+
+function createK8sPipelineEnv() {
+    requireArg "an environment name" "$1" || return 1
+    requireArg "an AWS account name" "$2" || return 1
+    requireArg "a K8s context name" "$3" || return 1
+    requireArg "a K8s namespace name" "$4" || return 1
+
+    local envName="$1"
+    local awsAccount="$2"
+    local k8sContext="$3"
+    local k8sNamespace="$4"
+
+    local apiVersion=$(getReleasedDTVersion)
+    local config=$(jq -n \
+        --arg apiVersion $apiVersion \
+        --arg envName $envName \
+        --arg awsAccount $awsAccount \
+        --arg k8sContext $k8sContext \
+        --arg k8sNamespace $k8sNamespace \
+    '{
+        apiVersion: $apiVersion,
+        environment: {
+            awsAccount: $awsAccount,
+            k8sContext: $k8sContext,
+            k8sNamespace: $k8sNamespace
+        },
+        chartDefaults: {},
+        deployments: {},
+        externalResources: { deployments: {} }
+    }')
+
+    if [[ ! -d "env" ]]; then
+        echo "Are you in the right directory? No 'env' dir found!"
+        return 1
+    fi
+
+    local envDir="env/$envName"
+    local configPath="$envDir/config.json"
+
+    if [[ -f $configPath ]]; then
+        echo "Environment '$envName' already initialized."
+        return 0
+    fi
+
+    echo "Creating new environment directory for '$envName'..."
+    mkdir -p $envDir/deployments $envDir/chartDefaults $envDir/externalResources
+    echo $config > $configPath
+    echo "Environment initialized! You can configure it at '$configPath'."
 }
 
 function installChart() {

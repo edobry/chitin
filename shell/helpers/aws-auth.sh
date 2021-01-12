@@ -148,3 +148,7 @@ function withProfile() {
     awsAuth $profile
     $*
 }
+
+function getAwsRegion() {
+    aws configure get region
+}
