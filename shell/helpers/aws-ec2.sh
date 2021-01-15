@@ -18,9 +18,9 @@ function createKeypair() {
     local publicKey=$(ssh-keygen -yf $privKeyFile)
 
     local ssmPath="/$envName/keypairs/$keypairName"
-    echo "Writing keypair to SSM at '$ssmPath'"
+    echo "Writing keypair to SSM at '$ssmPath'..."
     setSecureParam $ssmPath/public "$publicKey"
-    setSecureParam $ssmPath/private $(cat $privKeyFile)
+    setSecureParam $ssmPath/private "$(cat $privKeyFile)"
 
     echo "Cleaning up..."
     rm $privKeyFile
