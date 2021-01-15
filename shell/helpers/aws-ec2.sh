@@ -19,10 +19,8 @@ function createKeypair() {
 
     local ssmPath="/$envName/keypairs/$keypairName"
     echo "Writing keypair to SSM at '$ssmPath'"
-    # echo $ssmPath/public "$publicKey"
-    setSecureParam $ssmPath/private "$publicKey"
-    # echo $ssmPath/private $(cat $privKeyFile)
-    setSecureParam $ssmPath/public $(cat $privKeyFile)
+    setSecureParam $ssmPath/public "$publicKey"
+    setSecureParam $ssmPath/private $(cat $privKeyFile)
 
     echo "Cleaning up..."
     rm $privKeyFile
