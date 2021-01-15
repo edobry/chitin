@@ -1,3 +1,9 @@
+function listKeypairs() {
+    checkAuthAndFail || return 1
+
+    aws ec2 describe-key-pairs | jq -r '.KeyPairs[].KeyName'
+}
+
 function createKeypair() {
     checkAuthAndFail || return 1
     requireArg 'an environment name' "$1" || return 1
@@ -5,6 +11,12 @@ function createKeypair() {
 
     local envName="$1"
     local keypairName="$2"
+
+    aws ec2 describe-key-pairs --key-names $keypairName > /dev/null 2>&1
+    if [[ $? -eq 0 ]]; then
+        echo "A keypair named '$keypairName' already exists!"
+        return 1
+    fi
 
     local privKeyFile=$(tempFile)
 
@@ -34,5 +46,17 @@ function deleteKeypair() {
     local envName="$1"
     local keypairName="$2"
 
+    aws ec2 describe-key-pairs --key-names $keypairName > /dev/null 2>&1
+    if [[ $? -ne 0 ]]; then
+        echo "No keypair named '$keypairName' exists!"
+        return 1
+    fi
+
+    echo "Deleting keypair '$keypairName'..."
     aws ec2 delete-key-pair --key-name $keypairName
+
+    local ssmPath="/$envName/keypairs/$keypairName"
+    echo "Deleting keypair from SSM at '$ssmPath'..."
+    deleteSecureParam $ssmPath/public
+    deleteSecureParam $ssmPath/private
 }
