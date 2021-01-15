@@ -1,15 +1,18 @@
+# lists existing EC2 keypairs
 function listKeypairs() {
     checkAuthAndFail || return 1
 
     aws ec2 describe-key-pairs | jq -r '.KeyPairs[].KeyName'
 }
 
+# creates an EC2 keypair and persists it in SSM
+# args: account name, keypair name
 function createKeypair() {
     checkAuthAndFail || return 1
-    requireArg 'an environment name' "$1" || return 1
+    requireArg 'an account name' "$1" || return 1
     requireArg 'a keypair name' "$2" || return 1
 
-    local envName="$1"
+    local accountName="$1"
     local keypairName="$2"
 
     aws ec2 describe-key-pairs --key-names $keypairName > /dev/null 2>&1
@@ -29,7 +32,7 @@ function createKeypair() {
     echo "Determining public key..."
     local publicKey=$(ssh-keygen -yf $privKeyFile)
 
-    local ssmPath="/$envName/keypairs/$keypairName"
+    local ssmPath="/$accountName/keypairs/$keypairName"
     echo "Writing keypair to SSM at '$ssmPath'..."
     setSecureParam $ssmPath/public "$publicKey"
     setSecureParam $ssmPath/private "$(cat $privKeyFile)"
@@ -38,12 +41,14 @@ function createKeypair() {
     rm $privKeyFile
 }
 
+# deletes an existing EC2 keypair and removes it from SSM
+# args: account name, keypair name
 function deleteKeypair() {
     checkAuthAndFail || return 1
-    requireArg 'an environment name' "$1" || return 1
+    requireArg 'an account name' "$1" || return 1
     requireArg 'a keypair name' "$2" || return 1
 
-    local envName="$1"
+    local accountName="$1"
     local keypairName="$2"
 
     aws ec2 describe-key-pairs --key-names $keypairName > /dev/null 2>&1
@@ -55,7 +60,7 @@ function deleteKeypair() {
     echo "Deleting keypair '$keypairName'..."
     aws ec2 delete-key-pair --key-name $keypairName
 
-    local ssmPath="/$envName/keypairs/$keypairName"
+    local ssmPath="/$accountName/keypairs/$keypairName"
     echo "Deleting keypair from SSM at '$ssmPath'..."
     deleteSecureParam $ssmPath/public
     deleteSecureParam $ssmPath/private
