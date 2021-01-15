@@ -27,3 +27,14 @@ function createKeypair() {
     echo "Cleaning up..."
     rm $privKeyFile
 }
+
+function deleteKeypair() {
+    checkAuthAndFail || return 1
+    requireArg 'an environment name' "$1" || return 1
+    requireArg 'a keypair name' "$2" || return 1
+
+    local envName="$1"
+    local keypairName="$2"
+
+    aws ec2 delete-key-pair --key-name $keypairName
+}
