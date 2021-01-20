@@ -107,7 +107,7 @@ function checkAccountAuthAndFail() {
 }
 
 function awsOrg() {
-    requireArgOptions "an organization name" "$1" "$KNOWN_AWS_ORGS" || return 1
+    requireArgOptions "an organization name" "$1" "$CA_KNOWN_AWS_ORGS" || return 1
 
     export CA_DEPT_ROLE="$1"
     echo "Set AWS organization to: $1"

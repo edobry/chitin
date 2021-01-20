@@ -112,6 +112,13 @@ Functions:
 - `waitUntilSnapshotReady`: polls the status of the given EBS snapshot until it is available
 - `deleteVolume`: deletes the EBS volumes with the given name or id
 
+##### EC2 (Keypairs)
+
+Functions:
+- `listKeypairs`: lists existing EC2 keypairs
+- `createKeypair`: creates an EC2 keypair and persists it in SSM
+- `deleteKeypair`: deletes an existing EC2 keypair and removes it from SSM
+
 ##### RDS
 
 Functions:
@@ -129,7 +136,10 @@ Functions:
 ##### SSM
 
 Functions:
+ - `listSecureParams`: lists all SSM parameter names
  - `getSecureParam`: fetches and decrypts an SSM parameter
+ - `setSecureParam`: sets an SSM parameter
+ - `deleteSecureParam`: deletes an SSM parameter
 
 ##### MSK
 

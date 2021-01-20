@@ -68,10 +68,10 @@ function readDTConfig() {
     local json5ConfigFilePath="$configLocation/$json5ConfigFileName"
 
     if [[ ! -f $json5ConfigFilePath ]]; then
-        dtLog "initializing config file"
+        dtLog "initializing config file at '$json5ConfigFilePath'"
         mkdir -p $configLocation
         cp $CA_DT_DIR/shell/$json5ConfigFileName $json5ConfigFilePath
-        dtLog "please update the file with your values: $json5ConfigFilePath"
+        dtLog "please complete the initialization by running `modifyDTConfig`"
     fi
 
     local configFile
