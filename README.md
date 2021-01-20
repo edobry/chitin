@@ -116,8 +116,10 @@ Functions:
 
 Functions:
 - `listKeypairs`: lists existing EC2 keypairs
+- `checkKeypairExistence`: checks that a given EC2 Keypair exists
 - `createKeypair`: creates an EC2 keypair and persists it in SSM
 - `deleteKeypair`: deletes an existing EC2 keypair and removes it from SSM
+- `downloadKeypair`: reads a given EC2 Keypair out from SSM, persists locally, and permissions for use
 
 ##### RDS
 
@@ -230,6 +232,11 @@ Functions:
 - `createZCashParamsVolume`: creates an EBS volume containing the latest ZCash encryption parameter files
 - `snapshotNodeState`: pauses a p2p node, snapshots the EBS volume backing it, and unpauses
 - `cloneNodeState`: clones an existing node's state by snapshotting and then creating a volume
+
+#### SSH
+
+Functions:
+- `sshTunnel`: sets up an SSH tunnel to forward from a local port
 
 #### Terraform
 

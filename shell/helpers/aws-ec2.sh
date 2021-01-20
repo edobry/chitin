@@ -41,6 +41,8 @@ function createKeypair() {
     rm $privKeyFile
 }
 
+# checks that a given EC2 Keypair exists
+# args: keypair name
 function checkKeypairExistence() {
     requireArg 'a keypair name' "$1" || return 1
     local keypairName="$1"
@@ -48,6 +50,8 @@ function checkKeypairExistence() {
     aws ec2 describe-key-pairs --key-names $keypairName > /dev/null 2>&1
 }
 
+# checks that a given EC2 Keypair exists, and logs if it does not
+# args: keypair name
 function checkKeypairExistenceAndFail() {
     requireArg 'a keypair name' "$1" || return 1
     local keypairName="$1"
@@ -79,6 +83,8 @@ function deleteKeypair() {
     deleteSecureParam $ssmPath/private
 }
 
+# reads a given EC2 Keypair out from SSM, persists locally, and permissions for use
+# args: account name, keypair name
 function downloadKeypair() {
     checkAuthAndFail || return 1
     requireArg 'an account name' "$1" || return 1
