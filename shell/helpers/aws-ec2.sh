@@ -15,8 +15,8 @@ function createKeypair() {
     local accountName="$1"
     local keypairName="$2"
 
-    aws ec2 describe-key-pairs --key-names $keypairName > /dev/null 2>&1
-    if [[ $? -eq 0 ]]; then
+
+    if checkKeypairExistence $keypairName; then
         echo "A keypair named '$keypairName' already exists!"
         return 1
     fi
@@ -41,6 +41,23 @@ function createKeypair() {
     rm $privKeyFile
 }
 
+function checkKeypairExistence() {
+    requireArg 'a keypair name' "$1" || return 1
+    local keypairName="$1"
+
+    aws ec2 describe-key-pairs --key-names $keypairName > /dev/null 2>&1
+}
+
+function checkKeypairExistenceAndFail() {
+    requireArg 'a keypair name' "$1" || return 1
+    local keypairName="$1"
+
+    if ! checkKeypairExistence $keypairName; then
+        echo "No keypair named '$keypairName' exists!"
+        return 1
+    fi
+}
+
 # deletes an existing EC2 keypair and removes it from SSM
 # args: account name, keypair name
 function deleteKeypair() {
@@ -51,11 +68,7 @@ function deleteKeypair() {
     local accountName="$1"
     local keypairName="$2"
 
-    aws ec2 describe-key-pairs --key-names $keypairName > /dev/null 2>&1
-    if [[ $? -ne 0 ]]; then
-        echo "No keypair named '$keypairName' exists!"
-        return 1
-    fi
+    checkKeypairExistenceAndFail $keypairName || return 1
 
     echo "Deleting keypair '$keypairName'..."
     aws ec2 delete-key-pair --key-name $keypairName
