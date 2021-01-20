@@ -16,6 +16,11 @@ function escapeCommas(){
     sed 's/,/\\\,/g'
 }
 
+function unescapeNewlines() {
+    sed 's/\\n/\
+/g'
+}
+
 function checkNumeric() {
     [[ $1 =~ '^[0-9]+$' ]]
 }
