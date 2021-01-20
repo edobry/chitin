@@ -15,8 +15,8 @@ function createKeypair() {
     local accountName="$1"
     local keypairName="$2"
 
-    aws ec2 describe-key-pairs --key-names $keypairName > /dev/null 2>&1
-    if [[ $? -eq 0 ]]; then
+
+    if checkKeypairExistence $keypairName; then
         echo "A keypair named '$keypairName' already exists!"
         return 1
     fi
@@ -41,6 +41,27 @@ function createKeypair() {
     rm $privKeyFile
 }
 
+# checks that a given EC2 Keypair exists
+# args: keypair name
+function checkKeypairExistence() {
+    requireArg 'a keypair name' "$1" || return 1
+    local keypairName="$1"
+
+    aws ec2 describe-key-pairs --key-names $keypairName > /dev/null 2>&1
+}
+
+# checks that a given EC2 Keypair exists, and logs if it does not
+# args: keypair name
+function checkKeypairExistenceAndFail() {
+    requireArg 'a keypair name' "$1" || return 1
+    local keypairName="$1"
+
+    if ! checkKeypairExistence $keypairName; then
+        echo "No keypair named '$keypairName' exists!"
+        return 1
+    fi
+}
+
 # deletes an existing EC2 keypair and removes it from SSM
 # args: account name, keypair name
 function deleteKeypair() {
@@ -51,11 +72,7 @@ function deleteKeypair() {
     local accountName="$1"
     local keypairName="$2"
 
-    aws ec2 describe-key-pairs --key-names $keypairName > /dev/null 2>&1
-    if [[ $? -ne 0 ]]; then
-        echo "No keypair named '$keypairName' exists!"
-        return 1
-    fi
+    checkKeypairExistenceAndFail $keypairName || return 1
 
     echo "Deleting keypair '$keypairName'..."
     aws ec2 delete-key-pair --key-name $keypairName
@@ -64,4 +81,32 @@ function deleteKeypair() {
     echo "Deleting keypair from SSM at '$ssmPath'..."
     deleteSecureParam $ssmPath/public
     deleteSecureParam $ssmPath/private
+}
+
+# reads a given EC2 Keypair out from SSM, persists locally, and permissions for use
+# args: account name, keypair name
+function downloadKeypair() {
+    checkAuthAndFail || return 1
+    requireArg 'an account name' "$1" || return 1
+    requireArg 'a keypair name' "$2" || return 1
+
+    local accountName="$1"
+    local keypairName="$2"
+
+    checkKeypairExistenceAndFail $keypairName || return 1
+
+    local ssmPath="/$accountName/keypairs/$keypairName"
+    local keypairsPath="$HOME/.ssh/keypairs"
+    mkdir -p $keypairsPath
+
+    local privKeyPath="$keypairsPath/$keypairName"
+    echo "Downloading keypair from SSM at '$ssmPath' to '$keypairsPath'..."
+    getSecureParam $ssmPath/private | unescapeNewlines \
+        > $privKeyPath
+
+    getSecureParam $ssmPath/public | unescapeNewlines \
+        > $privKeyPath.pub
+
+    echo "Setting permissions..."
+    chmod 600 $privKeyPath
 }
