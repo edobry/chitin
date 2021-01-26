@@ -35,7 +35,7 @@ function listAZs() {
 function checkAZ() {
     checkAuthAndFail || return 1
 
-    if ! aws ec2 describe-availability-zones --zone-names $1 > /dev/null 2>1; then
+    if ! aws ec2 describe-availability-zones --zone-names $1 > /dev/null 2>&1; then
         echo "AZ not found!"
         return 1
     fi
