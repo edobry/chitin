@@ -78,26 +78,20 @@ function readDTConfig() {
 
     export CA_DT_CONFIG=$(readJSONFile $configFile)
 
-    if [[ -z $CA_DT_ENV_INITIALIZED ]] && [[ ! -z $CA_PROJECT_DIR ]]; then
-        dtLog "[DEPRECATION WARNING] you are using the legacy DT environment variables (ie CA_PROJECT_DIR)"
-        dtLog "[DEPRECATION WARNING] these will no longer be respected in the next major release"
-        dtLog "[DEPRECATION WARNING] please switch to setting your values in $json5ConfigFilePath ASAP"
-    fi
-
     local projectDir=$(readJSON "$CA_DT_CONFIG" '.projectDir // empty')
-    [[ -z $CA_PROJECT_DIR ]] && export CA_PROJECT_DIR=$projectDir
+    export CA_PROJECT_DIR=$projectDir
 
     local awsAuthEnabled=$(readJSON "$CA_DT_CONFIG" '.modules."aws-auth".enabled // empty')
-    [[ -z $CA_DT_AWS_AUTH_ENABLED ]] && export CA_DT_AWS_AUTH_ENABLED=$awsAuthEnabled
+    export CA_DT_AWS_AUTH_ENABLED=$awsAuthEnabled
 
     local googleUsername=$(readJSON "$CA_DT_CONFIG" '.modules."aws-auth".googleUsername // empty')
-    [[ -z $CA_GOOGLE_USERNAME ]] && export CA_GOOGLE_USERNAME=$googleUsername
+    export CA_GOOGLE_USERNAME=$googleUsername
 
     local departmentRole=$(readJSON "$CA_DT_CONFIG" '.modules."aws-auth".departmentRole // empty')
-    [[ -z $CA_DEPT_ROLE ]] && export CA_DEPT_ROLE=$departmentRole
+    export CA_DEPT_ROLE=$departmentRole
 
     local k8sEnvEnabled=$(readJSON "$CA_DT_CONFIG" '.modules."k8s-env".enabled // empty')
-    [[ -z $CA_DT_K8S_CONFIG_ENABLED ]] && export CA_DT_K8S_CONFIG_ENABLED=$k8sEnvEnabled
+    export CA_DT_K8S_CONFIG_ENABLED=$k8sEnvEnabled
 }
 
 function checkDTDeps() {
