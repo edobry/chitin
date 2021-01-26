@@ -19,7 +19,7 @@ function dtLog() {
 }
 
 function dtBail() {
-    dtLog "${$1:-something went wrong}!"
+    dtLog "${1:-"something went wrong"}!"
     dtLog "exiting!"
     return 1
 }
@@ -42,9 +42,7 @@ function checkDTDep() {
 
     local currentVersion=$(eval "$versionCommand")
 
-    if ! checkVersion "$expectedVersion" "$currentVersion" ]]; then
-        dtBail "invalid $depName version: >=$expectedVersion expected, $currentVersion found" && return 1
-    fi
+    checkVersionAndFail "$depName" "$expectedVersion" "$currentVersion" || return 1
 }
 
 function initJq() {
@@ -137,7 +135,7 @@ function initDT() {
     initJq
     readDTConfig
 
-    ([[ -z "$IS_DOCKER" ]] && ! checkDTDeps) && (dtBail && return 1)
+    ([[ -z "$IS_DOCKER" ]] && ! checkDTDeps) && (dtBail; return 1)
 
     export CA_DP_DIR=$CA_PROJECT_DIR/dataeng-pipeline
 

@@ -86,13 +86,51 @@ function requireArgWithCheck() {
     fi
 }
 
-# checks that the current version of a program is GTE the minimum required version
+# checks that the current version of a program is GTE the required version and equal to the major component of the required version
 # args: minimum version, current version
 function checkVersion() {
     requireArg "the minimum version" "$1" || return 1
     requireArg "the current version" "$2" || return 1
 
-    [[ "$(printf '%s\n' "$1" "$2" | sort -V | head -n1)" = "$1" ]]
+    local minimumVersion="$1"
+    local currentVersion="$2"
+
+    checkMajorVersion $minimumVersion $currentVersion || return 1
+    [[ "$(printf '%s\n' $minimumVersion $currentVersion | sort -V | head -n1)" = $minimumVersion ]]
+}
+
+function checkVersionAndFail() {
+    requireArg "the dependency name" "$1" || return 1
+    requireArg "the minimum version" "$2" || return 1
+    requireArg "the current version" "$3" || return 1
+
+    local minimumVersion="$2"
+    local currentVersion="$3"
+
+    local majorExpected=$(getMajorVersionComponent $minimumVersion)
+
+    if ! checkVersion "$2" "$3"; then
+        echo "invalid $1 version: expected $expectedVersion <= X < $(($majorExpected + 1)).0.0; found $currentVersion"
+        return 1
+    fi
+}
+
+function getMajorVersionComponent() {
+    requireArg "a SemVer version number" "$1" || return 1
+
+    echo "$1" | cut -d '.' -f 1
+}
+
+function checkMajorVersion() {
+    requireArg "the expected version" "$1" || return 1
+    requireArg "the current version" "$2" || return 1
+
+    local expectedVersion="$1"
+    local currentVersion="$2"
+
+    [[ $(getMajorVersionComponent $currentVersion) -eq \
+          $(getMajorVersionComponent $expectedVersion)
+    ]]
 }
 
 # checks if a command exists
