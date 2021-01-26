@@ -8,7 +8,7 @@ function listDatabases() {
 function checkRdsSnapshotExistence() {
     requireArg "a snapshot name" $1 || return 1
 
-    aws rds describe-db-snapshots --db-snapshot-identifier $1 > /dev/null 2>1
+    aws rds describe-db-snapshots --db-snapshot-identifier $1 > /dev/null 2>&1
 
     return $?
 }
@@ -53,7 +53,7 @@ function deleteRdsSnapshot() {
 function checkRdsInstanceExistence() {
     requireArg "an instance name" $1 || return 1
 
-    aws rds describe-db-instances --db-instance-identifier $1 > /dev/null 2>1
+    aws rds describe-db-instances --db-instance-identifier $1 > /dev/null 2>&1
 
     return $?
 }
