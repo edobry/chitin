@@ -503,6 +503,6 @@ function createDatabaseServicesFromTerraform() {
 
         # generate service file json, convert to yaml, then write
         echo $instance | jq '{ externalName }' \
-            | yq r -P - > $DP_RESOURCES_DIR/$name.yaml
+            | prettyYaml > $DP_RESOURCES_DIR/$name.yaml
     done
 }

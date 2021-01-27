@@ -7,15 +7,7 @@ function prettyJson() {
 }
 
 function prettyYaml() {
-    yq r -PC -
-}
-
-function printYaml() {
-    yq r -P -
-}
-
-function prettyYamlMultiple() {
-    yq r -PCd'*' -
+    yq e -P -
 }
 
 function validateJSONFile() {
@@ -63,7 +55,7 @@ function writeJSONToYamlFile() {
     requireArg "a JSON string" "$1" || return 1
     requireArg "a target file path" "$2" || return 1
 
-    echo "$1" | printYaml > "$2"
+    echo "$1" | prettyYaml > "$2"
 }
 
 function convertJSON5() {

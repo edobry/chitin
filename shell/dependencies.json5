@@ -6,7 +6,7 @@
             "command": "jq --version | awk -F '-' '{ print $2 }'"
         },
         "yq": {
-            "version": "3.4.0",
+            "version": "4.4.1",
             "command": "yq --version 2>&1 | awk '{ print $3 }'"
         },
         "aws": {
