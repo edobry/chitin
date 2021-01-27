@@ -35,6 +35,10 @@ function showDTConfig() {
     cat $(getDTConfigLocation)/config.json | prettyJson
 }
 
+function showDTEnvvars() {
+    env | grep "CA_"
+}
+
 function modifyDTConfig() {
     nano $(getDTConfigLocation)/config.json5
     echo "DT config updated, reinitializing..."
