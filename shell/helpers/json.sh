@@ -17,16 +17,19 @@ function validateJSONFile() {
 }
 
 # reads (a value at a certain path from) a JSON File
-# args: json file path, jq path to read
+# args: json file path, jq path to read (optional)
 function readJSONFile() {
     requireArg "a filepath" "$1" || return 1
+
+    local jsonFile="$1"
 
     if [[ ! -f "$1" ]]; then
         echo "No file exists at the given path!"
         return 1
     fi
 
-    cat "$1" | jq -cr "${2:-.}"
+    shift
+    cat "$jsonFile" | jq -cr $*
 }
 
 # reads the value at a certain path from a JSON object

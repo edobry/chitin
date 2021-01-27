@@ -9,6 +9,14 @@ function k9sPipeline() {
 }
 
 function k8sPipeline() {
+    # to use, call with `cd` as the first arg
+    local isCdMode
+    if [[ "$1" == "cd" ]]; then
+        isCdMode=true
+        echo "-- CD MODE --"
+        shift
+    fi
+
     # to use, call with `debug` as the first arg
     local isDebugMode
     if [[ "$1" == "debug" ]]; then
@@ -204,7 +212,11 @@ function k8sPipeline() {
     local externalResourceDeployments=$(readJSON "$runtimeConfig" '.externalResources.deployments | to_entries |
         map({ key: .key, value: { chart: "external-service", values: .value } })[]')
 
-    local deployments=$(readJSON "$runtimeConfig" '.deployments | to_entries[] | select(.value.disabled | not)')
+    local cdModeFlag=$(isSet $isCdMode && echo "true" || echo "false")
+    local deployments=$(readJSON "$runtimeConfig" \
+        '.deployments | to_entries[] | select(.value.disabled | not) |
+        select(($cdMode | test("false")) or (($cdMode | test("true")) and (.value.cdDisabled | not)))'\
+        --arg cdMode $cdModeFlag)
 
     local mergedDeployments=$(echo -e "$externalResourceDeployments\n$deployments")
     if [[ -z $mergedDeployments ]]; then
