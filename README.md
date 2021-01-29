@@ -159,6 +159,14 @@ Functions:
  - `getDynamoItem`: gets a specific DynamoDB item
  - `updateDynamoItem`: updates the value of a specific DynamoDB item
 
+#### Docker
+
+Functions:
+- `pruneDockerImages`: deletes all locally-cached Docker images not used in the last day
+- `listDockerImageTags`: lists all available tags for a Docker image
+- `getLatestDockerImageTag`: gets the latest available tag for a Docker image
+- `getDockerImageTags`: gets a human-readable view of available tags for a Docker image
+
 #### K8s
 
 ##### Env
