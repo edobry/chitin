@@ -166,6 +166,8 @@ Functions:
 - `listDockerImageTags`: lists all available tags for a Docker image
 - `getLatestDockerImageTag`: gets the latest available tag for a Docker image
 - `getDockerImageTags`: gets a human-readable view of available tags for a Docker image
+- `dockerArtifactoryPublish`: tags and pushes a locally-built Docker image to Artifactory
+- `dockerArtifactoryPublishLast`: tags and pushes the last locally-built Docker image to Artifactory
 
 #### K8s
 
