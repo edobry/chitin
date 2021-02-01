@@ -17,6 +17,15 @@ function downDeploy() {
     kubectl scale deployment $1 --replicas=0
 }
 
+# scales down a deployment to 0 replicas, and awaits the operation's completion
+# args: deployment name
+function downDeployAndWait() {
+    requireArg "a deployment name" "$1" || return 1
+
+    downDeploy "$1"
+    k8sWaitForDeploymentScaleDown "$1"
+}
+
 # scales a previously-paused deployment back up to 1 replica
 # args: deployment name
 function upDeploy() {
@@ -332,4 +341,47 @@ function k8sNamespaceExists() {
     requireArg "a namespace" "$1" || return 1
 
     kubectl get namespaces "$1" --output=json > /dev/null 2>&1
+}
+
+function k8sAwaitPodCondition() {
+    requireArg "a pod name" "$1" || return 1
+    requireArg "a condition" "$2" || return 1
+
+    kubectl wait --for=condition="$2" pod/"$1"
+
+}
+
+function k8sGetDeploymentSelector() {
+    requireArg "a deployment name" "$1" || return 1
+
+    kubectl get deployment "$1" --output json | jq -r \
+        '.spec.selector.matchLabels | to_entries | map("\(.key)=\(.value)") | join(",")'
+}
+
+function k8sGetDeploymentPods() {
+    requireArg "a deployment name" "$1" || return 1
+
+    local deploymentName="$1"
+    shift
+
+    kubectl get pods --selector=$(k8sGetDeploymentSelector "$deploymentName") $*
+}
+
+function k8sDeploymentHasPods() {
+    requireArg "a deployment name" "$1" || return 1
+
+    k8sGetDeploymentPods "$1" -o=json | jq -e '.items[0]' >/dev/null 2>&1
+}
+
+function k8sWaitForDeploymentScaleDown() {
+    requireArg "a deployment name" "$1" || return 1
+
+    local deploymentName="$1"
+
+    while k8sDeploymentHasPods $deploymentName
+    do
+        echo "Waiting for scale down..."
+    done
+
+    echo "Deployment '$1' has successfuly scaled down"
 }
