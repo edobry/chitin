@@ -351,6 +351,8 @@ function k8sAwaitPodCondition() {
 
 }
 
+# gets the pod selector used for a given Deployment
+# args: deployment name
 function k8sGetDeploymentSelector() {
     requireArg "a deployment name" "$1" || return 1
 
@@ -358,6 +360,8 @@ function k8sGetDeploymentSelector() {
         '.spec.selector.matchLabels | to_entries | map("\(.key)=\(.value)") | join(",")'
 }
 
+# gets the pods managed by a given Deployment
+# args: deployment name
 function k8sGetDeploymentPods() {
     requireArg "a deployment name" "$1" || return 1
 
@@ -367,12 +371,16 @@ function k8sGetDeploymentPods() {
     kubectl get pods --selector=$(k8sGetDeploymentSelector "$deploymentName") $*
 }
 
+# checks whether a given Deployment has running pods under management
+# args: deployment name
 function k8sDeploymentHasPods() {
     requireArg "a deployment name" "$1" || return 1
 
     k8sGetDeploymentPods "$1" -o=json | jq -e '.items[0]' >/dev/null 2>&1
 }
 
+# waits until all pods under management of a given Deployment have scaled down
+# args: deployment name
 function k8sWaitForDeploymentScaleDown() {
     requireArg "a deployment name" "$1" || return 1
 
