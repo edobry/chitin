@@ -130,7 +130,7 @@ function findVolumesByName() {
 function listSnapshots() {
     aws ec2 describe-snapshots --owner-ids $(awsAccountId) | jq -r '.Snapshots | sort_by(.StartTime) | reverse[] |
         { id: .SnapshotId, tags: ( (.Tags // []) | .[] | [select(.Key=="Name")] // []) } |
-        "\(.id) - \((.tags[] | select(.Key == "Name") | .Value) // "")"'
+        "\(.id) \((.tags[] | select(.Key == "Name") | .Value) // "")"'
 }
 
 # lists all in-progress EBS snapshots in the account, with names
