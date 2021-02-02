@@ -393,3 +393,19 @@ function k8sWaitForDeploymentScaleDown() {
 
     echo "Deployment '$1' has successfuly scaled down"
 }
+
+function k8sListDeployments() {
+    kubectl get deployments | tail -n +2 | cut -d ' ' -f 1
+}
+
+function k8sListPods() {
+    kubectl get pods | tail -n +2 | cut -d ' ' -f 1
+}
+
+function k8sListServices() {
+    kubectl get services | tail -n +2 | cut -d ' ' -f 1
+}
+
+function k8sListPostgresServices() {
+    kubectl get services | grep postgres | tail -n +2 | cut -d ' ' -f 1
+}
