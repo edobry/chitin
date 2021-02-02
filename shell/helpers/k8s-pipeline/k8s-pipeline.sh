@@ -209,23 +209,38 @@ function k8sPipeline() {
 
     local modeCommand=$(notSet $isTeardownMode && echo installChart || echo teardownChart)
 
-    local externalResourceDeployments=$(readJSON "$runtimeConfig" '.externalResources.deployments | to_entries |
-        map({ key: .key, value: { chart: "external-service", values: .value } })[]')
-
     local cdModeFlag=$(isSet $isCdMode && echo "true" || echo "false")
-    local deployments=$(readJSON "$runtimeConfig" \
-        '.deployments | to_entries[] | select(.value.disabled | not) |
-        select(($cdMode | test("false")) or (($cdMode | test("true")) and (.value.cdDisabled | not)))'\
-        --arg cdMode $cdModeFlag)
 
-    local mergedDeployments=$(echo -e "$externalResourceDeployments\n$deployments")
-    if [[ -z $mergedDeployments ]]; then
+    local deployments=$(readJSONFile env/dev/config.json '
+        # store the root object for later
+        . as $root |
+
+        # reformat & merge externalResources.deployments into deployments
+        {
+            externalResourceDeployments: (
+                .externalResources.deployments | to_entries |
+                    map({ key: .key,
+                        value: { chart: "external-service", values: .value }
+                    })),
+            deployments: (.deployments | to_entries)
+        } | [.externalResourceDeployments, .deployments] | flatten |
+
+        # merge chartDefault config, if exists into each one
+        map({key, value: (($root.chartDefaults[.value.chart] // {} | del(.values)) * .value) })[] |
+
+        # filter out disabled and cdDisabled deployments
+        select(.value.disabled | not) |
+        select(($cdMode | test("false")) or (($cdMode | test("true")) and (.value.cdDisabled | not)))' \
+    --arg cdMode $cdModeFlag)
+
+    if [[ -z $deployments ]]; then
         echo "No deployments configured, nothing to do. Exiting!"
         return 0
     fi
+
     while read -r deploymentOptions; do
          $modeCommand "$runtimeConfig" "$deploymentOptions" "$chartDefaults"
-    done <<< $mergedDeployments
+    done <<< $deployments
 
     notSet $isDryrunMode && notSet $isTeardownMode && rm "$envFile"
 
