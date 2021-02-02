@@ -138,5 +138,5 @@ function checkMajorVersion() {
 function checkCommand() {
     requireArg "a command" "$1" || return 1
 
-    hash "$1" 2>/dev/null
+    command -v "$1" >/dev/null 2>&1
 }
