@@ -265,3 +265,59 @@ function deleteVolume() {
         aws ec2 delete-volume --volume-id $id
     done <<< "$volumeIds"
 }
+
+function ebsAuthorizeSnapshotAccess() {
+    requireArg "a source snapshot identifier" "$1" || return 1
+    requireArg "an target account role" "$2" || return 1
+
+    local sourceArg="$1"
+
+    local snapshotId=$([[ "$sourceArg" == "snap-"* ]] && echo "$sourceArg" || findSnapshot "$sourceArg")
+    if [[ -z $snapshotId ]]; then
+        echo "Snapshot not found!"
+        return 1
+    fi
+
+    aws ec2 modify-snapshot-attribute \
+        --snapshot-id=$snapshotId \
+        --attribute createVolumePermission \
+        --operation-type add \
+        --user-ids "$2"
+}
+
+function ebsCopySnapshotCrossAccount() {
+    requireArg "a source snapshot identifier" "$1" || return 1
+    requireArg "an owning account role" "$2" || return 1
+    requireArg "an target account role" "$3" || return 1
+
+    local sourceArg="$1"
+    local owningRole="$2"
+    local targetRole="$3"
+
+    echo "Querying target account id..."
+    awsAuth $targetRole
+    local targetAccountId=$(awsAccountId)
+
+    echo "Authorizing EBS snapshot access from target account..."
+    awsAuth $owningRole
+    ebsAuthorizeSnapshotAccess $sourceArg $targetAccountId
+
+    local sourceRegion=$(getAwsRegion)
+
+    local snapshotId=$([[ "$sourceArg" == "snap-"* ]] && echo "$sourceArg" || findSnapshot "$sourceArg")
+    if [[ -z $snapshotId ]]; then
+        echo "Snapshot not found!"
+        return 1
+    fi
+
+    echo "Copying snapshot across accounts..."
+    awsAuth $targetRole
+    local newSnapshotId=$(aws ec2 copy-snapshot \
+        --source-snapshot-id $snapshotId \
+        --source-region $sourceRegion |\
+        jq -r '.SnapshotId')
+
+    echo "Copy started! New snapshot id: '$newSnapshotId'"
+    echo "Run 'watchUntilSnapshotReady $newSnapshotId' to monitor copy progress"
+    echo "Alternatively, 'waitUntilSnapshotReady $newSnapshotId' to await copy completion"
+}
