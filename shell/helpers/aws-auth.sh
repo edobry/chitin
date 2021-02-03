@@ -341,3 +341,16 @@ function awsAuthorizeAssumeRole() {
     aws iam update-assume-role-policy --role-name $roleName \
         --policy-document $patchedAssumeRoleDoc
 }
+
+function awsGetRoleArn() {
+    requireArg "an IAM role name" "$1" || return 1
+
+    aws iam get-role --role-name "$1" | jq -r '.Role.Arn'
+}
+
+function awsAssumeProgrammaticRole() {
+    requireArg "an IAM role name" "$1" || return 1
+
+    local roleArn=$(awsGetRoleArn "$1")
+    aws sts assume-role --role-arn $roleArn --role-session-name "$1-session-$(randomString 3)"
+}
