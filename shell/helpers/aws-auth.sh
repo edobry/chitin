@@ -192,10 +192,13 @@ function awsCreateProgrammaticCreds() {
 }
 
 function awsDeleteProgrammaticCreds() {
-    requireArg "programmatic credentials" "$1" || return 1
+    requireJsonArg "of programmatic credentials" "$1" || return 1
 
     local creds="$1"
+    validateJSONFields "$creds" user role || return 1
+
     awsDeleteProgrammaticUser $(readJSON "$creds" '.user')
+    awsDeleteRole yes $(readJSON "$creds" '.role')
 }
 
 # args: (optional) "quiet"
@@ -322,8 +325,6 @@ function awsAuthorizeAssumeRole() {
 
     local patchedAssumeRoleDoc=$(echo "$assumeRoleDoc" "$authzStatement" |\
         jq -sc '.[1] as $patch | .[0].Statement += [$patch] | .[0]')
-
-    echo "$patchedAssumeRoleDoc" | prettyJson
 
     aws iam update-assume-role-policy --role-name $roleName \
         --policy-document $patchedAssumeRoleDoc
