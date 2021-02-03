@@ -152,3 +152,11 @@ function withProfile() {
 function getAwsRegion() {
     aws configure get region
 }
+
+function awsListUsers() {
+    aws iam list-users | jq -r '.Users[].UserName'
+}
+
+function awsListRoles() {
+    aws iam list-roles | jq -r '.Roles[].RoleName'
+}
