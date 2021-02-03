@@ -162,6 +162,11 @@ function awsListRoles() {
 }
 
 function awsCreateProgrammaticCreds() {
+    requireArg "an IAM role name" "$1" || return 1
+    checkAuthAndFail || return 1
+
+    local roleName="$1"
+
     local googleUsername=$(readDTConfig '.modules["aws-auth"].googleUsername' -r)
     local newIamUsername="$googleUsername-programmatic-tmp-$(randomString 3)"
 
