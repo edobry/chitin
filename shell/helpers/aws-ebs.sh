@@ -231,7 +231,7 @@ function waitUntilSnapshotReady() {
 
     local snapshotId=$([[ "$1" == "snap-"* ]] && echo "$1" || findSnapshot "$1")
     if [[ -z $snapshotId ]]; then
-        [[ -z $quietMode ]] && echo "Snapshot not found!"
+        notSet $quietMode && echo "Snapshot not found!"
         return 1
     fi
 
@@ -239,11 +239,11 @@ function waitUntilSnapshotReady() {
       | jq -r '.Snapshots[0].State' \
       | grep -qm 1 "completed";
     do
-        [[ -z $quietMode ]] && echo "Checking..."
+        notSet $quietMode && echo "Checking..."
         sleep 5;
     done
 
-    [[ -z $quietMode ]] && echo "Snapshot $1 is available!"
+    notSet $quietMode && echo "Snapshot $1 is available!"
 }
 
 # deletes the EBS volumes with the given name
@@ -295,8 +295,7 @@ function ebsCopySnapshotCrossAccount() {
     local targetRole="$3"
 
     echo "Querying target account id..."
-    awsAuth $targetRole
-    local targetAccountId=$(awsAccountId)
+    local targetAccountId=$(withProfile $targetRole awsAccountId)
 
     echo "Authorizing EBS snapshot access from target account..."
     awsAuth $owningRole
@@ -311,8 +310,7 @@ function ebsCopySnapshotCrossAccount() {
     fi
 
     echo "Copying snapshot across accounts..."
-    awsAuth $targetRole
-    local newSnapshotId=$(aws ec2 copy-snapshot \
+    local newSnapshotId=$(withProfile $targetRole aws ec2 copy-snapshot \
         --source-snapshot-id $snapshotId \
         --source-region $sourceRegion |\
         jq -r '.SnapshotId')
