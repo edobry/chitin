@@ -25,6 +25,15 @@ function checkNumeric() {
     [[ $1 =~ '^[0-9]+$' ]]
 }
 
+function checkFileExists() {
+    requireArg "a filepath" "$1" || return 1
+
+    if [[ ! -f "$1" ]]; then
+        echo "No file exists at the given path!"
+        return 1
+    fi
+}
+
 # can be used to check arguments for a specific string
 # args: search target, args...
 # example: argsContain "some string" $* || exit 1
@@ -56,6 +65,12 @@ function requireArg() {
 # args: name of arg, arg value
 function requireNumericArg() {
     requireArgWithCheck "$1" "$2" checkNumeric "a numeric "
+}
+
+# checks that an argument is supplied and that it is numeric, and prints a message if not
+# args: name of arg, arg value
+function requireFileArg() {
+    requireArgWithCheck "$1" "$2" checkFileExists "a path to an existing "
 }
 
 # checks that an argument is supplied and that its one of the allowed options, and prints a message listing the available options if not

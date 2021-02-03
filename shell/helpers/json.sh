@@ -10,16 +10,22 @@ function prettyYaml() {
     yq e -P -
 }
 
-function validateJSONFile() {
-    requireArg "a filepath" "$1" || return 1
+function validateJSON() {
+    requireArg "a minified JSON string" "$1" || return 1
 
-    cat "$1" | jq -e . > /dev/null 2>&1
+    echo "$1" | jq -e . > /dev/null 2>&1
+}
+
+function validateJSONFile() {
+    requireFileArg "JSON file" "$1" || return 1
+
+    validateJSON $(readJSONFile "$1")
 }
 
 # reads (a value at a certain path from) a JSON File
 # args: json file path, jq path to read (optional)
 function readJSONFile() {
-    requireArg "a filepath" "$1" || return 1
+    requireFileArg "JSON file" "$1" || return 1
 
     local jsonFile="$1"
 
