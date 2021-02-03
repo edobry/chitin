@@ -151,7 +151,9 @@ function initDT() {
 }
 
 function dtRunInitCommand() {
-    local initCommand=$(readDTModuleConfig init '.command')
+    local initCommand=$(readDTModuleConfig init '.command // empty')
+    [[ -z "$initCommand" ]] && return 0
+
     $initCommand
 }
 
