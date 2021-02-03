@@ -168,10 +168,11 @@ function awsCreateProgrammaticCreds() {
     local roleName="$1"
 
     local googleUsername=$(readDTConfig '.modules["aws-auth"].googleUsername' -r)
-    local newIamUsername="$googleUsername-programmatic-tmp-$(randomString 3)"
+    local newIamSuffix="programmatic-tmp-$(randomString 5)"
+    local newIamUsername="$googleUsername-$newIamSuffix"
 
-    local newUserId
-    newUserId=$(aws iam create-user --user-name $newIamUsername | jq '.User.UserId')
+    local createUserOutput
+    createUserOutput=$(aws iam create-user --user-name $newIamUsername)
     [[ $? -eq 0 ]] || return 1
 
     local createKeyOutput
@@ -181,7 +182,13 @@ function awsCreateProgrammaticCreds() {
         return 1
     fi
 
-    readJSON "$createKeyOutput" '.AccessKey | { user: .UserName, id: .AccessKeyId, key: .SecretAccessKey }'
+    local newIamRole="$roleName-$newIamSuffix"
+    awsCloneRole quiet $roleName $newIamRole
+
+    awsAuthorizeAssumeRole $newIamRole $newIamUsername
+
+    readJSON "$createKeyOutput" '.AccessKey | { user: .UserName, role: $roleName, id: .AccessKeyId, key: .SecretAccessKey }'\
+        --arg roleName $newIamRole
 }
 
 function awsDeleteProgrammaticCreds() {
