@@ -240,8 +240,7 @@ function awsCloneRole() {
 
     notSet $quietMode && echo "Querying source role assume-role policy document..."
     local sourceAssumeRolePolicyDocumentFile=$(tempFile)
-    aws iam get-role --role-name $sourceRoleName |\
-        jq '.Role.AssumeRolePolicyDocument' > $sourceAssumeRolePolicyDocumentFile
+    awsGetAssumeRolePolicyDocument $sourceRoleName > $sourceAssumeRolePolicyDocumentFile
 
     notSet $quietMode && echo "Creating new role '$targetRoleName'..."
     local createOutput=$(aws iam create-role --role-name $targetRoleName \
@@ -251,6 +250,12 @@ function awsCloneRole() {
         notSet $quietMode && echo "Attaching policy '$policyArn'..."
         aws iam attach-role-policy --role-name $targetRoleName --policy-arn "$policyArn"
     done <<< "$sourcePolicyArns"
+}
+
+function awsGetAssumeRolePolicyDocument() {
+    requireArg "an IAM role name" "$1" || return 1
+
+    aws iam get-role --role-name "$1" | jq '.Role.AssumeRolePolicyDocument'
 }
 
 function awsDeleteRole() {
@@ -276,4 +281,38 @@ function awsDeleteRole() {
 
     echo "Deleting role '$roleName'..."
     aws iam delete-role --role-name $roleName
+}
+
+function awsGetUserArn() {
+    requireArg "an IAM user name" "$1" || return 1
+
+    aws iam get-user --user-name "$1" | jq -r '.User.Arn'
+}
+
+function awsAuthorizeAssumeRole() {
+    requireArg "an IAM role name" "$1" || return 1
+    requireArg "an IAM user name" "$2" || return 1
+
+    local roleName="$1"
+    local userName="$2"
+
+    local userArn=$(awsGetUserArn $userName)
+    local assumeRoleDoc=$(awsGetAssumeRolePolicyDocument $roleName)
+
+    local authzStatement=$(jq -nc --arg userArn $userArn '{
+        Sid: "ProgrammaticAssumption",
+        Effect: "Allow",
+        Principal: {
+            AWS: [$userArn]
+        },
+        Action: "sts:AssumeRole"
+    }')
+
+    local patchedAssumeRoleDoc=$(echo "$assumeRoleDoc" "$authzStatement" |\
+        jq -sc '.[1] as $patch | .[0].Statement += [$patch] | .[0]')
+
+    echo "$patchedAssumeRoleDoc" | prettyJson
+
+    aws iam update-assume-role-policy --role-name $roleName \
+        --policy-document $patchedAssumeRoleDoc
 }
