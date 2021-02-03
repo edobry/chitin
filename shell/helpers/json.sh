@@ -55,13 +55,8 @@ function readJSONFile() {
     requireFileArg "JSON file" "$1" || return 1
 
     local jsonFile="$1"
-
-    if [[ ! -f "$1" ]]; then
-        echo "No file exists at the given path!"
-        return 1
-    fi
-
     shift
+
     cat "$jsonFile" | jq -cr $*
 }
 
