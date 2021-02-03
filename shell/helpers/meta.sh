@@ -4,6 +4,10 @@ function getDTVersion() {
     popd > /dev/null
 }
 
+function getDTLocation() {
+    echo $CA_PROJECT_DIR/dataeng-tools
+}
+
 function getReleasedDTVersion() {
     getDTVersion | cut -d '-' -f 1
 }
@@ -33,6 +37,10 @@ function checkEmbeddedDTVersion() {
 
 function showDTConfig() {
     cat $(getDTConfigLocation)/config.json | prettyJson
+}
+
+function readDTConfig() {
+    readJSONFile $(getDTConfigLocation)/config.json $1
 }
 
 function modifyDTConfig() {
