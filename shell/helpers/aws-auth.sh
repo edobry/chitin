@@ -223,16 +223,27 @@ function awsDeleteProgrammaticUser() {
         shift
     fi
 
-    local username="$1"
-    local accessKeyIds=$(awsGetAccessKeysForUser $username)
+    local userName="$1"
+    local accessKeyIds=$(awsGetAccessKeysForUser $userName)
 
-    while IFS= read -r keyId; do
-        notSet $quietMode && echo "Deleting access key '$keyId'..."
-        awsDeleteAccessKey $username "$keyId"
-    done <<< "$accessKeyIds"
+    if [[ ! -z "$accessKeyIds" ]]; then
+        while IFS= read -r keyId; do
+            notSet $quietMode && echo "Deleting access key '$keyId'..."
+            awsDeleteAccessKey $userName "$keyId"
+        done <<< "$accessKeyIds"
+    fi
 
-    notSet $quietMode && echo "Deleting user '$username'..."
-    aws iam delete-user --user-name $username
+    notSet $quietMode && echo "Querying user policies..."
+    local policyNames=$(aws iam list-user-policies --user-name $userName | \
+        jq -r '.PolicyNames[]')
+
+    while IFS= read -r policyName; do
+        notSet $quietMode && echo "Deleting user policy '$policyName'..."
+        aws iam delete-user-policy --user-name $userName --policy-name "$policyName"
+    done <<< "$policyNames"
+
+    notSet $quietMode && echo "Deleting user '$userName'..."
+    aws iam delete-user --user-name $userName
 }
 
 function awsDeleteAccessKey() {
