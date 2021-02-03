@@ -323,8 +323,24 @@ function awsAuthorizeAssumeRole() {
     local roleName="$1"
     local userName="$2"
 
+    local roleArn=$(awsGetRoleArn $roleName)
     local userArn=$(awsGetUserArn $userName)
     local assumeRoleDoc=$(awsGetAssumeRolePolicyDocument $roleName)
+
+    local userGetRolePolicy=$(jq -nc --arg roleArn $roleArn '{
+        Version: "2012-10-17",
+        Statement: [{
+          Sid: "AllowGetRole",
+          Effect: "Allow",
+          Action: [
+            "iam:GetRole"
+          ],
+          Resource: $roleArn
+        }]
+    }')
+
+    aws iam put-user-policy --user-name $userName \
+        --policy-document "$userGetRolePolicy" --policy-name AllowGetRolePolicy
 
     local authzStatement=$(jq -nc --arg userArn $userArn '{
         Sid: "ProgrammaticAssumption",
