@@ -366,7 +366,22 @@ function awsGetRoleArn() {
 
 function awsAssumeProgrammaticRole() {
     requireArg "an IAM role name" "$1" || return 1
-
     local roleArn=$(awsGetRoleArn "$1")
-    aws sts assume-role --role-arn $roleArn --role-session-name "$1-session-$(randomString 3)"
+
+    local assumeRoleOutput
+    assumeRoleOutput=$(aws sts assume-role --role-arn $roleArn \
+        --role-session-name "$1-session-$(randomString 3)")
+
+    if [[ $? -ne 0 ]]; then
+         echo $assumeRoleOutput
+         return 1
+     fi
+
+     local accessKeyId=$(readJSON "$assumeRoleOutput" '.Credentials.AccessKeyId')
+     local secretAccessKey=$(readJSON "$assumeRoleOutput" '.Credentials.SecretAccessKey')
+     local sessionToken=$(readJSON "$assumeRoleOutput" '.Credentials.SessionToken')
+
+     export AWS_ACCESS_KEY_ID="$accessKeyId"
+     export AWS_SECRET_ACCESS_KEY="$secretAccessKey"
+     export AWS_SESSION_TOKEN="$sessionToken"
 }
