@@ -6,6 +6,12 @@ function initAwsAuth() {
         return 1
     fi
 
+    local programmaticAuth=$(readDTModuleConfig 'aws-auth' '.programmaticAuth')
+    if [[ "$programmaticAuth" == 'true' ]]; then
+        awsInitProgrammaticAuth
+        return 0
+    fi
+
     local embeddedAwsConfig=$CA_DT_DIR/shell/terraform/util/aws/config
 
     # if we're already initialized, we're done
@@ -28,6 +34,12 @@ function initAwsAuth() {
     export AWS_CONFIG_FILE=$embeddedAwsConfig
 
     export CA_DT_AWS_AUTH_INIT=true
+}
+
+function awsInitProgrammaticAuth() {
+    local programmaticRole=$(readDTModuleConfig 'aws-auth' '.programmaticRole')
+
+    awsAssumeProgrammaticRole "$programmaticRole"
 }
 
 # prints your full identity if authenticated, or fails
