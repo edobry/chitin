@@ -40,7 +40,7 @@ function showDTConfig() {
 }
 
 function readDTConfig() {
-    readJSONFile $(getDTConfigLocation)/config.json $*
+    readJSONFile $(getDTConfigLocation)/config.json $@
 }
 
 function readDTModuleConfig() {
@@ -51,7 +51,7 @@ function readDTModuleConfig() {
     local fieldPath="$1"
     [[ -z $fieldPath ]] || shift
 
-    readDTConfig ".modules[\$modName]$fieldPath" --arg modName $moduleName $*
+    readDTConfig ".modules[\$modName]$fieldPath" --arg modName $moduleName $@
 }
 
 function modifyDTConfig() {
