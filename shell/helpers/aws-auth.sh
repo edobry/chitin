@@ -220,3 +220,60 @@ function awsGetAccessKeysForUser() {
 
     aws iam list-access-keys --user-name "$1" | jq -r '.AccessKeyMetadata[].AccessKeyId'
 }
+
+function awsCloneRole() {
+    requireArg "a source IAM role name" "$1" || return 1
+    requireArg "a target IAM role name" "$2" || return 1
+
+    unset quietMode
+    if [[ "$1" == "quiet" ]]; then
+        quietMode=true
+        shift
+    fi
+
+    local sourceRoleName="$1"
+    local targetRoleName="$2"
+
+    notSet $quietMode && echo "Querying source role policy attachments..."
+    local sourcePolicyArns=$(aws iam list-attached-role-policies --role-name $sourceRoleName | \
+        jq -r '.AttachedPolicies[].PolicyArn')
+
+    notSet $quietMode && echo "Querying source role assume-role policy document..."
+    local sourceAssumeRolePolicyDocumentFile=$(tempFile)
+    aws iam get-role --role-name $sourceRoleName |\
+        jq '.Role.AssumeRolePolicyDocument' > $sourceAssumeRolePolicyDocumentFile
+
+    notSet $quietMode && echo "Creating new role '$targetRoleName'..."
+    local createOutput=$(aws iam create-role --role-name $targetRoleName \
+        --assume-role-policy-document file://$sourceAssumeRolePolicyDocumentFile)
+
+    while IFS= read -r policyArn; do
+        notSet $quietMode && echo "Attaching policy '$policyArn'..."
+        aws iam attach-role-policy --role-name $targetRoleName --policy-arn "$policyArn"
+    done <<< "$sourcePolicyArns"
+}
+
+function awsDeleteRole() {
+    requireArg "an IAM role name" "$1" || return 1
+
+    if [[ "$1" != 'yes' ]]; then
+        echo "This command is potentially destructive; please ensure you're passing the right arguments, and then re-run with 'yes' as the first argument"
+        return 0
+    else
+        shift
+    fi
+
+    local roleName="$1"
+
+    echo "Querying role policy attachments..."
+    local policyArns=$(aws iam list-attached-role-policies --role-name $roleName | \
+        jq -r '.AttachedPolicies[].PolicyArn')
+
+    while IFS= read -r policyArn; do
+        echo "Detaching policy '$policyArn'..."
+        aws iam detach-role-policy --role-name $roleName --policy-arn "$policyArn"
+    done <<< "$policyArns"
+
+    echo "Deleting role '$roleName'..."
+    aws iam delete-role --role-name $roleName
+}
