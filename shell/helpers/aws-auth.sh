@@ -160,3 +160,63 @@ function awsListUsers() {
 function awsListRoles() {
     aws iam list-roles | jq -r '.Roles[].RoleName'
 }
+
+function awsCreateProgrammaticCreds() {
+    local googleUsername=$(readDTConfig '.modules["aws-auth"].googleUsername' -r)
+    local newIamUsername="$googleUsername-programmatic-tmp-$(randomString 3)"
+
+    local newUserId
+    newUserId=$(aws iam create-user --user-name $newIamUsername | jq '.User.UserId')
+    [[ $? -eq 0 ]] || return 1
+
+    local createKeyOutput
+    createKeyOutput=$(aws iam create-access-key --user-name $newIamUsername)
+    if [[ $? -ne 0 ]]; then
+        awsDeleteProgrammaticUser quiet $newIamUsername
+        return 1
+    fi
+
+    readJSON "$createKeyOutput" '.AccessKey | { user: .UserName, id: .AccessKeyId, key: .SecretAccessKey }'
+}
+
+function awsDeleteProgrammaticCreds() {
+    requireArg "programmatic credentials" "$1" || return 1
+
+    local creds="$1"
+    awsDeleteProgrammaticUser $(readJSON "$creds" '.user')
+}
+
+# args: (optional) "quiet"
+function awsDeleteProgrammaticUser() {
+    requireArg "an IAM user name" "$1" || return 1
+
+    unset quietMode
+    if [[ "$1" == "quiet" ]]; then
+        quietMode=true
+        shift
+    fi
+
+    local username="$1"
+    local accessKeyIds=$(awsGetAccessKeysForUser $username)
+
+    while IFS= read -r keyId; do
+        notSet $quietMode && echo "Deleting access key '$keyId'..."
+        awsDeleteAccessKey $username "$keyId"
+    done <<< "$accessKeyIds"
+
+    notSet $quietMode && echo "Deleting user '$username'..."
+    aws iam delete-user --user-name $username
+}
+
+function awsDeleteAccessKey() {
+    requireArg "an IAM user name" "$1" || return 1
+    requireArg "an IAM access key id" "$2" || return 1
+
+    aws iam delete-access-key --user-name "$1" --access-key-id "$2"
+}
+
+function awsGetAccessKeysForUser() {
+    requireArg "an IAM user name" "$1" || return 1
+
+    aws iam list-access-keys --user-name "$1" | jq -r '.AccessKeyMetadata[].AccessKeyId'
+}
