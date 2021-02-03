@@ -22,6 +22,33 @@ function validateJSONFile() {
     validateJSON $(readJSONFile "$1")
 }
 
+function validateJSONFields() {
+    requireJsonArg "to validate" "$1" || return 1
+    requireArg "(a) field(s) to validate" "$2" || return 1
+
+    local json="$1"
+    shift
+
+    local requiredFields="$*"
+
+    local fields=".$1"
+    shift
+    for i in "$@"; do
+        fields="$fields, .$i"
+    done
+
+    if ! readJSON "$json" "$fields" -e >/dev/null; then
+        echo "One of the required fields '$requiredFields' is not present!"
+        return 1
+    fi
+}
+
+# checks that an argument is supplied and that it is numeric, and prints a message if not
+# args: name of arg, arg value
+function requireJsonArg() {
+    requireArgWithCheck "$1" "$2" validateJSON "a valid minified JSON string "
+}
+
 # reads (a value at a certain path from) a JSON File
 # args: json file path, jq path to read (optional)
 function readJSONFile() {
