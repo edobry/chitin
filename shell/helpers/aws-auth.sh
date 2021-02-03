@@ -330,7 +330,7 @@ function awsAuthorizeAssumeRole() {
         Sid: "ProgrammaticAssumption",
         Effect: "Allow",
         Principal: {
-            AWS: [$userArn]
+            AWS: $userArn
         },
         Action: "sts:AssumeRole"
     }')
