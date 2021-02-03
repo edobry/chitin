@@ -146,6 +146,13 @@ function initDT() {
     if [[ -z "$CA_FAIL_ON_ERROR" ]]; then
         set +e
     fi
+
+    dtRunInitCommand
+}
+
+function dtRunInitCommand() {
+    local initCommand=$(readDTModuleConfig init '.command')
+    $initCommand
 }
 
 function reinitDT() {
