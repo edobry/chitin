@@ -211,7 +211,7 @@ function k8sPipeline() {
 
     local cdModeFlag=$(isSet $isCdMode && echo "true" || echo "false")
 
-    local deployments=$(cat "env/dev/config.json" | jq -cr '
+    local deployments=$(readJSON "$runtimeConfig" '
         # store the root object for later
         . as $root |
 
