@@ -39,7 +39,12 @@ function initAwsAuth() {
 function awsInitProgrammaticAuth() {
     local programmaticRole=$(readDTModuleConfig 'aws-auth' '.programmaticRole')
 
-    awsAssumeProgrammaticRole "$programmaticRole"
+    # await authorization complete...
+    local roleArn
+    until roleArn=awsGetRoleArn $programmaticRole 2>&1; do
+        sleep 5
+    done
+    awsAssumeProgrammaticRoleArn $programmaticRole $roleArn
 }
 
 # prints your full identity if authenticated, or fails
