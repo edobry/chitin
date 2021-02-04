@@ -122,6 +122,7 @@ function initDT() {
     else
         setopt ksh_glob
     fi
+    set -o pipefail
 
     # load init scripts
     loadDTDir $CA_DT_DIR/shell/helpers/init/**/*.sh
