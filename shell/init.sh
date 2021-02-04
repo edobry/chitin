@@ -101,7 +101,7 @@ function checkDTDeps() {
     depFilePath=$(convertJSON5 "$json5DepFilePath")
     [[ $? -eq 0 ]] || return 1
 
-    readJSONFile "$depFilePath" '.dependencies | to_entries[]' | \
+    readJSONFile "$depFilePath" '.dependencies|to_entries[]' | \
     while read -r dep; do
         checkDTDep "$dep" || return 1
     done
