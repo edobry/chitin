@@ -40,10 +40,12 @@ function awsInitProgrammaticAuth() {
     local programmaticRole=$(readDTModuleConfig 'aws-auth' '.programmaticRole')
 
     # await authorization complete...
-    local roleArn
-    until roleArn=awsGetRoleArn $programmaticRole 2>&1; do
+    local roleArn=$(awsGetRoleArn $programmaticRole 2>/dev/null)
+    until [[ ! -z $roleArn ]]; do
         sleep 5
+        roleArn=$(awsGetRoleArn $programmaticRole)
     done
+
     awsAssumeProgrammaticRoleArn $programmaticRole $roleArn
 }
 
