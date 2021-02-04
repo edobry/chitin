@@ -352,15 +352,17 @@ function awsAuthorizeAssumeRole() {
     local userArn=$(awsGetUserArn $userName)
     local assumeRoleDoc=$(awsGetAssumeRolePolicyDocument $roleName)
 
-    local userGetRolePolicy=$(jq -nc --arg roleArn $roleArn '{
+    local userGetRolePolicy=$(jq -nc \
+        --arg roleArn $roleArn \
+    '{
         Version: "2012-10-17",
         Statement: [{
-          Sid: "AllowGetRole",
-          Effect: "Allow",
-          Action: [
-            "iam:GetRole"
-          ],
-          Resource: $roleArn
+            Sid: "AllowGetRole",
+            Effect: "Allow",
+            Action: [
+                "iam:GetRole"
+            ],
+            Resource: $roleArn
         }]
     }')
 
@@ -414,12 +416,11 @@ function awsAssumeProgrammaticRoleArn() {
     requireArg "an IAM role ARN" "$2" || return 1
 
     local roleName="$1"
-    local roleArn="$1"
+    local roleArn="$2"
 
     local assumeRoleOutput
     assumeRoleOutput=$(aws sts assume-role --role-arn $roleArn \
         --role-session-name "$roleName-session-$(randomString 3)")
-
     if [[ $? -ne 0 ]]; then
          echo $assumeRoleOutput
          return 1
