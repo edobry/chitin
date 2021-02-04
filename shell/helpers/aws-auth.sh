@@ -388,11 +388,30 @@ function awsGetRoleArn() {
 
 function awsAssumeProgrammaticRole() {
     requireArg "an IAM role name" "$1" || return 1
-    local roleArn=$(awsGetRoleArn "$1")
+
+    local roleName="$1"
+
+    local roleArn
+    roleArn=$(awsGetRoleArn "$roleName")
+    if [[ $? -ne 0 ]]; then
+        echo "$roleArn"
+        echo "Could not assume programmatic role '$roleName'!"
+        return 1
+    fi
+
+    awsAssumeProgrammaticRoleArn $roleName $roleArn
+}
+
+function awsAssumeProgrammaticRoleArn() {
+    requireArg "an IAM role name" "$1" || return 1
+    requireArg "an IAM role ARN" "$2" || return 1
+
+    local roleName="$1"
+    local roleArn="$1"
 
     local assumeRoleOutput
     assumeRoleOutput=$(aws sts assume-role --role-arn $roleArn \
-        --role-session-name "$1-session-$(randomString 3)")
+        --role-session-name "$roleName-session-$(randomString 3)")
 
     if [[ $? -ne 0 ]]; then
          echo $assumeRoleOutput
