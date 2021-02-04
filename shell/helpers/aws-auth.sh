@@ -379,7 +379,11 @@ function awsAuthorizeAssumeRole() {
 function awsGetRoleArn() {
     requireArg "an IAM role name" "$1" || return 1
 
-    aws iam get-role --role-name "$1" | jq -r '.Role.Arn'
+    local result
+    result=$(aws iam get-role --role-name "$1" | jq -r '.Role.Arn')
+    [[ $? -eq 0 ]] || return 1
+
+    echo "$result"
 }
 
 function awsAssumeProgrammaticRole() {
