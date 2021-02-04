@@ -195,7 +195,12 @@ function awsCreateProgrammaticCreds() {
     fi
 
     local newIamRole="$roleName-$newIamSuffix"
-    awsCloneRole quiet $roleName $newIamRole
+    local createRoleOutput
+    createRoleOutput=$(awsCloneRole quiet $roleName $newIamRole)
+    if [[ $? -ne 0 ]]; then
+        awsDeleteProgrammaticUser quiet $newIamUsername
+        return 1
+    fi
 
     awsAuthorizeAssumeRole $newIamRole $newIamUsername
 
@@ -281,8 +286,10 @@ function awsCloneRole() {
     awsGetAssumeRolePolicyDocument $sourceRoleName > $sourceAssumeRolePolicyDocumentFile
 
     notSet $quietMode && echo "Creating new role '$targetRoleName'..."
-    local createOutput=$(aws iam create-role --role-name $targetRoleName \
+    local createOutput
+    createOutput=$(aws iam create-role --role-name $targetRoleName \
         --assume-role-policy-document file://$sourceAssumeRolePolicyDocumentFile)
+    [[ $? -eq 0 ]] || return 1
 
     while IFS= read -r policyArn; do
         notSet $quietMode && echo "Attaching policy '$policyArn'..."
