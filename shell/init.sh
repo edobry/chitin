@@ -158,6 +158,7 @@ function dtRunInitCommand() {
     $initCommand
 }
 
+alias dtReinit=reinitDT
 function reinitDT() {
     source $CA_DT_DIR/shell/init.sh
 }
