@@ -221,8 +221,8 @@ function awsDeleteProgrammaticCreds() {
     local creds="$1"
     validateJSONFields "$creds" user role || return 1
 
-    awsDeleteProgrammaticUser $(readJSON "$creds" '.user')
-    awsDeleteRole yes $(readJSON "$creds" '.role')
+    awsDeleteProgrammaticUser quiet $(readJSON "$creds" '.user')
+    awsDeleteRole yes quiet $(readJSON "$creds" '.role')
 }
 
 # args: (optional) "quiet"
@@ -320,18 +320,23 @@ function awsDeleteRole() {
         shift
     fi
 
+    unset quietMode
+    if [[ "$1" == "quiet" ]]; then
+        quietMode=true
+        shift
+    fi
+
     local roleName="$1"
 
-    echo "Querying role policy attachments..."
-    local policyArns=$(aws iam list-attached-role-policies --role-name $roleName | \
-        jq -r '.AttachedPolicies[].PolicyArn')
+    notSet $quietMode && echo "Querying role policy attachments..."
+    local policyArns=$(awsListRolePolicies $roleName)
 
     while IFS= read -r policyArn; do
-        echo "Detaching policy '$policyArn'..."
+        notSet $quietMode && echo "Detaching policy '$policyArn'..."
         aws iam detach-role-policy --role-name $roleName --policy-arn "$policyArn"
     done <<< "$policyArns"
 
-    echo "Deleting role '$roleName'..."
+    notSet $quietMode && echo "Deleting role '$roleName'..."
     aws iam delete-role --role-name $roleName
 }
 
