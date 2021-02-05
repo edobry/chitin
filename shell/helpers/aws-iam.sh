@@ -1,6 +1,6 @@
 # shows all policy attachments for a given role
 # args: role name
-function listRolePolicies() {
+function awsListRolePolicies() {
     requireArg "a role name" $1 || return 1
 
     aws iam list-attached-role-policies --role-name $1 |\
@@ -9,7 +9,7 @@ function listRolePolicies() {
 
 # fetches a policy
 # args: policy ARN
-function getPolicy() {
+function awsGetPolicy() {
     requireArg "a policy ARN" $1 || return 1
 
     aws iam get-policy --policy-arn "$1"
@@ -21,17 +21,17 @@ function showCurrentRolePermissions() {
 
     echo -e "Showing policy attachments for role '$role'...\n"
 
-    listRolePolicies "$role" | \
+    awsListRolePolicies "$role" | \
     while read -r policyArn; do
-        local policyVersion=$(getPolicy "$policyArn" | jq -r '.Policy.DefaultVersionId')
-        showPolicy "$policyArn" "$policyVersion"
+        local policyVersion=$(awsGetPolicy "$policyArn" | jq -r '.Policy.DefaultVersionId')
+        awsShowPolicy "$policyArn" "$policyVersion"
         echo
     done
 }
 
 # shows all policy attachments for a given policy version
 # args: policy ARN, policy version
-function getPolicyAttachments() {
+function awsGetPolicyAttachments() {
     requireArg "a policy ARN" $1 || return 1
     requireArg "a policy version" $2 || return 1
 
@@ -44,7 +44,7 @@ function getPolicyAttachments() {
 
 # shows all policy attachments and their allowed actions for a given policy version
 # args: policy ARN, policy version
-function showPolicy() {
+function awsShowPolicy() {
     requireArg "a policy ARN" $1 || return 1
     requireArg "a policy version" $2 || return 1
 
@@ -52,7 +52,7 @@ function showPolicy() {
     local policyVersion="$2"
     local policyName=$(echo "$policyArn" | awk -F'/' '{ print $2 }')
 
-    local policyAttachments=$(getPolicyAttachments $policyArn $policyVersion |\
+    local policyAttachments=$(awsGetPolicyAttachments $policyArn $policyVersion |\
         jq -cr '.PolicyVersion.Document.Statement[]')
 
     echo "$policyName $policyVersion"
