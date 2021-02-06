@@ -12,6 +12,10 @@ function tempFile() {
     echo /tmp/$(randomString 10)
 }
 
+function hr() {
+	printf '%0*d' $(tput cols) | tr 0 ${1:-_}
+}
+
 function escapeCommas(){
     sed 's/,/\\\,/g'
 }
