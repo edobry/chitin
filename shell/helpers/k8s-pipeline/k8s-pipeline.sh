@@ -196,9 +196,10 @@ function k8sPipeline() {
 
     # generate environment-specific configuration and write to a temporary file
     # TODO: add per-chart child-chart config
-    local envValues=$(readJSON "$runtimeConfig" '{
+    local envValues=$(jq -cr '{
         region: $region, nodeSelector: {
-            "eks.amazonaws.com/nodegroup": (.environment.eksNodegroup // empty) } }' --arg region $region)
+            "eks.amazonaws.com/nodegroup": (.environment.eksNodegroup // empty) } }' \
+            --arg region $region <<< "$runtimeConfig")
 
     notSet "$isTestingMode" && notSet "$isDryrunMode" && notSet "$isTeardownMode" && helm repo update
 
