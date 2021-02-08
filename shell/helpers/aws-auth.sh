@@ -46,6 +46,7 @@ function awsInitProgrammaticAuth() {
         roleArn=$(awsGetRoleArn $programmaticRole)
     done
 
+    aws configure set region $AWS_DEFAULT_REGION
     awsAssumeProgrammaticRoleArn $programmaticRole $roleArn
 }
 
