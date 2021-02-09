@@ -10,25 +10,53 @@ function prettyYaml() {
     yq e -P -
 }
 
-function validateJSONFile() {
-    requireArg "a filepath" "$1" || return 1
+function validateJSON() {
+    requireArg "a minified JSON string" "$1" || return 1
 
-    cat "$1" | jq -e . > /dev/null 2>&1
+    echo "$1" | jq -e . > /dev/null 2>&1
+}
+
+function validateJSONFile() {
+    requireFileArg "JSON file" "$1" || return 1
+
+    validateJSON $(readJSONFile "$1")
+}
+
+function validateJSONFields() {
+    requireJsonArg "to validate" "$1" || return 1
+    requireArg "(a) field(s) to validate" "$2" || return 1
+
+    local json="$1"
+    shift
+
+    local requiredFields="$*"
+
+    local fields=".$1"
+    shift
+    for i in "$@"; do
+        fields="$fields, .$i"
+    done
+
+    if ! readJSON "$json" "$fields" -e >/dev/null; then
+        echo "One of the required fields '$requiredFields' is not present!"
+        return 1
+    fi
+}
+
+# checks that an argument is supplied and that it is numeric, and prints a message if not
+# args: name of arg, arg value
+function requireJsonArg() {
+    requireArgWithCheck "$1" "$2" validateJSON "a valid minified JSON string "
 }
 
 # reads (a value at a certain path from) a JSON File
 # args: json file path, jq path to read (optional)
 function readJSONFile() {
-    requireArg "a filepath" "$1" || return 1
+    requireFileArg "JSON file" "$1" || return 1
 
     local jsonFile="$1"
-
-    if [[ ! -f "$1" ]]; then
-        echo "No file exists at the given path!"
-        return 1
-    fi
-
     shift
+
     cat "$jsonFile" | jq -cr $*
 }
 

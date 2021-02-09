@@ -4,6 +4,10 @@ function getDTVersion() {
     popd > /dev/null
 }
 
+function getDTLocation() {
+    echo $CA_PROJECT_DIR/dataeng-tools
+}
+
 function getReleasedDTVersion() {
     getDTVersion | cut -d '-' -f 1
 }
@@ -33,6 +37,38 @@ function checkEmbeddedDTVersion() {
 
 function showDTConfig() {
     cat $(getDTConfigLocation)/config.json | prettyJson
+}
+
+function showDTEnvvars() {
+    env | grep "CA_"
+}
+
+function dtDebug() {
+    echo -e "DT configuration\n"
+    echo -e "DT version: $(getDTVersion)\n"
+    showDTConfig
+
+    echo -e "\nDT envvars:\n"
+    showDTEnvvars
+    echo
+    hr
+    echo -e "\n\nAWS configuration:\n"
+    showAWSEnvvars
+}
+
+function readDTConfig() {
+    readJSONFile $(getDTConfigLocation)/config.json $@
+}
+
+function readDTModuleConfig() {
+    requireArg "a module name" "$1" || return 1
+
+    local moduleName="$1"
+    shift
+    local fieldPath="$1"
+    [[ -z $fieldPath ]] || shift
+
+    readDTConfig ".modules[\$modName]$fieldPath" --arg modName $moduleName $@
 }
 
 function modifyDTConfig() {
