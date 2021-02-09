@@ -298,7 +298,7 @@ function awsGetRoleArn() {
     echo "$result"
 }
 
-function awsAssumeProgrammaticRole() {
+function awsAssumeRole() {
     requireArg "an IAM role name" "$1" || return 1
 
     local roleName="$1"
@@ -311,29 +311,16 @@ function awsAssumeProgrammaticRole() {
         return 1
     fi
 
-    awsAssumeProgrammaticRoleArn $roleName $roleArn
+    awsAssumeRoleArn $roleName $roleArn
 }
 
-function awsAssumeProgrammaticRoleArn() {
+function awsAssumeRoleArn() {
     requireArg "an IAM role name" "$1" || return 1
     requireArg "an IAM role ARN" "$2" || return 1
 
     local roleName="$1"
     local roleArn="$2"
 
-    local assumeRoleOutput
-    assumeRoleOutput=$(aws sts assume-role --role-arn $roleArn \
-        --role-session-name "$roleName-session-$(randomString 3)")
-    if [[ $? -ne 0 ]]; then
-         echo $assumeRoleOutput
-         return 1
-     fi
-
-     local accessKeyId=$(readJSON "$assumeRoleOutput" '.Credentials.AccessKeyId')
-     local secretAccessKey=$(readJSON "$assumeRoleOutput" '.Credentials.SecretAccessKey')
-     local sessionToken=$(readJSON "$assumeRoleOutput" '.Credentials.SessionToken')
-
-     export AWS_ACCESS_KEY_ID="$accessKeyId"
-     export AWS_SECRET_ACCESS_KEY="$secretAccessKey"
-     export AWS_SESSION_TOKEN="$sessionToken"
+    aws sts assume-role --role-arn $roleArn \
+        --role-session-name "$roleName-session-$(randomString 3)"
 }
