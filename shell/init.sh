@@ -122,6 +122,7 @@ function initDT() {
     else
         setopt ksh_glob
     fi
+    set -o pipefail
 
     # load init scripts
     loadDTDir $CA_DT_DIR/shell/helpers/init/**/*.sh
@@ -146,8 +147,18 @@ function initDT() {
     if [[ -z "$CA_FAIL_ON_ERROR" ]]; then
         set +e
     fi
+
+    dtRunInitCommand
 }
 
+function dtRunInitCommand() {
+    local initCommand=$(readDTModuleConfig init '.command//empty')
+    [[ -z "$initCommand" ]] && return 0
+
+    $initCommand
+}
+
+alias dtReinit=reinitDT
 function reinitDT() {
     source $CA_DT_DIR/shell/init.sh
 }
