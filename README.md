@@ -159,6 +159,16 @@ Functions:
  - `getDynamoItem`: gets a specific DynamoDB item
  - `updateDynamoItem`: updates the value of a specific DynamoDB item
 
+#### Docker
+
+Functions:
+- `pruneDockerImages`: deletes all locally-cached Docker images not used in the last day
+- `listDockerImageTags`: lists all available tags for a Docker image
+- `getLatestDockerImageTag`: gets the latest available tag for a Docker image
+- `getDockerImageTags`: gets a human-readable view of available tags for a Docker image
+- `dockerArtifactoryPublish`: tags and pushes a locally-built Docker image to Artifactory
+- `dockerArtifactoryPublishLast`: tags and pushes the last locally-built Docker image to Artifactory
+
 #### K8s
 
 ##### Env
@@ -182,6 +192,7 @@ appropriately using `kubectx/kubens` before running.
 Functions:
  - `debugPod`: launches a debug pod in the cluster preloaded with common networking tools, drops you into its shell when created
  - `downDeploy/upDeploy/reDeploy`: stop/start/restart a deployment
+ - `downDeployAndWait`: scales down a deployment to 0 replicas, and awaits the operation's completion
  - `secretEncode`: base64-encodes a string for use in a Secret
  - `rds`: connects to an RDS instance from the service name
  - `getServiceExternalUrl`: fetches the external url, with port, for a Service with a load balancer configured
@@ -192,6 +203,10 @@ Functions:
  - `createTmpK8sSvcAccContext`: creates a temporary k8s context for a ServiceAccount
  - `runAsServiceAccount`: impersonates a given ServiceAccount and runs a command
  - `kubectlAsServiceAccount`: impersonates a given ServiceAccount and runs a kubectl command using its token
+- `k8sGetDeploymentSelector`: gets the pod selector used for a given Deployment
+- `k8sGetDeploymentPods`: gets the pods managed by a given Deployment
+- `k8sDeploymentHasPods`:  checks whether a given Deployment has running pods under management
+- `k8sWaitForDeploymentScaleDown`: waits until all pods under management of a given Deployment have scaled down
 
 ##### Pipeline
 

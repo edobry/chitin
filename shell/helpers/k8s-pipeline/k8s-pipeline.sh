@@ -9,6 +9,14 @@ function k9sPipeline() {
 }
 
 function k8sPipeline() {
+    # to use, call with `cd` as the first arg
+    local isCdMode
+    if [[ "$1" == "cd" ]]; then
+        isCdMode=true
+        echo "-- CD MODE --"
+        shift
+    fi
+
     # to use, call with `debug` as the first arg
     local isDebugMode
     if [[ "$1" == "debug" ]]; then
@@ -188,9 +196,10 @@ function k8sPipeline() {
 
     # generate environment-specific configuration and write to a temporary file
     # TODO: add per-chart child-chart config
-    local envValues=$(readJSON "$runtimeConfig" '{
+    local envValues=$(jq -cr '{
         region: $region, nodeSelector: {
-            "eks.amazonaws.com/nodegroup": (.environment.eksNodegroup // empty) } }' --arg region $region)
+            "eks.amazonaws.com/nodegroup": (.environment.eksNodegroup // empty) } }' \
+            --arg region $region <<< "$runtimeConfig")
 
     notSet "$isTestingMode" && notSet "$isDryrunMode" && notSet "$isTeardownMode" && helm repo update
 
@@ -201,19 +210,38 @@ function k8sPipeline() {
 
     local modeCommand=$(notSet $isTeardownMode && echo installChart || echo teardownChart)
 
-    local externalResourceDeployments=$(readJSON "$runtimeConfig" '.externalResources.deployments | to_entries |
-        map({ key: .key, value: { chart: "external-service", values: .value } })[]')
+    local cdModeFlag=$(isSet $isCdMode && echo "true" || echo "false")
 
-    local deployments=$(readJSON "$runtimeConfig" '.deployments | to_entries[] | select(.value.disabled | not)')
+    local deployments=$(readJSON "$runtimeConfig" '
+        # store the root object for later
+        . as $root |
 
-    local mergedDeployments=$(echo -e "$externalResourceDeployments\n$deployments")
-    if [[ -z $mergedDeployments ]]; then
+        # reformat & merge externalResources.deployments into deployments
+        {
+            externalResourceDeployments: (
+                .externalResources.deployments | to_entries |
+                    map({ key: .key,
+                        value: { chart: "external-service", values: .value }
+                    })),
+            deployments: (.deployments | to_entries)
+        } | [.externalResourceDeployments, .deployments] | flatten |
+
+        # merge chartDefault config, if exists into each one
+        map({key, value: (($root.chartDefaults[.value.chart] // {} | del(.values)) * .value) })[] |
+
+        # filter out disabled and cdDisabled deployments
+        select(.value.disabled | not) |
+        select(($cdMode | test("false")) or (($cdMode | test("true")) and (.value.cdDisabled | not)))' \
+    --arg cdMode $cdModeFlag)
+
+    if [[ -z $deployments ]]; then
         echo "No deployments configured, nothing to do. Exiting!"
         return 0
     fi
+
     while read -r deploymentOptions; do
          $modeCommand "$runtimeConfig" "$deploymentOptions" "$chartDefaults"
-    done <<< $mergedDeployments
+    done <<< $deployments
 
     notSet $isDryrunMode && notSet $isTeardownMode && rm "$envFile"
 

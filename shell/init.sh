@@ -69,7 +69,7 @@ function readDTConfig() {
         dtLog "initializing config file at '$json5ConfigFilePath'"
         mkdir -p $configLocation
         cp $CA_DT_DIR/shell/$json5ConfigFileName $json5ConfigFilePath
-        dtLog "please complete the initialization by running `modifyDTConfig`"
+        dtLog "please complete the initialization by running modifyDTConfig"
     fi
 
     local configFile
@@ -101,7 +101,7 @@ function checkDTDeps() {
     depFilePath=$(convertJSON5 "$json5DepFilePath")
     [[ $? -eq 0 ]] || return 1
 
-    readJSONFile "$depFilePath" '.dependencies | to_entries[]' | \
+    readJSONFile "$depFilePath" '.dependencies|to_entries[]' | \
     while read -r dep; do
         checkDTDep "$dep" || return 1
     done
@@ -122,6 +122,7 @@ function initDT() {
     else
         setopt ksh_glob
     fi
+    set -o pipefail
 
     # load init scripts
     loadDTDir $CA_DT_DIR/shell/helpers/init/**/*.sh
@@ -146,8 +147,18 @@ function initDT() {
     if [[ -z "$CA_FAIL_ON_ERROR" ]]; then
         set +e
     fi
+
+    dtRunInitCommand
 }
 
+function dtRunInitCommand() {
+    local initCommand=$(readDTModuleConfig init '.command//empty')
+    [[ -z "$initCommand" ]] && return 0
+
+    $initCommand
+}
+
+alias dtReinit=reinitDT
 function reinitDT() {
     source $CA_DT_DIR/shell/init.sh
 }

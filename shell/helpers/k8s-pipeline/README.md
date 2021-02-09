@@ -17,6 +17,7 @@ with the components being as follows:
    - `debug`: enables more detailed logging
    - `dryrun` simulates a run, printing out commands that would be executed
    - `testing` disables validations and updates, to allow faster iteration
+   - `cd` indicates that we are in a Continuous Deployment (CD) environment, enables support for `cdDisabled`
 - `subcommand`: the operation to be executed
    - `deploy`: the most common mode; `render` and then deploy the targeted deployments to the cluster
    - `render`: substitutes values and templates the targeted deployments, but prints out the results instead of deploying
@@ -78,6 +79,8 @@ The `config.json` file sets up the environment, including the relevant account, 
       - `remote`: pull from a remote repository
    - `version`: version of the chart to require [optional]
    - `values`: an inline values object, will be converted to YAML and passed to Helm
+   - `disabled`: if set to `true`, causes this deployment to not be processed
+   - `cdDisabled`: if set to `true`, and the `cd` flag is set, causes this deployment to not be processed
 - `externalResources`: enables creation of K8s Services/Secrets to facilitate access to extra-cluster resources, ie databases, MSK clusters, Hetzner services, or external APIs
   - `secretPresets`: defines common `externalSecret` combinations which can be referenced in specific `externalResources.deployment`s using `$secretPreset`
   - `deployments`: instances of the `external-service` chart to be deployed, takes only values
