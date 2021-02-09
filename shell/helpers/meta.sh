@@ -43,6 +43,19 @@ function showDTEnvvars() {
     env | grep "CA_"
 }
 
+function dtDebug() {
+    echo -e "DT configuration\n"
+    echo -e "DT version: $(getDTVersion)\n"
+    showDTConfig
+
+    echo -e "\nDT envvars:\n"
+    showDTEnvvars
+    echo
+    hr
+    echo -e "\n\nAWS configuration:\n"
+    showAWSEnvvars
+}
+
 function readDTConfig() {
     readJSONFile $(getDTConfigLocation)/config.json $@
 }
