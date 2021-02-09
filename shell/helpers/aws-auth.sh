@@ -165,8 +165,11 @@ function withProfile() {
 
     requireArg "a command to run" $1 || return 1
 
-    awsAuth $profile
+    local currentProfile=$(awsRole)
+
+    awsAuth $profile >/dev/null
     $*
+    awsAuth $currentProfile >/dev/null
 }
 
 function getAwsRegion() {

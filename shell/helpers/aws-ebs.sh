@@ -298,8 +298,8 @@ function ebsCopySnapshotCrossAccount() {
     local targetAccountId=$(withProfile $targetRole awsAccountId)
 
     echo "Authorizing EBS snapshot access from target account..."
-    awsAuth $owningRole
     ebsAuthorizeSnapshotAccess $sourceArg $targetAccountId
+    [[ $? -eq 0 ]] || return 1
 
     local sourceRegion=$(getAwsRegion)
 
@@ -316,6 +316,6 @@ function ebsCopySnapshotCrossAccount() {
         jq -r '.SnapshotId')
 
     echo "Copy started! New snapshot id: '$newSnapshotId'"
-    echo "Run 'watchUntilSnapshotReady $newSnapshotId' to monitor copy progress"
+    echo "Run 'watchSnapshotProgress $newSnapshotId' to monitor copy progress"
     echo "Alternatively, 'waitUntilSnapshotReady $newSnapshotId' to await copy completion"
 }
