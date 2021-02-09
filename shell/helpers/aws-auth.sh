@@ -172,3 +172,7 @@ function withProfile() {
 function getAwsRegion() {
     aws configure get region
 }
+
+function showAWSEnvvars() {
+    env | grep 'AWS_' | grep -v "CA_"
+}
