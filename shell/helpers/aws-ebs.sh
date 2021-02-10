@@ -274,6 +274,7 @@ function awsDeleteVolume() {
     done <<< "$volumeIds"
 }
 
+# authorizes access to a snapshot from another account
 function awsEbsAuthorizeSnapshotAccess() {
     requireArg "a source snapshot identifier" "$1" || return 1
     requireArg "an target account role" "$2" || return 1
@@ -293,6 +294,7 @@ function awsEbsAuthorizeSnapshotAccess() {
         --user-ids "$2"
 }
 
+# authorizes access to, and then copies a snapshot across to another account
 function awsEbsCopySnapshotCrossAccount() {
     unset quietMode
     if [[ "$1" == "quiet" ]]; then
