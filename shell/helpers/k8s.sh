@@ -360,6 +360,16 @@ function k8sGetDeploymentSelector() {
         '.spec.selector.matchLabels | to_entries | map("\(.key)=\(.value)") | join(",")'
 }
 
+# gets an annotation value for the given resource
+# args: resource type, resource name, annotation
+function k8sGetResourceAnnotation() {
+    requireArg "a resource type" "$1" || return 1
+    requireArg "a resource name" "$2" || return 1
+    requireArg "an annotation name" "$3" || return 1
+
+    kubectl get "$1" "$2" --output json | jq -r --arg annotation "$3" \
+        '.metadata.annotations[$annotation]'
+}
 # gets the pods managed by a given Deployment
 # args: deployment name
 function k8sGetDeploymentPods() {
