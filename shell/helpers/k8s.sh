@@ -121,7 +121,7 @@ function rds() {
     local service=$1
     shift
 
-    local url=$(getServiceEndpoint $service)
+    local url=$(k8sGetServiceEndpoint $service)
     [ -z $url ] && return;
     local json=$(kubectl get secret $service-user -o json | jq .data)
     local user=$(jq .username -r <<< $json| base64 --decode)
@@ -140,7 +140,7 @@ function kconfig() {
 
 # fetches the external url, with port, for a Service with a load balancer configured
 # args: service name
-function getServiceExternalUrl() {
+function k8sGetServiceExternalUrl() {
     requireArg "a service name" $1 || return 1
 
     local svc=$(kubectl get service $1 -o=json)
@@ -151,7 +151,7 @@ function getServiceExternalUrl() {
 }
 
 # fetch the endpoint url for both services and proxies to zen garden
-function getServiceEndpoint() {
+function k8sGetServiceEndpoint() {
     requireArg "a service name" $1 || return 1
 
     service=$(kubectl describe services $1)
