@@ -54,7 +54,7 @@ function argsContain() {
 
 # can be used to check a list for a specific string
 # args: search target, list
-# example: listContains "eu-west-1" $(listAZs) || exit 1
+# example: listContains "eu-west-1" $(awsListAZs) || exit 1
 function listContains() {
     echo "$2" | grep -q "$1"
 }
