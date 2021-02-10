@@ -370,6 +370,15 @@ function k8sGetResourceAnnotation() {
     kubectl get "$1" "$2" --output json | jq -r --arg annotation "$3" \
         '.metadata.annotations[$annotation]'
 }
+
+# gets the external hostname created for a given Service
+# args: service name
+function k8sGetServiceExternalHostname() {
+    requireArg "a service name" "$1" || return 1
+
+    k8sGetResourceAnnotation service "$1" 'external-dns.alpha.kubernetes.io/hostname'
+}
+
 # gets the pods managed by a given Deployment
 # args: deployment name
 function k8sGetDeploymentPods() {
