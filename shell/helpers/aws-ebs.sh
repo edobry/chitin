@@ -1,3 +1,11 @@
+function awsEbsGetVolumeName() {
+    requireArg "a volume id" "$1" || return 1
+    checkAuthAndFail || return 1
+
+    aws ec2 describe-volumes --volume-ids "$1" |\
+        jq -r '.Volumes[].Tags[] | select(.Key=="Name").Value'
+}
+
 # watches an EBS volume currently being modified and reports progress
 # args: volumeId
 function awsWatchVolumeModificationProgress() {
