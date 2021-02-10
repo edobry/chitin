@@ -294,6 +294,12 @@ function awsEbsAuthorizeSnapshotAccess() {
 }
 
 function awsEbsCopySnapshotCrossAccount() {
+    unset quietMode
+    if [[ "$1" == "quiet" ]]; then
+        quietMode=true
+        shift
+    fi
+
     requireArg "a source snapshot identifier" "$1" || return 1
     requireArg "an owning account role" "$2" || return 1
     requireArg "an target account role" "$3" || return 1
@@ -302,10 +308,10 @@ function awsEbsCopySnapshotCrossAccount() {
     local owningRole="$2"
     local targetRole="$3"
 
-    echo "Querying target account id..."
+    notSet $quietMode && echo "Querying target account id..."
     local targetAccountId=$(withProfile $targetRole awsAccountId)
 
-    echo "Authorizing EBS snapshot access from target account..."
+    notSet $quietMode && echo "Authorizing EBS snapshot access from target account..."
     awsEbsAuthorizeSnapshotAccess $sourceArg $targetAccountId
     [[ $? -eq 0 ]] || return 1
 
@@ -317,13 +323,14 @@ function awsEbsCopySnapshotCrossAccount() {
         return 1
     fi
 
-    echo "Copying snapshot across accounts..."
+    notSet $quietMode && echo "Copying snapshot across accounts..."
     local newSnapshotId=$(withProfile $targetRole aws ec2 copy-snapshot \
         --source-snapshot-id $snapshotId \
         --source-region $sourceRegion |\
         jq -r '.SnapshotId')
 
-    echo "Copy started! New snapshot id: '$newSnapshotId'"
-    echo "Run 'awsWatchSnapshotProgress $newSnapshotId' to monitor copy progress"
-    echo "Alternatively, 'awsWaitUntilSnapshotReady $newSnapshotId' to await copy completion"
+    notSet $quietMode && echo "Copy started! New snapshot id: '$newSnapshotId'"
+    notSet $quietMode && echo "Run 'awsWatchSnapshotProgress $newSnapshotId' to monitor copy progress"
+    notSet $quietMode && echo "Alternatively, 'awsWaitUntilSnapshotReady $newSnapshotId' to await copy completion"
+    isSet $quietMode && echo $newSnapshotId
 }
