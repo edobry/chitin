@@ -121,7 +121,7 @@ function rds() {
     local service=$1
     shift
 
-    local url=$(getServiceEndpoint $service)
+    local url=$(k8sGetServiceEndpoint $service)
     [ -z $url ] && return;
     local json=$(kubectl get secret $service-user -o json | jq .data)
     local user=$(jq .username -r <<< $json| base64 --decode)
@@ -140,7 +140,7 @@ function kconfig() {
 
 # fetches the external url, with port, for a Service with a load balancer configured
 # args: service name
-function getServiceExternalUrl() {
+function k8sGetServiceExternalUrl() {
     requireArg "a service name" $1 || return 1
 
     local svc=$(kubectl get service $1 -o=json)
@@ -151,7 +151,7 @@ function getServiceExternalUrl() {
 }
 
 # fetch the endpoint url for both services and proxies to zen garden
-function getServiceEndpoint() {
+function k8sGetServiceEndpoint() {
     requireArg "a service name" $1 || return 1
 
     service=$(kubectl describe services $1)
@@ -358,6 +358,25 @@ function k8sGetDeploymentSelector() {
 
     kubectl get deployment "$1" --output json | jq -r \
         '.spec.selector.matchLabels | to_entries | map("\(.key)=\(.value)") | join(",")'
+}
+
+# gets an annotation value for the given resource
+# args: resource type, resource name, annotation
+function k8sGetResourceAnnotation() {
+    requireArg "a resource type" "$1" || return 1
+    requireArg "a resource name" "$2" || return 1
+    requireArg "an annotation name" "$3" || return 1
+
+    kubectl get "$1" "$2" --output json | jq -r --arg annotation "$3" \
+        '.metadata.annotations[$annotation]'
+}
+
+# gets the external hostname created for a given Service
+# args: service name
+function k8sGetServiceExternalHostname() {
+    requireArg "a service name" "$1" || return 1
+
+    k8sGetResourceAnnotation service "$1" 'external-dns.alpha.kubernetes.io/hostname'
 }
 
 # gets the pods managed by a given Deployment

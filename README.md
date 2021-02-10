@@ -190,19 +190,21 @@ associated administrative tasks.
 appropriately using `kubectx/kubens` before running.
 
 Functions:
- - `debugPod`: launches a debug pod in the cluster preloaded with common networking tools, drops you into its shell when created
- - `downDeploy/upDeploy/reDeploy`: stop/start/restart a deployment
- - `downDeployAndWait`: scales down a deployment to 0 replicas, and awaits the operation's completion
- - `secretEncode`: base64-encodes a string for use in a Secret
- - `rds`: connects to an RDS instance from the service name
- - `getServiceExternalUrl`: fetches the external url, with port, for a Service with a load balancer configured
- - `getServiceEndpoint`: fetches the endpoint url for both services and proxies to zen garden
- - `killDeploymentPods`: kills all pods for a deployment, useful for forcing a restart during dev
- - `getK8sImage`: gets the container image for a given resource
- - `getServiceAccountToken`: gets the token for a given ServiceAccount
- - `createTmpK8sSvcAccContext`: creates a temporary k8s context for a ServiceAccount
- - `runAsServiceAccount`: impersonates a given ServiceAccount and runs a command
- - `kubectlAsServiceAccount`: impersonates a given ServiceAccount and runs a kubectl command using its token
+- `debugPod`: launches a debug pod in the cluster preloaded with common networking tools, drops you into its shell when created
+- `downDeploy/upDeploy/reDeploy`: stop/start/restart a deployment
+- `downDeployAndWait`: scales down a deployment to 0 replicas, and awaits the operation's completion
+- `secretEncode`: base64-encodes a string for use in a Secret
+- `rds`: connects to an RDS instance from the service name
+- `getServiceExternalUrl`: fetches the external url, with port, for a Service with a load balancer configured
+- `getServiceEndpoint`: fetches the endpoint url for both services and proxies to zen garden
+- `killDeploymentPods`: kills all pods for a deployment, useful for forcing a restart during dev
+- `getK8sImage`: gets the container image for a given resource
+- `getServiceAccountToken`: gets the token for a given ServiceAccount
+- `createTmpK8sSvcAccContext`: creates a temporary k8s context for a ServiceAccount
+- `runAsServiceAccount`: impersonates a given ServiceAccount and runs a command
+- `kubectlAsServiceAccount`: impersonates a given ServiceAccount and runs a kubectl command using its token
+- `k8sGetResourceAnnotation`: gets an annotation value for the given resource
+- `k8sGetServiceExternalHostname`:  gets the external hostname created for a given Service
 - `k8sGetDeploymentSelector`: gets the pod selector used for a given Deployment
 - `k8sGetDeploymentPods`: gets the pods managed by a given Deployment
 - `k8sDeploymentHasPods`:  checks whether a given Deployment has running pods under management
