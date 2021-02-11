@@ -9,9 +9,8 @@ function awsEbsGetVolumeName() {
 # watches an EBS volume currently being modified and reports progress
 # args: volumeId
 function awsWatchVolumeModificationProgress() {
-    checkAuthAndFail || return 1
-
     requireArg "a volume identifier" $1 || return 1
+    checkAuthAndFail || return 1
 
     local volumeIds=$([[ $1 == "vol-"* ]] && echo "$1" || awsFindVolumesByName $1)
 
@@ -88,6 +87,24 @@ function awsDeleteSnapshots() {
         echo "Deleting snapshot '$id'..."
         aws ec2 delete-snapshot --snapshot-id $id
     done <<< "$snapshotIds"
+}
+
+function awsEbsShowVolumeTags() {
+    requireArg "a volume identifier" $1 || return 1
+    checkAuthAndFail || return 1
+
+    local volumeIds=$([[ $1 == "vol-"* ]] && echo "$1" || awsFindVolumesByName $1)
+
+    while IFS= read -r id; do
+        echo "Volume $id"
+        echo "------------------------------"
+        aws ec2 describe-volumes --volume-ids "$id" | jq -r '.Volumes[] | ({
+            name: "Name: \(((.Tags // [])[] | select(.Key == "Name")).Value)\n",
+            tagLength: ((.Tags // []) | length),
+            tags: (if ((.Tags // []) | length > 0) then [.Tags[] | select(.Key != "Name") | "\(.Key): \(.Value)"] | join("\n") else "no tags" end)
+        } | "\(.name)\(.tags)") // "No tags"'
+        echo
+    done <<< "$volumeIds"
 }
 
 # creates an EBS volume with the given name, either empty or from a snapshot
