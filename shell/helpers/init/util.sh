@@ -25,6 +25,10 @@ function unescapeNewlines() {
 /g'
 }
 
+function replaceNewlines() {
+    tr '\n' ' ' | sed -e 's/  *$//'
+}
+
 function checkNumeric() {
     [[ $1 =~ '^[0-9]+$' ]]
 }
