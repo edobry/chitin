@@ -166,9 +166,10 @@ function awsListInProgressSnapshots() {
 
 # lists all EBS volumes in the account, with names
 function awsListVolumes() {
-    aws ec2 describe-volumes | jq -r '.Volumes[] |
-        { id: .VolumeId, tags: ( (.Tags // []) | .[] | [select(.Key=="Name")] // []) } |
-        "\(.id) - \((.tags[] | select(.Key == "Name") | .Value) // "")"'
+    aws ec2 describe-volumes | jq -r '.Volumes[] | {
+        id: .VolumeId,
+        name: (((.Tags // [])[] | select(.Key=="Name")).Value // "")
+    } | "\(.id) - \(.name)"'
 }
 
 # sets the IOPS for the EBS volume with the given name or id
