@@ -111,6 +111,8 @@ Functions:
 - `snapshotVolume`: snapshots the EBS volume with the given name or id
 - `waitUntilSnapshotReady`: polls the status of the given EBS snapshot until it is available
 - `deleteVolume`: deletes the EBS volumes with the given name or id
+- `ebsAuthorizeSnapshotAccess`: authorizes access to a snapshot from another account
+- `ebsCopySnapshotCrossAccount`: authorizes access to, and then copies a snapshot across to another account
 
 ##### EC2 (Keypairs)
 
@@ -249,6 +251,7 @@ Functions:
 - `createZCashParamsVolume`: creates an EBS volume containing the latest ZCash encryption parameter files
 - `snapshotNodeState`: pauses a p2p node, snapshots the EBS volume backing it, and unpauses
 - `cloneNodeState`: clones an existing node's state by snapshotting and then creating a volume
+- `cloneNodeStateCrossAccount`: clones an existing node's state across accounts by snapshotting, authorizing, copying, and then creating a volume
 
 #### SSH
 
