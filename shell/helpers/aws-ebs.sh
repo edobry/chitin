@@ -9,7 +9,7 @@ function awsEbsGetVolumeName() {
 # watches an EBS volume currently being modified and reports progress
 # args: volumeId
 function awsWatchVolumeModificationProgress() {
-    requireArg "a volume identifier" $1 || return 1
+    requireArg "a volume identifier" "$1" || return 1
     checkAuthAndFail || return 1
 
     local volumeIds=$([[ $1 == "vol-"* ]] && echo "$1" || awsFindVolumesByName $1)
@@ -23,7 +23,7 @@ function awsWatchVolumeModificationProgress() {
 function awsWatchSnapshotProgress() {
     checkAuthAndFail || return 1
 
-    requireArg "a snapshot identifier" $1 || return 1
+    requireArg "a snapshot identifier" "$1" || return 1
 
     local snapshotId=$([[ $1 == "snap-"* ]] && echo "$1" || awsFindSnapshot $1)
 
@@ -55,7 +55,7 @@ function requireAZ() {
 # finds the ids of EBS snapshots with the given name, in descending-recency order
 # args: EBS snapshot name
 function awsFindSnapshots() {
-    requireArg "a snapshot name" $1 || return 1
+    requireArg "a snapshot name" "$1" || return 1
 
     local snapshotIds=$(aws ec2 describe-snapshots --filters "Name=tag:Name,Values=$1")
 
@@ -75,7 +75,7 @@ function awsFindSnapshot() {
 function awsDeleteSnapshots() {
     checkAuthAndFail || return 1
 
-    requireArg "a snapshot identifier" $1 || return 1
+    requireArg "a snapshot identifier" "$1" || return 1
 
     local snapshotIds=$([[ "$1" == "snap-"* ]] && echo "$1" || awsFindSnapshots "$1")
     if [[ -z $snapshotIds ]]; then
@@ -90,7 +90,7 @@ function awsDeleteSnapshots() {
 }
 
 function awsEbsShowVolumeTags() {
-    requireArg "a volume identifier" $1 || return 1
+    requireArg "a volume identifier" "$1" || return 1
     checkAuthAndFail || return 1
 
     local volumeIds=$([[ $1 == "vol-"* ]] && echo "$1" || awsFindVolumesByName $1)
@@ -112,7 +112,7 @@ function awsEbsShowVolumeTags() {
 function awsCreateVolume() {
     checkAuthAndFail || return 1
 
-    requireArg "a volume name" $2 || return 1
+    requireArg "a volume name" "$2" || return 1
 
     local azName="$1"
     local volumeName="$2"
@@ -146,7 +146,7 @@ function awsCreateVolume() {
 # finds the ids of the EBS volumes with the given name
 # args: EBS volume name
 function awsFindVolumesByName() {
-    requireArg "a volume name" $1 || return 1
+    requireArg "a volume name" "$1" || return 1
 
     aws ec2 describe-volumes --filters "Name=tag:Name,Values=$1" | jq -r '.Volumes[] | .VolumeId'
 }
@@ -177,9 +177,9 @@ function awsListVolumes() {
 function awsModifyVolumeIOPS() {
     checkAuthAndFail || return 1
 
-    requireArg "a volume identifier" $1 || return 1
+    requireArg "a volume identifier" "$1" || return 1
 
-    requireNumericArg "IOPS value" $2 || return 1
+    requireNumericArg "IOPS value" "$2" || return 1
     local volumeIOPS=$2
 
     local volumeIds=$([[ "$1" == "vol-"* ]] && echo "$1" || awsFindVolumesByName "$1")
@@ -200,9 +200,9 @@ function awsModifyVolumeIOPS() {
 function awsResizeVolume() {
     checkAuthAndFail || return 1
 
-    requireArg "a volume identifier" $1 || return 1
+    requireArg "a volume identifier" "$1" || return 1
 
-    requireNumericArg "volume size" $2 || return 1
+    requireNumericArg "volume size" "$2" || return 1
     local volumeSize=$2
 
     local volumeIds=$([[ $1 == "vol-"* ]] && echo "$1" || awsFindVolumesByName $1)
@@ -224,9 +224,9 @@ function awsResizeVolume() {
 function awsSnapshotVolume() {
     checkAuthAndFail || return 1
 
-    requireArg "a volume identifier" $1 || return 1
+    requireArg "a volume identifier" "$1" || return 1
 
-    requireArg "a snapshot name" $2 || return 1
+    requireArg "a snapshot name" "$2" || return 1
     local snapshotName="$2"
 
     local volumeIds=$([[ "$1" == "vol-"* ]] && echo "$1" || awsFindVolumesByName $1)
@@ -277,7 +277,7 @@ function awsWaitUntilSnapshotReady() {
 function awsDeleteVolume() {
     checkAuthAndFail || return 1
 
-    requireArg "a volume identifier" $1 || return 1
+    requireArg "a volume identifier" "$1" || return 1
 
     local volumeIds=$([[ "$1" == "vol-"* ]] && echo "$1" || awsFindVolumesByName "$1")
 
