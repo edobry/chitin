@@ -107,6 +107,26 @@ function awsEbsShowVolumeTags() {
     done <<< "$volumeIds"
 }
 
+function awsEbsTagVolume() {
+    requireArg "a volume identifier" "$1" || return 1
+    requireArg "the tag key" "$2" || return 1
+    requireArg "the tag value" "$3" || return 1
+    checkAuthAndFail || return 1
+
+    local volumeIds=$([[ $1 == "vol-"* ]] && echo "$1" || awsFindVolumesByName $1)
+
+    while IFS= read -r id; do
+        echo "Tagging volume $id.."
+        local input=$(jq -nc '{
+            "Resources": [$id],
+            "Tags": [{ Key: $key, Value: $value }]
+        }' --arg id "$id" --arg key "$2" --arg value "$3")
+
+        aws ec2 create-tags \
+            --cli-input-json "$input"
+    done <<< "$volumeIds"
+}
+
 # creates an EBS volume with the given name, either empty or from a snapshot
 # args: availability zone name, EBS volume name, (volume size in GB OR source snapshot identifier)
 function awsCreateVolume() {
