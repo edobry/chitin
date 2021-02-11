@@ -89,6 +89,8 @@ function awsDeleteSnapshots() {
     done <<< "$snapshotIds"
 }
 
+# shows the tags on an EBS volume
+# args: volume identifier
 function awsEbsShowVolumeTags() {
     requireArg "a volume identifier" "$1" || return 1
     checkAuthAndFail || return 1
@@ -107,6 +109,8 @@ function awsEbsShowVolumeTags() {
     done <<< "$volumeIds"
 }
 
+# adds a tag to an EBS volume
+# args: volume identifier, tag key, tag value
 function awsEbsTagVolume() {
     requireArg "a volume identifier" "$1" || return 1
     requireArg "the tag key" "$2" || return 1

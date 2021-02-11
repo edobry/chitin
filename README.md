@@ -101,6 +101,9 @@ Functions:
 - `awsCheckAZ`: checks whether an availability zone with the given name exists
 - `awsFindSnapshots`: finds the ids of EBS snapshots with the given name, in descending-recency order
 - `awsFindSnapshot`: finds the id of the latest EBS snapshot with the given name
+- `awsDeleteSnapshots`: deletes all EBS snapshots with the given name
+- `awsEbsShowVolumeTags`: shows the tags on an EBS volume
+- `awsEbsTagVolume`: adds a tag to an EBS volume
 - `awsCreateVolume`: creates an EBS volume with the given name, either empty or from a snapshot
 - `awsFindVolumesByName`: finds the ids of the EBS volumes with the given name
 - `awsListSnapshots`: lists all EBS snapshots in the account, with names
