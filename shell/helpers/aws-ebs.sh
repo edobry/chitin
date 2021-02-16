@@ -9,9 +9,8 @@ function awsEbsGetVolumeName() {
 # watches an EBS volume currently being modified and reports progress
 # args: volumeId
 function awsWatchVolumeModificationProgress() {
+    requireArg "a volume identifier" "$1" || return 1
     checkAuthAndFail || return 1
-
-    requireArg "a volume identifier" $1 || return 1
 
     local volumeIds=$([[ $1 == "vol-"* ]] && echo "$1" || awsFindVolumesByName $1)
 
@@ -24,7 +23,7 @@ function awsWatchVolumeModificationProgress() {
 function awsWatchSnapshotProgress() {
     checkAuthAndFail || return 1
 
-    requireArg "a snapshot identifier" $1 || return 1
+    requireArg "a snapshot identifier" "$1" || return 1
 
     local snapshotId=$([[ $1 == "snap-"* ]] && echo "$1" || awsFindSnapshot $1)
 
@@ -56,7 +55,7 @@ function requireAZ() {
 # finds the ids of EBS snapshots with the given name, in descending-recency order
 # args: EBS snapshot name
 function awsFindSnapshots() {
-    requireArg "a snapshot name" $1 || return 1
+    requireArg "a snapshot name" "$1" || return 1
 
     local snapshotIds=$(aws ec2 describe-snapshots --filters "Name=tag:Name,Values=$1")
 
@@ -76,7 +75,7 @@ function awsFindSnapshot() {
 function awsDeleteSnapshots() {
     checkAuthAndFail || return 1
 
-    requireArg "a snapshot identifier" $1 || return 1
+    requireArg "a snapshot identifier" "$1" || return 1
 
     local snapshotIds=$([[ "$1" == "snap-"* ]] && echo "$1" || awsFindSnapshots "$1")
     if [[ -z $snapshotIds ]]; then
@@ -90,12 +89,54 @@ function awsDeleteSnapshots() {
     done <<< "$snapshotIds"
 }
 
+# shows the tags on an EBS volume
+# args: volume identifier
+function awsEbsShowVolumeTags() {
+    requireArg "a volume identifier" "$1" || return 1
+    checkAuthAndFail || return 1
+
+    local volumeIds=$([[ $1 == "vol-"* ]] && echo "$1" || awsFindVolumesByName $1)
+
+    while IFS= read -r id; do
+        echo "Volume $id"
+        echo "------------------------------"
+        aws ec2 describe-volumes --volume-ids "$id" | jq -r '.Volumes[] | ({
+            name: "Name: \(((.Tags // [])[] | select(.Key == "Name")).Value)\n",
+            tagLength: ((.Tags // []) | length),
+            tags: (if ((.Tags // []) | length > 0) then [.Tags[] | select(.Key != "Name") | "\(.Key): \(.Value)"] | join("\n") else "no tags" end)
+        } | "\(.name)\(.tags)") // "No tags"'
+        echo
+    done <<< "$volumeIds"
+}
+
+# adds a tag to an EBS volume
+# args: volume identifier, tag key, tag value
+function awsEbsTagVolume() {
+    requireArg "a volume identifier" "$1" || return 1
+    requireArg "the tag key" "$2" || return 1
+    requireArg "the tag value" "$3" || return 1
+    checkAuthAndFail || return 1
+
+    local volumeIds=$([[ $1 == "vol-"* ]] && echo "$1" || awsFindVolumesByName $1)
+
+    while IFS= read -r id; do
+        echo "Tagging volume $id.."
+        local input=$(jq -nc '{
+            "Resources": [$id],
+            "Tags": [{ Key: $key, Value: $value }]
+        }' --arg id "$id" --arg key "$2" --arg value "$3")
+
+        aws ec2 create-tags \
+            --cli-input-json "$input"
+    done <<< "$volumeIds"
+}
+
 # creates an EBS volume with the given name, either empty or from a snapshot
 # args: availability zone name, EBS volume name, (volume size in GB OR source snapshot identifier)
 function awsCreateVolume() {
     checkAuthAndFail || return 1
 
-    requireArg "a volume name" $2 || return 1
+    requireArg "a volume name" "$2" || return 1
 
     local azName="$1"
     local volumeName="$2"
@@ -129,7 +170,7 @@ function awsCreateVolume() {
 # finds the ids of the EBS volumes with the given name
 # args: EBS volume name
 function awsFindVolumesByName() {
-    requireArg "a volume name" $1 || return 1
+    requireArg "a volume name" "$1" || return 1
 
     aws ec2 describe-volumes --filters "Name=tag:Name,Values=$1" | jq -r '.Volumes[] | .VolumeId'
 }
@@ -149,9 +190,10 @@ function awsListInProgressSnapshots() {
 
 # lists all EBS volumes in the account, with names
 function awsListVolumes() {
-    aws ec2 describe-volumes | jq -r '.Volumes[] |
-        { id: .VolumeId, tags: ( (.Tags // []) | .[] | [select(.Key=="Name")] // []) } |
-        "\(.id) - \((.tags[] | select(.Key == "Name") | .Value) // "")"'
+    aws ec2 describe-volumes | jq -r '.Volumes[] | {
+        id: .VolumeId,
+        name: (((.Tags // [])[] | select(.Key=="Name")).Value // "")
+    } | "\(.id) - \(.name)"'
 }
 
 # sets the IOPS for the EBS volume with the given name or id
@@ -159,9 +201,9 @@ function awsListVolumes() {
 function awsModifyVolumeIOPS() {
     checkAuthAndFail || return 1
 
-    requireArg "a volume identifier" $1 || return 1
+    requireArg "a volume identifier" "$1" || return 1
 
-    requireNumericArg "IOPS value" $2 || return 1
+    requireNumericArg "IOPS value" "$2" || return 1
     local volumeIOPS=$2
 
     local volumeIds=$([[ "$1" == "vol-"* ]] && echo "$1" || awsFindVolumesByName "$1")
@@ -182,9 +224,9 @@ function awsModifyVolumeIOPS() {
 function awsResizeVolume() {
     checkAuthAndFail || return 1
 
-    requireArg "a volume identifier" $1 || return 1
+    requireArg "a volume identifier" "$1" || return 1
 
-    requireNumericArg "volume size" $2 || return 1
+    requireNumericArg "volume size" "$2" || return 1
     local volumeSize=$2
 
     local volumeIds=$([[ $1 == "vol-"* ]] && echo "$1" || awsFindVolumesByName $1)
@@ -206,9 +248,9 @@ function awsResizeVolume() {
 function awsSnapshotVolume() {
     checkAuthAndFail || return 1
 
-    requireArg "a volume identifier" $1 || return 1
+    requireArg "a volume identifier" "$1" || return 1
 
-    requireArg "a snapshot name" $2 || return 1
+    requireArg "a snapshot name" "$2" || return 1
     local snapshotName="$2"
 
     local volumeIds=$([[ "$1" == "vol-"* ]] && echo "$1" || awsFindVolumesByName $1)
@@ -259,7 +301,7 @@ function awsWaitUntilSnapshotReady() {
 function awsDeleteVolume() {
     checkAuthAndFail || return 1
 
-    requireArg "a volume identifier" $1 || return 1
+    requireArg "a volume identifier" "$1" || return 1
 
     local volumeIds=$([[ "$1" == "vol-"* ]] && echo "$1" || awsFindVolumesByName "$1")
 
