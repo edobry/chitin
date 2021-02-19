@@ -109,13 +109,14 @@ The subdirectories/files are simply a way to extract complex configuration from 
 ```json
 {
     "apiVersion": "4.13.0",
-    "environment": "dataeng-dev",
-    "tfModule": "legacy-dev",
-    "account": "dataeng-dev",
-    "region": "eu-west-1",
-    "context": "coin-collection-dev",
-    "namespace": "coin-collection-dev",
-    "nodegroup": "coin-collection-eu-west-1a-workers",
+    "environment": {
+        "tfEnv": "dataeng-dev",
+        "tfModule": "legacy-dev",
+        "awsAccount": "dataeng-dev",
+        "k8sContext": "dataeng-nonprod",
+        "k8sNamespace": "coin-collection-dev",
+        "eksNodegroup": "coin-collection-eu-west-1a-workers"
+    },
     "chartDefaults": {
         "external-service": {
             "version": "0.1.0"
