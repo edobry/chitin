@@ -498,7 +498,7 @@ function k8sPipelineInitEnv() {
 
     echo "Creating namespace..."
     local namespaceResource=$(kubectl create namespace $namespace \
-        --dry-run=true -o=json --save-config)
+        --dry-run=client -o=json --save-config)
 
     # TODO: annotate with:
     #     externalsecrets.kubernetes-client.io/permitted-key-name: "/dev/cluster1/core-namespace/.*"
