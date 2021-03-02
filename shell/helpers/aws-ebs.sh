@@ -359,7 +359,7 @@ function awsEbsCopySnapshotCrossAccount() {
     awsEbsAuthorizeSnapshotAccess $sourceArg $targetAccountId
     [[ $? -eq 0 ]] || return 1
 
-    local sourceRegion=$(getAwsRegion)
+    local sourceRegion=$(awsGetRegion)
 
     local snapshotId=$([[ "$sourceArg" == "snap-"* ]] && echo "$sourceArg" || awsFindSnapshot "$sourceArg")
     if [[ -z $snapshotId ]]; then

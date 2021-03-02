@@ -106,7 +106,7 @@ function k8sPipeline() {
     local account=$(readJSON "$envConfig" ".$accountPath // empty")
     requireArg "the AWS account name as '$accountPath'" "$account" || return 1
 
-    local region=$(getAwsRegion)
+    local region=$(awsGetRegion)
 
     local contextPath="environment.k8sContext"
     local context=$(readJSON "$envConfig" ".$contextPath // empty")

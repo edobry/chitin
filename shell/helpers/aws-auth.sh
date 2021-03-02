@@ -172,7 +172,7 @@ function withProfile() {
     awsAuth $currentProfile >/dev/null
 }
 
-function getAwsRegion() {
+function awsGetRegion() {
     aws configure get region
 }
 
