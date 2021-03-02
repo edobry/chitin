@@ -1,9 +1,17 @@
 # add krew to PATH
 export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
 
-if [ "$CA_DT_K8S_CONFIG_ENABLED" = true ]; then
-    export KUBECONFIG="$CA_DT_DIR/shell/eksconfig.yaml:$KUBECONFIG:$HOME/.kube/config"
-fi
+function k8sEnvInit() {
+    local moduleConfig=$(readDTModuleConfig k8s-env)
+
+    if jsonCheckBool 'enabled' "$moduleConfig"; then
+        local originalString=":$KUBECONFIG:$HOME/.kube/config"
+
+        local conditionalAppend=$(jsonCheckBool 'override' "$moduleConfig" && echo '' || echo "$originalString")
+        export KUBECONFIG="$CA_DT_DIR/shell/eksconfig.yaml$conditionalAppend"
+    fi
+}
+k8sEnvInit
 
 # gets the current k8s context config
 function getCurrentK8sContext() {
