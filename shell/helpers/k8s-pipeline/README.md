@@ -64,6 +64,7 @@ The `config.json` file sets up the environment, including the relevant account, 
 - `apiVersion`: minimum version of `dataeng-tools` required
 - `environment`: environment configuration
    - `awsAccount` (required): AWS account to use
+   - `awsRegion` (optional): AWS region to use. if not set, detection will be attempted
    - `k8sContext` (required): pre-configured K8s context to use
    - `k8sNamespace` (required): K8s namespace to create/use
    - `eksNodegroup`: EKS nodegroup to deploy to
@@ -113,6 +114,7 @@ The subdirectories/files are simply a way to extract complex configuration from 
         "tfEnv": "dataeng-dev",
         "tfModule": "legacy-dev",
         "awsAccount": "dataeng-dev",
+        "awsRegion": "eu-west-1",
         "k8sContext": "dataeng-nonprod",
         "k8sNamespace": "coin-collection-dev",
         "eksNodegroup": "coin-collection-eu-west-1a-workers"

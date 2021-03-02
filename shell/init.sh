@@ -55,11 +55,10 @@ function initJq() {
     source $CA_DT_DIR/shell/helpers/json.sh
 }
 
-function getDTConfigLocation() {
-    echo "${XDG_CONFIG_HOME:-$HOME/.config}/dataeng-tools"
-}
-
 function readDTConfig() {
+    # load meta module
+    source $CA_DT_DIR/shell/helpers/meta.sh
+
     local configLocation=$(getDTConfigLocation)
 
     local json5ConfigFileName="config.json5"
@@ -76,7 +75,7 @@ function readDTConfig() {
     configFile=$(convertJSON5 $json5ConfigFilePath)
     [[ $? -eq 0 ]] || return 1
 
-    export CA_DT_CONFIG=$(readJSONFile $configFile)
+    export CA_DT_CONFIG=$(readDTConfig)
 
     local projectDir=$(readJSON "$CA_DT_CONFIG" '.projectDir // empty')
     export CA_PROJECT_DIR=$projectDir
@@ -89,9 +88,6 @@ function readDTConfig() {
 
     local departmentRole=$(readJSON "$CA_DT_CONFIG" '.modules."aws-auth".departmentRole // empty')
     export CA_DEPT_ROLE=$departmentRole
-
-    local k8sEnvEnabled=$(readJSON "$CA_DT_CONFIG" '.modules."k8s-env".enabled // empty')
-    export CA_DT_K8S_CONFIG_ENABLED=$k8sEnvEnabled
 }
 
 function checkDTDeps() {

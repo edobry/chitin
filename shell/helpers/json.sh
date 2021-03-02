@@ -110,3 +110,10 @@ function convertJSON5() {
 
     echo $jsonfilePath
 }
+
+function jsonCheckBool() {
+    requireArg "a field name" "$1" || return 1
+    requireArg "a JSON string" "$2" || return 1
+
+    echo "$2" | jq -e --arg fieldName "$1" '.[$fieldName] // empty' >/dev/null
+}

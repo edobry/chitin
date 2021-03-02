@@ -106,7 +106,14 @@ function k8sPipeline() {
     local account=$(readJSON "$envConfig" ".$accountPath // empty")
     requireArg "the AWS account name as '$accountPath'" "$account" || return 1
 
-    local region=$(getAwsRegion)
+    local region=$(readJSON "$envConfig" '.environment.awsRegion // empty')
+    if [[ -z $region ]]; then
+        region=$(awsGetRegion)
+        if [[ -z $region ]]; then
+            echo "The AWS region for this environment could not be determined!"
+            return 1
+        fi
+    fi
 
     local contextPath="environment.k8sContext"
     local context=$(readJSON "$envConfig" ".$contextPath // empty")
@@ -120,6 +127,7 @@ function k8sPipeline() {
     isSet "$tfEnv" && echo "Terraform environment: '$tfEnv'"
     isSet "$tfModule" && echo "Terraform module: '$tfModule'"
     echo "AWS account: 'ca-aws-$account'"
+    echo "AWS region: '$region'"
     echo "K8s context: '$context'"
     echo "K8s namespace: '$namespace'"
     echo
@@ -258,25 +266,29 @@ function checkJSONFlag() {
 function createK8sPipelineEnv() {
     requireArg "an environment name" "$1" || return 1
     requireArg "an AWS account name" "$2" || return 1
-    requireArg "a K8s context name" "$3" || return 1
-    requireArg "a K8s namespace name" "$4" || return 1
+    requireArg "an AWS region name" "$3" || return 1
+    requireArg "a K8s context name" "$4" || return 1
+    requireArg "a K8s namespace name" "$5" || return 1
 
     local envName="$1"
     local awsAccount="$2"
-    local k8sContext="$3"
-    local k8sNamespace="$4"
+    local awsRegion="$3"
+    local k8sContext="$4"
+    local k8sNamespace="$5"
 
     local apiVersion=$(getReleasedDTVersion)
     local config=$(jq -n \
         --arg apiVersion $apiVersion \
         --arg envName $envName \
         --arg awsAccount $awsAccount \
+        --arg awsRegion $awsRegion \
         --arg k8sContext $k8sContext \
         --arg k8sNamespace $k8sNamespace \
     '{
         apiVersion: $apiVersion,
         environment: {
             awsAccount: $awsAccount,
+            awsRegion: $awsRegion,
             k8sContext: $k8sContext,
             k8sNamespace: $k8sNamespace
         },

@@ -35,6 +35,10 @@ function checkEmbeddedDTVersion() {
     popd > /dev/null
 }
 
+function getDTConfigLocation() {
+    echo "${XDG_CONFIG_HOME:-$HOME/.config}/dataeng-tools"
+}
+
 function showDTConfig() {
     cat $(getDTConfigLocation)/config.json | prettyJson
 }
