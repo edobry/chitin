@@ -1,3 +1,26 @@
+## Instances
+
+# lists existing EC2 instances
+function awsEc2ListInstances() {
+    checkAuthAndFail || return 1
+
+    aws ec2 describe-instances | jq -r \
+        '.Reservations[].Instances[] | {
+            id: .InstanceId,
+            name: [(.Tags[] | select(.Key == "Name")).Value]
+        } | "\(.id) \(.name[0] // "")"'
+}
+
+# finds the ids of the EC2 instances with the given name
+# args: EBS volume name
+function awsEc2FindInstancesByName() {
+    requireArg "an instance name" "$1" || return 1
+
+    aws ec2 describe-instances --filters "Name=tag:Name,Values=$1" | jq -r '.Reservations[].Instances[].InstanceId'
+}
+
+## Keypairs
+
 # lists existing EC2 keypairs
 function awsEc2ListKeypairs() {
     checkAuthAndFail || return 1
