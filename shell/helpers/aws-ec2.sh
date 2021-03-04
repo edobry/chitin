@@ -124,11 +124,16 @@ function awsEc2DownloadKeypair() {
 
     local privKeyPath="$keypairsPath/$keypairName"
     echo "Downloading keypair from SSM at '$ssmPath' to '$keypairsPath'..."
-    getSecureParam $ssmPath/private | unescapeNewlines \
-        > $privKeyPath
-
-    getSecureParam $ssmPath/public | unescapeNewlines \
-        > $privKeyPath.pub
+    local privKey
+    privKey=$(getSecureParam $ssmPath/private)
+    if [[ $? -ne 0 ]]; then
+        echo "Keypair not downloadable!"
+        return 1
+    fi
+    local pubKey=$(getSecureParam $ssmPath/public)
+    
+    echo "$privKey" | unescapeNewlines > $privKeyPath
+    echo "$pubKey" | unescapeNewlines > $privKeyPath.pub
 
     echo "Setting permissions..."
     chmod 600 $privKeyPath
