@@ -138,3 +138,18 @@ function awsEc2DownloadKeypair() {
     echo "Setting permissions..."
     chmod 600 $privKeyPath
 }
+
+function awsEc2GetInstanceKeypairName() {
+    checkAuthAndFail || return 1
+    requireArg 'an instance identifier' "$1" || return 1
+
+    local instanceIds=$([[ "$1" == "i-"* ]] && echo "$1" || awsEc2FindInstancesByName "$1")
+
+    if [[ -z $instanceIds ]]; then
+        echo "No instance with given name found!"
+        return 1;
+    fi
+
+    aws ec2 describe-instances --instance-ids "$instanceIds" |\
+        jq -r '.Reservations[].Instances[].KeyName'
+}
