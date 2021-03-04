@@ -157,7 +157,6 @@ function awsEc2DownloadKeypairForInstance() {
     requireArg 'a instance name' "$1" || return 1
 
     local instanceName="$1"
-    local accountName=$(awsAccountName)
 
     echo "Querying keypair for instance '$instanceName'..."
     local keypairName
@@ -167,5 +166,5 @@ function awsEc2DownloadKeypairForInstance() {
         return 1
     fi
 
-    awsEc2DownloadKeypair $accountName $keypairName
+    awsEc2DownloadKeypair $keypairName
 }
