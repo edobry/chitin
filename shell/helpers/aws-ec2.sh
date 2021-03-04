@@ -12,7 +12,7 @@ function awsEc2ListInstances() {
 }
 
 # finds the ids of the EC2 instances with the given name
-# args: EBS volume name
+# args: EC2 instance name
 function awsEc2FindInstancesByName() {
     requireArg "an instance name" "$1" || return 1
 
@@ -135,6 +135,8 @@ function awsEc2DownloadKeypair() {
     chmod 600 $privKeyPath
 }
 
+# queries the name of the keypair used for the given EC2 instance
+# args: instance identifier
 function awsEc2GetInstanceKeypairName() {
     checkAuthAndFail || return 1
     requireArg 'an instance identifier' "$1" || return 1
