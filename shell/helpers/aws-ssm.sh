@@ -8,7 +8,7 @@ function listSecureParams() {
 function getSecureParam() {
     requireArg "a parameter path" "$1" || return 1
 
-    aws ssm get-parameter --name $1 --with-decryption | jq ".Parameter.Value" | sed "s/\"//g"
+    aws ssm get-parameter --name $1 --with-decryption 2>/dev/null | jq ".Parameter.Value" | sed "s/\"//g"
 }
 
 # sets an SSM parameter
