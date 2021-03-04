@@ -153,3 +153,24 @@ function awsEc2GetInstanceKeypairName() {
     aws ec2 describe-instances --instance-ids "$instanceIds" |\
         jq -r '.Reservations[].Instances[].KeyName'
 }
+
+# queries the appropriate keypair for an EC2 instance and downloads it
+# args: account name, instance name
+function awsEc2DownloadKeypairForInstance() {
+    checkAuthAndFail || return 1
+    requireArg 'an account name' "$1" || return 1
+    requireArg 'a instance name' "$2" || return 1
+
+    local accountName="$1"
+    local instanceName="$2"
+
+    echo "Querying keypair for instance '$instanceName'..."
+    local keypairName
+    keypairName=$(awsEc2GetInstanceKeypairName $instanceName)
+    if [[ $? -ne 0 ]]; then
+        echo "$keypairName"
+        return 1
+    fi
+
+    awsEc2DownloadKeypair $accountName $keypairName
+}
