@@ -29,15 +29,13 @@ function awsEc2ListKeypairs() {
 }
 
 # creates an EC2 keypair and persists it in SSM
-# args: account name, keypair name
+# args: keypair name
 function awsEc2CreateKeypair() {
     checkAuthAndFail || return 1
-    requireArg 'an account name' "$1" || return 1
-    requireArg 'a keypair name' "$2" || return 1
+    requireArg 'a keypair name' "$1" || return 1
 
-    local accountName="$1"
-    local keypairName="$2"
-
+    local keypairName="$1"
+    local accountName=$(awsAccountName)
 
     if awsEc2CheckKeypairExistence $keypairName; then
         echo "A keypair named '$keypairName' already exists!"
@@ -86,14 +84,13 @@ function awsEc2CheckKeypairExistenceAndFail() {
 }
 
 # deletes an existing EC2 keypair and removes it from SSM
-# args: account name, keypair name
+# args: keypair name
 function awsEc2DeleteKeypair() {
     checkAuthAndFail || return 1
-    requireArg 'an account name' "$1" || return 1
-    requireArg 'a keypair name' "$2" || return 1
+    requireArg 'a keypair name' "$1" || return 1
 
-    local accountName="$1"
-    local keypairName="$2"
+    local keypairName="$1"
+    local accountName=$(awsAccountName)
 
     awsEc2CheckKeypairExistenceAndFail $keypairName || return 1
 
@@ -107,14 +104,13 @@ function awsEc2DeleteKeypair() {
 }
 
 # reads a given EC2 Keypair out from SSM, persists locally, and permissions for use
-# args: account name, keypair name
+# args: keypair name
 function awsEc2DownloadKeypair() {
     checkAuthAndFail || return 1
-    requireArg 'an account name' "$1" || return 1
-    requireArg 'a keypair name' "$2" || return 1
+    requireArg 'a keypair name' "$1" || return 1
 
-    local accountName="$1"
-    local keypairName="$2"
+    local keypairName="$1"
+    local accountName=$(awsAccountName)
 
     awsEc2CheckKeypairExistenceAndFail $keypairName || return 1
 
@@ -155,14 +151,13 @@ function awsEc2GetInstanceKeypairName() {
 }
 
 # queries the appropriate keypair for an EC2 instance and downloads it
-# args: account name, instance name
+# args: instance name
 function awsEc2DownloadKeypairForInstance() {
     checkAuthAndFail || return 1
-    requireArg 'an account name' "$1" || return 1
-    requireArg 'a instance name' "$2" || return 1
+    requireArg 'a instance name' "$1" || return 1
 
-    local accountName="$1"
-    local instanceName="$2"
+    local instanceName="$1"
+    local accountName=$(awsAccountName)
 
     echo "Querying keypair for instance '$instanceName'..."
     local keypairName
