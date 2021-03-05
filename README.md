@@ -10,9 +10,11 @@ Make sure the following programs are installed on your computer (not every helpe
 requires each one, but you may want to install them all to save time):
 
 Required:
+
 - `jq v1.6` [link](https://github.com/stedolan/jq)
 
 Optionally required:
+
 - `yq v3.3.2` [link](https://github.com/mikefarah/yq)
 - `aws`
 - `terraform`
@@ -22,9 +24,11 @@ Optionally required:
 - `tsc` [link](https://www.npmjs.com/package/typescript)
 
 MacOS only:
+
 - `watch`
 
 Linux only:
+
 - `xclip`
 
 ### Setup
@@ -56,21 +60,25 @@ automatically re-authenticating if needed. This shell integration is disabled by
 ###### Examples
 
 To switch between AWS organizations (if you are a member of multiple):
+
 ```
 awsOrg engineering-data
 ```
 
 To assume a particular AWS role, authenticating if needed:
+
 ```
 awsAuth dataeng-dev-admin
 ```
 
 To reset your AWS credentials (which can be useful for debugging):
+
 ```
 deAuth
 ```
 
 Functions:
+
 - `awsId`: prints your full identity if authenticated, or fails
 - `awsAccount`: prints your account alias if authenticated, or fails
 - `awsAccountId`: prints your account id if authenticated, or fails
@@ -80,6 +88,7 @@ Functions:
 - `checkAccountAuthAndFail`: checks if you're authenticated with a specific account, or fails. meant to be used as a failfast
 
 If you enable the shell integration, you can use the following functions to assume roles:
+
 - `awsOrg`: switch to a different AWS organization, needed only if `DEPT_ROLE` not set
 - `awsAuth`: authenticate if needed, and assume a profile
 - `withProfile`: run a command with a specific AWS profile
@@ -87,6 +96,7 @@ If you enable the shell integration, you can use the following functions to assu
 ##### IAM
 
 Functions
+
 - `listRolePolicies`: shows all policy attachments for a given role
 - `getPolicy`: fetches a policy
 - `showCurrentRolePermissions`: shows all policy attachments and their allowed actions for the current role
@@ -96,6 +106,7 @@ Functions
 ##### EBS
 
 Functions:
+
 - `awsWatchVolumeModificationProgress`: watches an EBS volume currently being modified and reports progress
 - `awsWatchSnapshotProgress`: watches an EBS volume snapshot currently being created and reports progress
 - `awsCheckAZ`: checks whether an availability zone with the given name exists
@@ -120,15 +131,21 @@ Functions:
 ##### EC2 (Keypairs)
 
 Functions:
-- `listKeypairs`: lists existing EC2 keypairs
-- `checkKeypairExistence`: checks that a given EC2 Keypair exists
-- `createKeypair`: creates an EC2 keypair and persists it in SSM
-- `deleteKeypair`: deletes an existing EC2 keypair and removes it from SSM
-- `downloadKeypair`: reads a given EC2 Keypair out from SSM, persists locally, and permissions for use
+
+- `awsEc2ListInstances`: lists existing EC2 instances
+- `awsEc2FindInstancesByName`: finds the ids of the EC2 instances with the given name
+- `awsEc2ListKeypairs`: lists existing EC2 keypairs
+- `awsEc2CheckKeypairExistence`: checks that a given EC2 Keypair exists
+- `awsEc2CreateKeypair`: creates an EC2 keypair and persists it in SSM
+- `awsEc2DeleteKeypair`: deletes an existing EC2 keypair and removes it from SSM
+- `awsEc2DownloadKeypair`: reads a given EC2 Keypair out from SSM, persists locally, and permissions for use
+- `awsEc2GetInstanceKeypairName`: queries the name of the keypair used for the given EC2 instance
+- `awsEc2DownloadKeypairForInstance`: queries the appropriate keypair for an EC2 instance and downloads it
 
 ##### RDS
 
 Functions:
+
 - `checkRdsSnapshotExistence`: checks the existence of an RDS snapshot with the given name
 - `waitUntilRdsSnapshotReady`: polls the status of the given RDS snapshot until it is available
 - `deleteRdsSnapshot`: waits for the RDS snapshot with the given name to be available, and then deletes it
@@ -138,35 +155,40 @@ Functions:
 ##### S3
 
 Functions:
- - `catS3Key`: downloads and reads the content of a particular S3 object
+
+- `catS3Key`: downloads and reads the content of a particular S3 object
 
 ##### SSM
 
 Functions:
- - `listSecureParams`: lists all SSM parameter names
- - `getSecureParam`: fetches and decrypts an SSM parameter
- - `setSecureParam`: sets an SSM parameter
- - `deleteSecureParam`: deletes an SSM parameter
+
+- `listSecureParams`: lists all SSM parameter names
+- `getSecureParam`: fetches and decrypts an SSM parameter
+- `setSecureParam`: sets an SSM parameter
+- `deleteSecureParam`: deletes an SSM parameter
 
 ##### MSK
 
 Functions:
- - `listKafkaClusters`: lists all MSK clusters in the account, with names
- - `findKafkaClusterArnByName`: finds the ARN of the MSK cluster with the given name
- - `getKafkaConnection`: gets the connection string of the MSK cluster with the given identifier
- - `getKafkaZkConnection`: gets the Zookeeper connection string of the MSK cluster with the given identifier
+
+- `listKafkaClusters`: lists all MSK clusters in the account, with names
+- `findKafkaClusterArnByName`: finds the ARN of the MSK cluster with the given name
+- `getKafkaConnection`: gets the connection string of the MSK cluster with the given identifier
+- `getKafkaZkConnection`: gets the Zookeeper connection string of the MSK cluster with the given identifier
 
 ##### DynamoDB
 
 Functions:
- - `listDynamoTables`: lists all DyanmoDB tables
- - `listDynamoTableItems`: lists all items in the given DynamoDB table
- - `getDynamoItem`: gets a specific DynamoDB item
- - `updateDynamoItem`: updates the value of a specific DynamoDB item
+
+- `listDynamoTables`: lists all DyanmoDB tables
+- `listDynamoTableItems`: lists all items in the given DynamoDB table
+- `getDynamoItem`: gets a specific DynamoDB item
+- `updateDynamoItem`: updates the value of a specific DynamoDB item
 
 #### Docker
 
 Functions:
+
 - `pruneDockerImages`: deletes all locally-cached Docker images not used in the last day
 - `listDockerImageTags`: lists all available tags for a Docker image
 - `getLatestDockerImageTag`: gets the latest available tag for a Docker image
@@ -181,6 +203,7 @@ Functions:
 The `k8s-env` helper sets up your Kubernetes configuration for working with our EKS environments. It works by adding the `eksconfig.yaml` file to your `KUBECONFIG` environment variable. This shell integration is disabled by default, but you can enable it by setting `DE_K8S_CONFIG_ENABLED=true` in step 2 of the setup. This is recommended, but not required. If you do choose to use it, however, you may want to delete any existing EKS-relevant config from your `~/.kube/config` file, to avoid conflicts.
 
 Functions:
+
 - `getCurrentK8sContext`: gets the current k8s context config
 - `deleteK8sContext`: deletes a k8s context
 
@@ -192,9 +215,10 @@ The K8s helper provides useful functions for interacting with clusters and vario
 associated administrative tasks.
 
 > Note: these functions use the shell's current context/namespace. Please ensure you set them
-appropriately using `kubectx/kubens` before running.
+> appropriately using `kubectx/kubens` before running.
 
 Functions:
+
 - `debugPod`: launches a debug pod in the cluster preloaded with common networking tools, drops you into its shell when created
 - `downDeploy/upDeploy/reDeploy`: stop/start/restart a deployment
 - `downDeployAndWait`: scales down a deployment to 0 replicas, and awaits the operation's completion
@@ -209,10 +233,10 @@ Functions:
 - `runAsServiceAccount`: impersonates a given ServiceAccount and runs a command
 - `kubectlAsServiceAccount`: impersonates a given ServiceAccount and runs a kubectl command using its token
 - `k8sGetResourceAnnotation`: gets an annotation value for the given resource
-- `k8sGetServiceExternalHostname`:  gets the external hostname created for a given Service
+- `k8sGetServiceExternalHostname`: gets the external hostname created for a given Service
 - `k8sGetDeploymentSelector`: gets the pod selector used for a given Deployment
 - `k8sGetDeploymentPods`: gets the pods managed by a given Deployment
-- `k8sDeploymentHasPods`:  checks whether a given Deployment has running pods under management
+- `k8sDeploymentHasPods`: checks whether a given Deployment has running pods under management
 - `k8sWaitForDeploymentScaleDown`: waits until all pods under management of a given Deployment have scaled down
 
 ##### Pipeline
@@ -220,6 +244,7 @@ Functions:
 The `k8s-pipeline` helper module adds functionality which helps deploy workloads to K8s clusters, please see [the README](shell/helpers/k8s-pipeline/README.md) for details
 
 Functions:
+
 - `k8sPipeline`: automates Helm operations, enabling simple deployments
 
 #### Kafka
@@ -227,6 +252,7 @@ Functions:
 > Requires: `docker`, `python`
 
 Functions:
+
 - `listTopics`: lists all known topics
 - `readTopic`: reads from a topic at a certain offset
 - `resetTopics`: resets an MSK cluster's topics by destroying and recreating using terraform
@@ -239,6 +265,7 @@ Functions:
 > Depend on: `k8s`
 
 Functions:
+
 - `resetBackendDb`: pauses an `ib-backend`, recreates the db, and unpauses
 - `createTransferDbs`: creates a transfer database for each coin name passed in
 - `getLatestClusterVersion`: finds the latest cluster version by querying S3
@@ -250,6 +277,7 @@ Functions:
 > Depend on: `aws-auth`, `aws-ebs`
 
 Functions:
+
 - `updateZCashParams`: ensures existence of an up-to-date EBS snapshot containing the latest ZCash encryption parameter files.
 - `createZCashParamsVolume`: creates an EBS volume containing the latest ZCash encryption parameter files
 - `snapshotNodeState`: pauses a p2p node, snapshots the EBS volume backing it, and unpauses
@@ -259,6 +287,7 @@ Functions:
 #### SSH
 
 Functions:
+
 - `sshTunnel`: sets up an SSH tunnel to forward from a local port
 
 #### Terraform
@@ -266,6 +295,7 @@ Functions:
 > Requires: `terraform`, `jq`
 
 Functions:
+
 - `runTF`: runs the specified terraform command in on a particular module
 - `showDestroys`: generates a terraform plan and shows destructive actions
 - `copyTfState`: copies the Terraform remote state
@@ -278,7 +308,9 @@ Functions:
 #### Network
 
 Functions:
+
 - `checksumUrl`: downloads a file from a url and checksums it
 
 ### Contributing
+
 See `CONTRIBUTING.md` for more details about how to contribute.

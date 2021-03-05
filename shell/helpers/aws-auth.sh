@@ -69,6 +69,12 @@ function awsAccount() {
         return 1
     fi
 }
+
+# prints your account alias if authenticated, or fails
+function awsAccountName() {
+    awsAccount 2>/dev/null | sed 's/ca-aws-//'
+}
+
 # prints your account id if authenticated, or fails
 function awsAccountId() {
     local id
