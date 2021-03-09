@@ -7,7 +7,7 @@ function k8sEnvInit() {
     if jsonCheckBool 'enabled' "$moduleConfig"; then
         local dtKubeConfigPath="$CA_DT_DIR/shell/eksconfig.yaml"
         # set user-readable-only permissions
-        chmod go-r $dtKubeConfigPath
+        chmod go-r $dtKubeConfigPath 2>/dev/null
 
         local originalString=":$KUBECONFIG:$HOME/.kube/config"
 
