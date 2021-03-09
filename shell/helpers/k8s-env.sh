@@ -5,10 +5,14 @@ function k8sEnvInit() {
     local moduleConfig=$(readDTModuleConfig k8s-env)
 
     if jsonCheckBool 'enabled' "$moduleConfig"; then
+        local dtKubeConfigPath="$CA_DT_DIR/shell/eksconfig.yaml"
+        # set user-readable-only permissions
+        chmod go-r $dtKubeConfigPath
+
         local originalString=":$KUBECONFIG:$HOME/.kube/config"
 
         local conditionalAppend=$(jsonCheckBool 'override' "$moduleConfig" && echo '' || echo "$originalString")
-        export KUBECONFIG="$CA_DT_DIR/shell/eksconfig.yaml$conditionalAppend"
+        export KUBECONFIG="$dtKubeConfigPath$conditionalAppend"
     fi
 }
 k8sEnvInit
