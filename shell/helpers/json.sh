@@ -117,3 +117,7 @@ function jsonCheckBool() {
 
     echo "$2" | jq -e --arg fieldName "$1" '.[$fieldName] // empty' >/dev/null
 }
+
+function yamlToJson() {
+    yq e - -j
+}
