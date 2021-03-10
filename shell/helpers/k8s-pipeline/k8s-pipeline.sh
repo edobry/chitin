@@ -372,12 +372,12 @@ function installChart() {
     if notSet $isTestingMode; then
         if [[ -z $expectedVersion ]]; then
             local latestVersion
-            latestVersion=$(getLatestChartVersion "$source" "$chartPath")
+            latestVersion=$(helmChartGetLatestVersion "$source" "$chartPath")
             [[ $? -ne 0 ]] && { echo "Couldn't fetch latest version, skipping"; echo "$latestVersion"; return 1; }
 
             echo "No version configured, using '$chart:$latestVersion'; consider locking the deployment to this version"
             version=$latestVersion
-        elif ! checkChartVersion "$source" "$chartPath" "$expectedVersion"; then
+        elif ! helmChartCheckVersion "$source" "$chartPath" "$expectedVersion"; then
             echo "Could not find expected version for $source chart: '$chartPath':$expectedVersion"
             return 1
         else

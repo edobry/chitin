@@ -196,6 +196,21 @@ Functions:
 - `dockerArtifactoryPublish`: tags and pushes a locally-built Docker image to Artifactory
 - `dockerArtifactoryPublishLast`: tags and pushes the last locally-built Docker image to Artifactory
 
+#### Helm
+
+Functions:
+
+- `helmReadRepoConfig`: prints out the local Helm repository configuration
+- `helmRepoChecConfigured`: s whether a given Helm repository is configured
+- `helmRepoConfigureArtifactory`: configures the Artifactory Helm repository
+- `helmRepoGetCredentials`: prints a JSON object containing the locally-configured credentials for the given repository
+- `helmRepoGetArtifactoryCredentials`: prints a JSON object containing the locally-configured Artifactory credentials
+- `helmChartGetLatestRemoteVersion`: gets the latest version of a given helm chart
+- `helmChartCheckRemoteVersion`: checks whether the given version of the given helm chart exists
+- `helmChartGetLocalVersion`: gets the version of a local Helm chart
+- `helmChartGetLatestVersion`: gets the latest version of a given Helm chart
+- `helmChartCheckVersion`: checks the version of a given Helm chart against a desired version
+
 #### K8s
 
 ##### Env
