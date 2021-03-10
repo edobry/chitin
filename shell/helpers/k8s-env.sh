@@ -9,10 +9,10 @@ function k8sEnvInit() {
         # set user-readable-only permissions
         chmod go-r $dtKubeConfigPath 2>/dev/null
 
-        local originalString=":$KUBECONFIG:$HOME/.kube/config"
+        local originalConfig="$KUBECONFIG:$HOME/.kube/config"
 
-        local conditionalAppend=$(jsonCheckBool 'override' "$moduleConfig" && echo '' || echo "$originalString")
-        export KUBECONFIG="$dtKubeConfigPath$conditionalAppend"
+        local conditionalPrepend=$(jsonCheckBool 'override' "$moduleConfig" && echo '' || echo "$originalConfig:")
+        export KUBECONFIG="${conditionalPrepend}${dtKubeConfigPath}"
     fi
 }
 k8sEnvInit
