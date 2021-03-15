@@ -1,3 +1,4 @@
+# lists all hosted zones
 function awsR53ListZones() {
     checkAuthAndFail || return 1
 
@@ -5,7 +6,7 @@ function awsR53ListZones() {
 }
 
 # finds the id of the Route 53 hosted zone the given name
-# args: EBS snapshot name
+# args hosted zone name
 function awsR53GetZoneId() {
     requireArg "a hosted zone name" "$1" || return 1
 
@@ -16,6 +17,8 @@ function awsR53GetZoneId() {
     echo "$zoneId"
 }
 
+# gets all records in the given hosted zone
+# args: hosted zone identifier
 function awsR53GetRecords() {
     requireArg 'a hosted zone ID' "$1" || return 1
     checkAuthAndFail || return 1
@@ -33,7 +36,8 @@ function awsR53GetRecords() {
         } | "\(.name)\n\(.records)\n\n"'
 }
 
-
+# gets all A records in the given hosted zone
+# args: hosted zone identifier
 function awsR53GetARecords() {
     requireArg 'a hosted zone ID' "$1" || return 1
     checkAuthAndFail || return 1

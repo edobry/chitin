@@ -142,6 +142,15 @@ Functions:
 - `awsEc2GetInstanceKeypairName`: queries the name of the keypair used for the given EC2 instance
 - `awsEc2DownloadKeypairForInstance`: queries the appropriate keypair for an EC2 instance and downloads it
 
+##### Route 53
+
+Functions:
+
+- `awsR53ListZones`: lists all hosted zones
+- `awsR53GetZoneId`: finds the id of the Route 53 hosted zone the given name
+- `awsR53GetRecords`: gets all records in the given hosted zone
+- `awsR53GetARecords`: gets all A records in the given hosted zone
+
 ##### RDS
 
 Functions:
