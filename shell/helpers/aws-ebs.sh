@@ -58,10 +58,9 @@ function awsFindSnapshots() {
     requireArg "a snapshot name" "$1" || return 1
 
     local snapshotIds=$(aws ec2 describe-snapshots --filters "Name=tag:Name,Values=$1")
+    [[ -z "$snapshotIds" ]] && return 1
 
-    if [[ -z $snapshotIds ]]; then return 1; fi
-
-    echo $snapshotIds | jq -r '.Snapshots | sort_by(.StartTime) | reverse[] | .SnapshotId'
+    echo "$snapshotIds" | jq -r '.Snapshots | sort_by(.StartTime) | reverse[] | .SnapshotId'
 }
 
 # finds the id of the latest EBS snapshot with the given name
