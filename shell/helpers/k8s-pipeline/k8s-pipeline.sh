@@ -429,8 +429,8 @@ function installChart() {
     # deployment (file)
     # deployment (inline)
 
-    local helmCommand="helm $helmSubCommand $name $chartPath $helmVersionArg $helmEnvValues $chartDefaultFileArg \
-        -f $chartDefaultInlineValuesFile $deploymentFileArg -f $inlineValuesFile -f $envFile"
+    local helmCommand="helm $helmSubCommand $name $chartPath $helmVersionArg $helmEnvValues -f $envFile $chartDefaultFileArg \
+        -f $chartDefaultInlineValuesFile $deploymentFileArg -f $inlineValuesFile"
 
     isSet "$isDryrunMode" && echo "$helmCommand"
     notSet "$isDryrunMode" && $(echo "$helmCommand")
