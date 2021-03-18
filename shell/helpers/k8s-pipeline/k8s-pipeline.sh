@@ -136,9 +136,8 @@ function k8sPipeline() {
     # aws auth
     if isSet "$isAuthMode"; then
         awsAuth "$account-admin"
-    else
-        checkAccountAuthAndFail "$account" || return 1
     fi
+    checkAccountAuthAndFail "$account" || return 1
 
     ## env init
     notSet $isDryrunMode && kubectx $context
