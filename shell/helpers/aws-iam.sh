@@ -324,3 +324,20 @@ function awsAssumeRoleArn() {
     aws sts assume-role --role-arn $roleArn \
         --role-session-name "$roleName-session-$(randomString 3)"
 }
+
+function awsAssumeRoleShell() {
+    requireArg "an IAM role name" "$1" || return 
+
+    local awsCreds
+    awsCreds=$(awsAssumeRole "$1")
+    if [[ $? -ne 0 ]]; then
+         echo $awsCreds
+         return 1
+     fi
+
+    echo "Starting subshell as role '$1'..."
+    AWS_ACCESS_KEY_ID="$(readJSON "$awsCreds" '.Credentials.AccessKeyId')" \
+        AWS_SECRET_ACCESS_KEY="$(readJSON "$awsCreds" '.Credentials.SecretAccessKey')" \
+        AWS_SESSION_TOKEN="$(readJSON "$awsCreds" '.Credentials.SessionToken')" \
+        zsh
+}
