@@ -1,6 +1,13 @@
+# lists existing S3 buckets
+function awsS3ListBuckets() {
+    checkAuthAndFail || return 1
+
+    aws s3api list-buckets | jq -r '.Buckets[].Name'
+}
+
 # downloads and reads the content of a particular S3 object
 # args: S3 key
-function catS3Key() {
+function awsS3ReadObject() {
     checkAuthAndFail || return 1
 
     requireArg "an S3 path" $1
@@ -13,7 +20,7 @@ function catS3Key() {
 
 # check if the given key in the given s3 bucket exists
 # args: bucket, key
-function s3KeyExists() {
+function awsS3KeyExists() {
     checkAuthAndFail || return 1
 
     requireArg "a bucket name" "$1" || return 1

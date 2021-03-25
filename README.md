@@ -166,7 +166,9 @@ Functions:
 
 Functions:
 
-- `catS3Key`: downloads and reads the content of a particular S3 object
+- `awsS3ListBuckets`: lists existing S3 buckets
+- `awsS3ReadObject`: downloads and reads the content of a particular S3 object
+- `awsS3KeyExists`: check if the given key in the given s3 bucket exists
 
 ##### SSM
 
