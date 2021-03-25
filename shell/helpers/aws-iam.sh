@@ -325,6 +325,8 @@ function awsAssumeRoleArn() {
         --role-session-name "$roleName-session-$(randomString 3)"
 }
 
+# assumes an IAM role in a subshell, can be used to test permissions
+# args: IAM role name
 function awsAssumeRoleShell() {
     requireArg "an IAM role name" "$1" || return 
 
@@ -340,4 +342,5 @@ function awsAssumeRoleShell() {
         AWS_SECRET_ACCESS_KEY="$(readJSON "$awsCreds" '.Credentials.SecretAccessKey')" \
         AWS_SESSION_TOKEN="$(readJSON "$awsCreds" '.Credentials.SessionToken')" \
         zsh
+    echo "Exiting assumed role '$1' session"
 }
