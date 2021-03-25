@@ -20,6 +20,10 @@ function escapeCommas(){
     sed 's/,/\\\,/g'
 }
 
+function escapeSlashes() {
+    sed 's/\//\\\//g'
+}
+
 function unescapeNewlines() {
     sed 's/\\n/\
 /g'
