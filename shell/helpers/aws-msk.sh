@@ -1,19 +1,19 @@
 # lists all MSK clusters in the account, with names
-function listKafkaClusters() {
+function awsMskListClusters() {
     checkAuthAndFail || return 1
 
-    listKafkaClustersJSON | jq -r '"\(.ClusterName) - \(.ClusterArn)"'
+    awsMskListClustersJSON | jq -r '"\(.ClusterName) - \(.ClusterArn)"'
 }
 
 # lists names of all MSK clusters in the account
-function listKafkaClusterNames() {
+function awsMskListClusterNames() {
     checkAuthAndFail || return 1
 
-    listKafkaClustersJSON | jq -r '.ClusterName'
+    awsMskListClustersJSON | jq -r '.ClusterName'
 }
 
 # lists all MSK clusters in the account, with names
-function listKafkaClustersJSON() {
+function awsMskListClustersJSON() {
     checkAuthAndFail || return 1
 
     aws kafka list-clusters | jq -r '.ClusterInfoList[]'
@@ -21,28 +21,28 @@ function listKafkaClustersJSON() {
 
 # finds the ARN of the MSK cluster with the given name
 # args: MSK cluster name
-function findKafkaClusterArnByName() {
-    findKafkaClusterByNameJSON $1 | jq -r '.ClusterArn'
+function awsMskFindClusterArnByName() {
+    awsMskFindClusterByNameJSON $1 | jq -r '.ClusterArn'
 }
 
 # finds the MSK cluster with the given name
 # args: MSK cluster name
-function findKafkaClusterByNameJSON() {
+function awsMskFindClusterByNameJSON() {
     checkAuthAndFail || return 1
 
     requireArg "a cluster name" $1 || return 1
 
-    listKafkaClustersJSON | jq -r --arg CLUSTER_NAME "$1" 'select(.ClusterName==$CLUSTER_NAME)'
+    awsMskListClustersJSON | jq -r --arg CLUSTER_NAME "$1" 'select(.ClusterName==$CLUSTER_NAME)'
 }
 
 # gets the connection string of the MSK cluster with the given identifier
 # args: MSK cluster name or ARN
-function getKafkaConnection() {
+function awsMskGetConnection() {
     checkAuthAndFail || return 1
 
     requireArg "a cluster name" $1 || return 1
 
-    local clusterArn=$([[ "$1" == "arn:aws:kafka"* ]] && echo "$1" || findKafkaClusterArnByName $1)
+    local clusterArn=$([[ "$1" == "arn:aws:kafka"* ]] && echo "$1" || awsMskFindClusterArnByName $1)
 
     if [[ -z "$clusterArn" ]]; then
         echo "No cluster with given name found!"
@@ -54,12 +54,12 @@ function getKafkaConnection() {
 
 # gets the Zookeeper connection string of the MSK cluster with the given identifier
 # args: MSK cluster name or ARN
-function getKafkaZkConnection() {
+function awsMskGetZkConnection() {
     checkAuthAndFail || return 1
 
     requireArg "a cluster name" $1 || return 1
 
-    local cluster=$([[ "$1" == "arn:aws:kafka"* ]] && echo "$1" || findKafkaClusterByNameJSON $1)
+    local cluster=$([[ "$1" == "arn:aws:kafka"* ]] && echo "$1" || awsMskFindClusterByNameJSON $1)
 
     if [[ -z "$cluster" ]]; then
         echo "No cluster with given name found!"

@@ -183,10 +183,10 @@ Functions:
 
 Functions:
 
-- `listKafkaClusters`: lists all MSK clusters in the account, with names
-- `findKafkaClusterArnByName`: finds the ARN of the MSK cluster with the given name
-- `getKafkaConnection`: gets the connection string of the MSK cluster with the given identifier
-- `getKafkaZkConnection`: gets the Zookeeper connection string of the MSK cluster with the given identifier
+- `awsMskListClusters`: lists all MSK clusters in the account, with names
+- `awsMskFindClusterArnByName`: finds the ARN of the MSK cluster with the given name
+- `awsMskGetConnection`: gets the connection string of the MSK cluster with the given identifier
+- `awsMskGetZkConnection`: gets the Zookeeper connection string of the MSK cluster with the given identifier
 
 ##### DynamoDB
 
