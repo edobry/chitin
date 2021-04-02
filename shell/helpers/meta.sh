@@ -60,11 +60,15 @@ function dtDebug() {
     showAWSEnvvars
 }
 
-function readDTConfig() {
+function dtReadConfig() {
+    readJSON "$CA_DT_CONFIG" $@
+}
+
+function dtReadConfigFile() {
     readJSONFile $(getDTConfigLocation)/config.json $@
 }
 
-function readDTModuleConfig() {
+function dtReadModuleConfig() {
     requireArg "a module name" "$1" || return 1
 
     local moduleName="$1"
@@ -72,7 +76,7 @@ function readDTModuleConfig() {
     local fieldPath="$1"
     [[ -z $fieldPath ]] || shift
 
-    readDTConfig ".modules[\$modName]$fieldPath" --arg modName $moduleName $@
+    dtReadConfig ".modules[\$modName]$fieldPath" --arg modName $moduleName $@
 }
 
 function modifyDTConfig() {

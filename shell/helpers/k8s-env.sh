@@ -2,7 +2,7 @@
 export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
 
 function k8sEnvInit() {
-    local moduleConfig=$(readDTModuleConfig k8s-env)
+    local moduleConfig=$(dtReadModuleConfig k8s-env)
 
     if jsonCheckBool 'enabled' "$moduleConfig"; then
         local dtKubeConfigPath="$CA_DT_DIR/shell/eksconfig.yaml"

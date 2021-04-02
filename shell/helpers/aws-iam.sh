@@ -84,7 +84,7 @@ function awsCreateProgrammaticCreds() {
 
     local roleName="$1"
 
-    local googleUsername=$(readDTConfig '.modules["aws-auth"].googleUsername' -r)
+    local googleUsername=$(dtReadConfigig '.modules["aws-auth"].googleUsername' -r)
     local newIamSuffix="programmatic-tmp-$(randomString 5)"
     local newIamUsername="$googleUsername-$newIamSuffix"
 

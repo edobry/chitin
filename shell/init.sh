@@ -55,7 +55,7 @@ function initJq() {
     source $CA_DT_DIR/shell/helpers/json.sh
 }
 
-function readDTConfig() {
+function dtLoadConfig() {
     # load meta module
     source $CA_DT_DIR/shell/helpers/meta.sh
 
