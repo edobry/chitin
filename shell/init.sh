@@ -104,6 +104,9 @@ function checkDTDeps() {
 }
 
 function autoinitDT() {
+    # load init scripts
+    loadDTDir $CA_DT_DIR/shell/helpers/init/**/*.sh
+
     [[ "$CA_DT_AUTOINIT_DISABLED" = "true" ]] || initDT
 }
 
@@ -119,9 +122,6 @@ function initDT() {
         setopt ksh_glob
     fi
     set -o pipefail
-
-    # load init scripts
-    loadDTDir $CA_DT_DIR/shell/helpers/init/**/*.sh
 
     initJq
     readDTConfig
