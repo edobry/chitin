@@ -79,7 +79,16 @@ function mergeJSON() {
     requireArg "a JSON string" "$1" || return 1
     requireArg "another JSON string" "$2" || return 1
 
-    jq -s 'add' <<< $@
+    jq -sc 'add' <<< $@
+}
+
+# merges two JSON objects together
+# args: N>2 minified json strings
+function jsonMergeDeep() {
+    requireArg "a JSON string" "$1" || return 1
+    requireArg "another JSON string" "$2" || return 1
+
+    jq -sc 'reduce .[] as $item ({}; . * $item)' <<< $@
 }
 
 function writeJSONToYamlFile() {
