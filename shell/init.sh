@@ -169,4 +169,20 @@ function reinitDT() {
     source $CA_DT_DIR/shell/init.sh
 }
 
+function dtShellAuth() {
+    local authConfig=$(jq -nc --arg profile "$1" '{
+        modules: {
+            "aws-auth": { automaticAuth: true },
+            init: { command: "initAutoAwsAuth" }
+        }
+    } | (
+        if $profile != "" then
+            (.modules["aws-auth"] += {"defaultProfile": $profile})
+        else .
+        end
+    )')
+    
+    dtShell "$authConfig"
+}
+
 autoinitDT
