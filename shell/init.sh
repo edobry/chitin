@@ -75,7 +75,16 @@ function dtLoadConfig() {
     configFile=$(convertJSON5 $json5ConfigFilePath)
     [[ $? -eq 0 ]] || return 1
 
-    export CA_DT_CONFIG=$(readDTConfig)
+    local configFileContents=$(dtReadConfigFile)
+    local inlineConfig=$([[ -z "$1" ]] && echo '{}' || echo "$1")
+
+    # echo "file config: $configFileContents"
+    # echo "inline config: $inlineConfig"
+
+    local mergedConfig=$(jsonMergeDeep "$configFileContents" "$inlineConfig")
+    # echo "merged config: $mergedConfig"
+
+    export CA_DT_CONFIG="$mergedConfig"
 
     local projectDir=$(readJSON "$CA_DT_CONFIG" '.projectDir // empty')
     export CA_PROJECT_DIR=$projectDir
@@ -124,7 +133,7 @@ function initDT() {
     set -o pipefail
 
     initJq
-    readDTConfig
+    dtLoadConfig "$1"
 
     ([[ -z "$IS_DOCKER" ]] && ! checkDTDeps) && (dtBail; return 1)
 
@@ -148,7 +157,8 @@ function initDT() {
 }
 
 function dtRunInitCommand() {
-    local initCommand=$(readDTModuleConfig init '.command//empty')
+    local initCommand=$(dtReadModuleConfig init '.command//empty')
+    # echo "initcommand: $initCommand"
     [[ -z "$initCommand" ]] && return 0
 
     $initCommand
