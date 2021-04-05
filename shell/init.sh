@@ -55,7 +55,7 @@ function initJq() {
     source $CA_DT_DIR/shell/helpers/json.sh
 }
 
-function readDTConfig() {
+function dtLoadConfig() {
     # load meta module
     source $CA_DT_DIR/shell/helpers/meta.sh
 
@@ -75,7 +75,16 @@ function readDTConfig() {
     configFile=$(convertJSON5 $json5ConfigFilePath)
     [[ $? -eq 0 ]] || return 1
 
-    export CA_DT_CONFIG=$(readDTConfig)
+    local configFileContents=$(dtReadConfigFile)
+    local inlineConfig=$([[ -z "$1" ]] && echo '{}' || echo "$1")
+
+    # echo "file config: $configFileContents"
+    # echo "inline config: $inlineConfig"
+
+    local mergedConfig=$(jsonMergeDeep "$configFileContents" "$inlineConfig")
+    # echo "merged config: $mergedConfig"
+
+    export CA_DT_CONFIG="$mergedConfig"
 
     local projectDir=$(readJSON "$CA_DT_CONFIG" '.projectDir // empty')
     export CA_PROJECT_DIR=$projectDir
@@ -103,10 +112,6 @@ function checkDTDeps() {
     done
 }
 
-function autoinitDT() {
-    [[ "$CA_DT_AUTOINIT_DISABLED" = "true" ]] || initDT
-}
-
 alias dtShell=initDT
 function initDT() {
     if [[ ! -z "$CA_FAIL_ON_ERROR" ]]; then
@@ -123,8 +128,11 @@ function initDT() {
     # load init scripts
     loadDTDir $CA_DT_DIR/shell/helpers/init/**/*.sh
 
+    # if autoinit is disabled then end here
+    [[ "$CA_DT_AUTOINIT_DISABLED" = "true" ]] && return 0
+
     initJq
-    readDTConfig
+    dtLoadConfig "$1"
 
     ([[ -z "$IS_DOCKER" ]] && ! checkDTDeps) && (dtBail; return 1)
 
@@ -148,7 +156,8 @@ function initDT() {
 }
 
 function dtRunInitCommand() {
-    local initCommand=$(readDTModuleConfig init '.command//empty')
+    local initCommand=$(dtReadModuleConfig init '.command//empty')
+    # echo "initcommand: $initCommand"
     [[ -z "$initCommand" ]] && return 0
 
     $initCommand
@@ -159,4 +168,20 @@ function reinitDT() {
     source $CA_DT_DIR/shell/init.sh
 }
 
-autoinitDT
+function dtShellAuth() {
+    local authConfig=$(jq -nc --arg profile "$1" '{
+        modules: {
+            "aws-auth": { automaticAuth: true },
+            init: { command: "initAutoAwsAuth" }
+        }
+    } | (
+        if $profile != "" then
+            (.modules["aws-auth"] += {"defaultProfile": $profile})
+        else .
+        end
+    )')
+    
+    dtShell "$authConfig"
+}
+
+initDT
