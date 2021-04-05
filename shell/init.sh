@@ -112,13 +112,6 @@ function checkDTDeps() {
     done
 }
 
-function autoinitDT() {
-    # load init scripts
-    loadDTDir $CA_DT_DIR/shell/helpers/init/**/*.sh
-
-    [[ "$CA_DT_AUTOINIT_DISABLED" = "true" ]] || initDT
-}
-
 alias dtShell=initDT
 function initDT() {
     if [[ ! -z "$CA_FAIL_ON_ERROR" ]]; then
@@ -131,6 +124,12 @@ function initDT() {
         setopt ksh_glob
     fi
     set -o pipefail
+
+    # load init scripts
+    loadDTDir $CA_DT_DIR/shell/helpers/init/**/*.sh
+
+    # if autoinit is disabled then end here
+    [[ "$CA_DT_AUTOINIT_DISABLED" = "true" ]] && return 0
 
     initJq
     dtLoadConfig "$1"
@@ -185,4 +184,4 @@ function dtShellAuth() {
     dtShell "$authConfig"
 }
 
-autoinitDT
+initDT
