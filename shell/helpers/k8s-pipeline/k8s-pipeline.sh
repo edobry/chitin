@@ -48,7 +48,7 @@ function k8sPipeline() {
         shift
     fi
 
-    requireArgOptions "a subcommand" "$1" 'render deploy teardown k9s' || return 1
+    requireArgOptions "a subcommand" "$1" 'render deploy teardown k9s debugPod' || return 1
     requireArg "the environment name" "$2" || return 1
     local subCommand="$1"
     local envName="$2"
@@ -64,6 +64,7 @@ function k8sPipeline() {
     local isRenderMode
     local isDeployMode
     local isK9sMode
+    local isDebugPodMode
     if [[ "$subCommand" == "teardown" ]]; then
         isTeardownMode=true
         echo "-- TEARDOWN MODE --"
@@ -75,6 +76,8 @@ function k8sPipeline() {
         echo "-- DEPLOY MODE --"
     elif [[ "$subCommand" == "k9s" ]]; then
         isK9sMode=true
+    elif [[ "$subCommand" == "debugPod" ]]; then
+        isDebugPodMode=true
     fi
 
     # to use, call with `chart` as the second arg (after env)
