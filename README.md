@@ -118,7 +118,7 @@ Functions:
 - `awsEbsTagVolume`: adds a tag to an EBS volume
 - `awsCreateVolume`: creates an EBS volume with the given name, either empty or from a snapshot
 - `awsFindVolumesByName`: finds the ids of the EBS volumes with the given name
-- `awsListSnapshots`: lists all EBS snapshots in the account, with names
+- `awsEbsListSnapshots`: lists all EBS snapshots in the account, with names
 - `awsListInProgressSnapshots`: lists all in-progress EBS snapshots in the account, with names
 - `awsListVolumes`: lists all EBS volumes in the account, with names
 - `awsModifyVolumeIOPS`: sets the IOPS for the EBS volume with the given name or id
@@ -323,14 +323,15 @@ Functions:
 
 Functions:
 
-- `runTF`: runs the specified terraform command in on a particular module
-- `showDestroys`: generates a terraform plan and shows destructive actions
-- `copyTfState`: copies the Terraform remote state
-- `backupTfState`: backs up a Terraform remote state file
-- `restoreTfState`: restores a Terraform remote state file backup
-- `getTfLockTableItem`: get a specific TF remote state lock item
-- `getTfLockDigest`: get a specific TF remote state lock digest
-- `updateTfLockDigest`: get a specific TF remote state lock digest
+- `tfRun`: runs the specified terraform command in on a particular module
+- `tfShowDestroys`: generates a terraform plan and shows destructive actions
+- `tfCopyState`: copies the Terraform remote state
+- `tfBackupState`: backs up a Terraform remote state file
+- `tfRestoreState`: restores a Terraform remote state file backup
+- `tfDynamoLockKey`: get a specific TF remote state lock item
+- `tfGetLockTableItem`: get a specific TF remote state lock digest
+- `tfUpdateLockDigest`: set a specific TF remote state lock digest
+- `tfSourceToLocal`: convert a terraform module source to a local path, useful for development
 
 #### Network
 
