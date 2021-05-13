@@ -1,8 +1,8 @@
-function awsListUsers() {
+function awsIamListUsers() {
     aws iam list-users | jq -r '.Users[].UserName'
 }
 
-function awsListRoles() {
+function awsIamListRoles() {
     aws iam list-roles | jq -r '.Roles[].RoleName'
 }
 
@@ -12,6 +12,15 @@ function awsIamListRolePolicies() {
     requireArg "a role name" $1 || return 1
 
     aws iam list-attached-role-policies --role-name $1 |\
+        jq -cr '.AttachedPolicies[].PolicyArn'
+}
+
+# shows all policy attachments for a given user
+# args: user name
+function awsIamListUserPolicies() {
+    requireArg "a role name" $1 || return 1
+
+    aws iam list-attached-user-policies --user-name $1 |\
         jq -cr '.AttachedPolicies[].PolicyArn'
 }
 
@@ -78,7 +87,7 @@ function awsIamShowPolicy() {
     done
 }
 
-function awsCreateProgrammaticCreds() {
+function awsIamCreateProgrammaticCreds() {
     requireArg "an IAM role name" "$1" || return 1
     checkAuthAndFail || return 1
 
@@ -95,36 +104,36 @@ function awsCreateProgrammaticCreds() {
     local createKeyOutput
     createKeyOutput=$(aws iam create-access-key --user-name $newIamUsername)
     if [[ $? -ne 0 ]]; then
-        awsDeleteProgrammaticUser quiet $newIamUsername
+        awsIamDeleteProgrammaticUser quiet $newIamUsername
         return 1
     fi
 
     local newIamRole="$roleName-$newIamSuffix"
     local createRoleOutput
-    createRoleOutput=$(awsCloneRole quiet $roleName $newIamRole)
+    createRoleOutput=$(awsIamCloneRole quiet $roleName $newIamRole)
     if [[ $? -ne 0 ]]; then
-        awsDeleteProgrammaticUser quiet $newIamUsername
+        awsIamDeleteProgrammaticUser quiet $newIamUsername
         return 1
     fi
 
-    awsAuthorizeAssumeRole $newIamRole $newIamUsername
+    awsIamAuthorizeAssumeRole $newIamRole $newIamUsername
 
     readJSON "$createKeyOutput" '.AccessKey | { user: .UserName, role: $roleName, id: .AccessKeyId, key: .SecretAccessKey }'\
         --arg roleName $newIamRole
 }
 
-function awsDeleteProgrammaticCreds() {
+function awsIamDeleteProgrammaticCreds() {
     requireJsonArg "of programmatic credentials" "$1" || return 1
 
     local creds="$1"
     validateJSONFields "$creds" user role || return 1
 
-    awsDeleteProgrammaticUser quiet $(readJSON "$creds" '.user')
-    awsDeleteRole yes quiet $(readJSON "$creds" '.role')
+    awsIamDeleteProgrammaticUser quiet $(readJSON "$creds" '.user')
+    awsIamDeleteRole yes quiet $(readJSON "$creds" '.role')
 }
 
 # args: (optional) "quiet"
-function awsDeleteProgrammaticUser() {
+function awsIamDeleteProgrammaticUser() {
     requireArg "an IAM user name" "$1" || return 1
 
     unset quietMode
@@ -134,12 +143,12 @@ function awsDeleteProgrammaticUser() {
     fi
 
     local userName="$1"
-    local accessKeyIds=$(awsGetAccessKeysForUser $userName)
+    local accessKeyIds=$(awsIamGetAccessKeysForUser $userName)
 
     if [[ ! -z "$accessKeyIds" ]]; then
         while IFS= read -r keyId; do
             notSet $quietMode && echo "Deleting access key '$keyId'..."
-            awsDeleteAccessKey $userName "$keyId"
+            awsIamDeleteAccessKey $userName "$keyId"
         done <<< "$accessKeyIds"
     fi
 
@@ -156,20 +165,20 @@ function awsDeleteProgrammaticUser() {
     aws iam delete-user --user-name $userName
 }
 
-function awsDeleteAccessKey() {
+function awsIamDeleteAccessKey() {
     requireArg "an IAM user name" "$1" || return 1
     requireArg "an IAM access key id" "$2" || return 1
 
     aws iam delete-access-key --user-name "$1" --access-key-id "$2"
 }
 
-function awsGetAccessKeysForUser() {
+function awsIamGetAccessKeysForUser() {
     requireArg "an IAM user name" "$1" || return 1
 
     aws iam list-access-keys --user-name "$1" | jq -r '.AccessKeyMetadata[].AccessKeyId'
 }
 
-function awsCloneRole() {
+function awsIamCloneRole() {
     requireArg "a source IAM role name" "$1" || return 1
     requireArg "a target IAM role name" "$2" || return 1
 
@@ -188,7 +197,7 @@ function awsCloneRole() {
 
     notSet $quietMode && echo "Querying source role assume-role policy document..."
     local sourceAssumeRolePolicyDocumentFile=$(tempFile)
-    awsGetAssumeRolePolicyDocument $sourceRoleName > $sourceAssumeRolePolicyDocumentFile
+    awsIamGetAssumeRolePolicyDocument $sourceRoleName > $sourceAssumeRolePolicyDocumentFile
 
     notSet $quietMode && echo "Creating new role '$targetRoleName'..."
     local createOutput
@@ -202,13 +211,13 @@ function awsCloneRole() {
     done <<< "$sourcePolicyArns"
 }
 
-function awsGetAssumeRolePolicyDocument() {
+function awsIamGetAssumeRolePolicyDocument() {
     requireArg "an IAM role name" "$1" || return 1
 
     aws iam get-role --role-name "$1" | jq '.Role.AssumeRolePolicyDocument'
 }
 
-function awsDeleteRole() {
+function awsIamDeleteRole() {
     requireArg "an IAM role name" "$1" || return 1
 
     if [[ "$1" != 'yes' ]]; then
@@ -238,22 +247,22 @@ function awsDeleteRole() {
     aws iam delete-role --role-name $roleName
 }
 
-function awsGetUserArn() {
+function awsIamGetUserArn() {
     requireArg "an IAM user name" "$1" || return 1
 
     aws iam get-user --user-name "$1" | jq -r '.User.Arn'
 }
 
-function awsAuthorizeAssumeRole() {
+function awsIamAuthorizeAssumeRole() {
     requireArg "an IAM role name" "$1" || return 1
     requireArg "an IAM user name" "$2" || return 1
 
     local roleName="$1"
     local userName="$2"
 
-    local roleArn=$(awsGetRoleArn $roleName)
-    local userArn=$(awsGetUserArn $userName)
-    local assumeRoleDoc=$(awsGetAssumeRolePolicyDocument $roleName)
+    local roleArn=$(awsIamGetRoleArn $roleName)
+    local userArn=$(awsIamGetUserArn $userName)
+    local assumeRoleDoc=$(awsIamGetAssumeRolePolicyDocument $roleName)
 
     local userGetRolePolicy=$(jq -nc \
         --arg roleArn $roleArn \
@@ -288,7 +297,7 @@ function awsAuthorizeAssumeRole() {
         --policy-document $patchedAssumeRoleDoc
 }
 
-function awsGetRoleArn() {
+function awsIamGetRoleArn() {
     requireArg "an IAM role name" "$1" || return 1
 
     local result
@@ -298,23 +307,23 @@ function awsGetRoleArn() {
     echo "$result"
 }
 
-function awsAssumeRole() {
+function awsIamAssumeRole() {
     requireArg "an IAM role name" "$1" || return 1
 
     local roleName="$1"
 
     local roleArn
-    roleArn=$(awsGetRoleArn "$roleName")
+    roleArn=$(awsIamGetRoleArn "$roleName")
     if [[ $? -ne 0 ]]; then
         echo "$roleArn"
         echo "Could not assume programmatic role '$roleName'!"
         return 1
     fi
 
-    awsAssumeRoleArn $roleName $roleArn
+    awsIamAssumeRoleArn $roleName $roleArn
 }
 
-function awsAssumeRoleArn() {
+function awsIamAssumeRoleArn() {
     requireArg "an IAM role name" "$1" || return 1
     requireArg "an IAM role ARN" "$2" || return 1
 
@@ -327,11 +336,11 @@ function awsAssumeRoleArn() {
 
 # assumes an IAM role in a subshell, can be used to test permissions
 # args: IAM role name
-function awsAssumeRoleShell() {
+function awsIamAssumeRoleShell() {
     requireArg "an IAM role name" "$1" || return 
 
     local awsCreds
-    awsCreds=$(awsAssumeRole "$1")
+    awsCreds=$(awsIamAssumeRole "$1")
     if [[ $? -ne 0 ]]; then
          echo $awsCreds
          return 1

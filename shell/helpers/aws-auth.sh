@@ -56,10 +56,10 @@ function awsInitProgrammaticAuth() {
     local programmaticRole=$(dtReadModuleConfig 'aws-auth' '.programmaticRole')
 
     # await authorization complete...
-    local roleArn=$(awsGetRoleArn $programmaticRole 2>/dev/null)
+    local roleArn=$(awsIamGetRoleArn $programmaticRole 2>/dev/null)
     until [[ ! -z $roleArn ]]; do
         sleep 5
-        roleArn=$(awsGetRoleArn $programmaticRole)
+        roleArn=$(awsIamGetRoleArn $programmaticRole)
     done
 
     aws configure set region $AWS_DEFAULT_REGION

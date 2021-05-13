@@ -98,11 +98,12 @@ If you enable the shell integration, you can use the following functions to assu
 Functions
 
 - `awsIamListRolePolicies`: shows all policy attachments for a given role
+- `awsIamListUserPolicies`: shows all policy attachments for a given user
 - `awsIamGetPolicy`: fetches a policy
 - `awsIamShowCurrentRolePermissions`: shows all policy attachments and their allowed actions for the current role
 - `awsIamGetPolicyAttachments`: shows all policy attachments for a given policy version
 - `awsIamShowPolicy`: shows all policy attachments and their allowed actions for a given policy version
-- `awsAssumeRoleShell`: assumes an IAM role in a subshell, can be used to test permissions
+- `awsIamAssumeRoleShell`: assumes an IAM role in a subshell, can be used to test permissions
 
 ##### EBS
 
