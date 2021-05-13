@@ -108,24 +108,24 @@ Functions
 
 Functions:
 
-- `awsWatchVolumeModificationProgress`: watches an EBS volume currently being modified and reports progress
-- `awsWatchSnapshotProgress`: watches an EBS volume snapshot currently being created and reports progress
+- `awsEbsWatchVolumeModificationProgress`: watches an EBS volume currently being modified and reports progress
+- `awsEbsWatchSnapshotProgress`: watches an EBS volume snapshot currently being created and reports progress
 - `awsCheckAZ`: checks whether an availability zone with the given name exists
-- `awsFindSnapshots`: finds the ids of EBS snapshots with the given name, in descending-recency order
-- `awsFindSnapshot`: finds the id of the latest EBS snapshot with the given name
-- `awsDeleteSnapshots`: deletes all EBS snapshots with the given name
+- `awsEbsFindSnapshots`: finds the ids of EBS snapshots with the given name, in descending-recency order
+- `awsEbsFindSnapshot`: finds the id of the latest EBS snapshot with the given name
+- `awsEbsDeleteSnapshots`: deletes all EBS snapshots with the given name
 - `awsEbsShowVolumeTags`: shows the tags on an EBS volume
 - `awsEbsTagVolume`: adds a tag to an EBS volume
-- `awsCreateVolume`: creates an EBS volume with the given name, either empty or from a snapshot
-- `awsFindVolumesByName`: finds the ids of the EBS volumes with the given name
+- `awsEbsCreateVolume`: creates an EBS volume with the given name, either empty or from a snapshot
+- `awsEbsFindVolumesByName`: finds the ids of the EBS volumes with the given name
 - `awsEbsListSnapshots`: lists all EBS snapshots in the account, with names
-- `awsListInProgressSnapshots`: lists all in-progress EBS snapshots in the account, with names
-- `awsListVolumes`: lists all EBS volumes in the account, with names
-- `awsModifyVolumeIOPS`: sets the IOPS for the EBS volume with the given name or id
-- `awsResizeVolume`: resizes the EBS volume with the given name or id
-- `awsSnapshotVolume`: snapshots the EBS volume with the given name or id
-- `awsWaitUntilSnapshotReady`: polls the status of the given EBS snapshot until it is available
-- `awsDeleteVolume`: deletes the EBS volumes with the given name or id
+- `awsEbsListInProgressSnapshots`: lists all in-progress EBS snapshots in the account, with names
+- `awsEbsListVolumes`: lists all EBS volumes in the account, with names
+- `awsEbsModifyVolumeIOPS`: sets the IOPS for the EBS volume with the given name or id
+- `awsEbsResizeVolume`: resizes the EBS volume with the given name or id
+- `awsEbsSnapshotVolume`: snapshots the EBS volume with the given name or id
+- `awsEbsWaitUntilSnapshotReady`: polls the status of the given EBS snapshot until it is available
+- `awsEbsDeleteVolume`: deletes the EBS volumes with the given name or id
 - `awsEbsAuthorizeSnapshotAccess`: authorizes access to a snapshot from another account
 - `awsEbsCopySnapshotCrossAccount`: authorizes access to, and then copies a snapshot across to another account
 
