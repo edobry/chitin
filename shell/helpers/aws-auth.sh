@@ -172,18 +172,19 @@ function awsAuth() {
 
     requireArg "a profile name" $1 || return 1
 
+    local mfaCode="$2"
+    local mfaArg=$(isSet "$mfaCode" && echo --mfa-code $mfaCode || echo '')
     export AWS_PROFILE=$1
     export AWS_SSO_ORG_ROLE_ARN=arn:aws:iam::${AWS_ORG_IDENTITY_ACCOUNT_ID}:role/${CA_DEPT_ROLE}
 
     if ! checkAuth; then
         echo "Authenticating..."
-        AWS_PROFILE=$AWS_ORG_SSO_PROFILE gimme-aws-creds --roles $AWS_SSO_ORG_ROLE_ARN
+        AWS_PROFILE=$AWS_ORG_SSO_PROFILE gimme-aws-creds --roles $AWS_SSO_ORG_ROLE_ARN ${=mfaArg}
     fi
 
     local role=$(awsRole)
     echo "Assumed role: $role"
 }
-
 alias aws-auth=awsAuth
 
 # run a command with a specific AWS profile
