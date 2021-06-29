@@ -145,6 +145,10 @@ The subdirectories/files are simply a way to extract complex configuration from 
         "eth-backend": {
             "chart": "ib-backend"
         },
+        "eth-seeder": {
+            "chart": "~/Developer/chainalysis/dataeng-charts/charts/ib-seeder",
+            "source": "local"
+        },
         "eth-producer": {
             "version": "0.5.4",
             "chart": "tx-producer"
