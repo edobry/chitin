@@ -241,8 +241,6 @@ function k8sPipeline() {
          $modeCommand "$runtimeConfig" "$deploymentOptions" "$chartDefaults"
     done <<< $deployments
 
-    notSet $isDryrunMode && notSet $isTeardownMode && rm "$envFile"
-
     return 0
 }
 
