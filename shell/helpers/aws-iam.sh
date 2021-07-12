@@ -350,6 +350,6 @@ function awsIamAssumeRoleShell() {
     AWS_ACCESS_KEY_ID="$(readJSON "$awsCreds" '.Credentials.AccessKeyId')" \
         AWS_SECRET_ACCESS_KEY="$(readJSON "$awsCreds" '.Credentials.SecretAccessKey')" \
         AWS_SESSION_TOKEN="$(readJSON "$awsCreds" '.Credentials.SessionToken')" \
-        zsh
+        $SHELL
     echo "Exiting assumed role '$1' session"
 }
