@@ -170,7 +170,6 @@ function k8sPipeline() {
     fi
     ##
 
-    local envFile=$(tempFile)
     local runtimeConfig=$(echo "$envConfig" | jq -nc \
         --arg envName "$envName" \
         --arg envDir "$envDir" \
@@ -186,7 +185,6 @@ function k8sPipeline() {
         'inputs * {
         env: $envName,
         envDir: $envDir,
-        envFile: $envFile,
         target: $target,
         flags: {
             isDebugMode: ($isDebugMode != ""),
@@ -204,18 +202,8 @@ function k8sPipeline() {
     local baseSsmPath=$(readJSON "$runtimeConfig" '"/\(.environment.ssmOverride // "dataeng-\($envName)")"' --arg envName dev)
     # isSet $isDryrunMode && echo "Base SSM Path: '$baseSsmPath'"
 
-    # generate environment-specific configuration and write to a temporary file
-    # TODO: add per-chart child-chart config
-    local envValues=$(jq -cr '{
-        region: $region, nodeSelector: {
-            "eks.amazonaws.com/nodegroup": (.environment.eksNodegroup // empty) } }' \
-            --arg region $region <<< "$runtimeConfig")
-
     notSet "$isTestingMode" && notSet "$isDryrunMode" && notSet "$isTeardownMode" && helm repo update
-
-    isSet "$isDryrunMode" && notSet "$isTeardownMode" && echo "$envValues" | prettyYaml
-    notSet "$isDryrunMode" && notSet "$isTeardownMode" && echo "$envValues" > $envFile
-
+    
     local chartDefaults=$(readJSON "$runtimeConfig" '.chartDefaults')
 
     local modeCommand=$(notSet $isTeardownMode && echo installChart || echo teardownChart)
@@ -360,6 +348,7 @@ function installChart() {
     (targetMatches "$runtimeConfig" "$deploymentOptions") || return 0
 
     echo -e "\n$(isSet $isRenderMode && echo 'Rendering' || echo 'Deploying') $name..."
+    isSet "$isDryrunMode" && echo "$mergedConfig" | prettyYaml
 
     # update chart deps
     if notSet $isDryrunMode && [[ $source == "local" ]] && [[ -d $chartPath ]]; then
@@ -391,6 +380,7 @@ function installChart() {
     ##
 
     local inlineValues=$(readJSON "$mergedConfig" '.values // {}')
+    local nestValues=$(readJSON "$mergedConfig" '.nestValues // empty')
 
     ## secrets
     local secretPresets=$(readJSON "$runtimeConfig" '.externalResources.secretPresets // {}')
@@ -406,6 +396,24 @@ function installChart() {
     ##
 
     ## values
+
+    # generate environment-specific configuration and write to a temporary file
+    local envValues=$(jq -cr '{
+        region: $region, nodeSelector: {
+            "eks.amazonaws.com/nodegroup": (.environment.eksNodegroup // empty) } }' \
+            --arg region $region <<< "$runtimeConfig")
+    
+    # handle parent chart value nesting
+    if isSet "$nestValues"; then
+        envValues=$(jq -nc --arg chartName "$chart" --argjson vals "$envValues" '{ ($chartName): $vals }')
+    fi
+
+    isSet "$isDryrunMode" && echo "$envValues" | prettyYaml
+    isSet "$isDryrunMode" && echo
+
+    local envFile=$(tempFile)
+    notSet "$isDryrunMode" && writeJSONToYamlFile "$envValues" "$envFile"
+
     local chartDefaultFilePath="$envDir/chartDefaults/$chart.yaml"
     local chartDefaultFileArg=$([ -f $chartDefaultFilePath ] && echo "-f $chartDefaultFilePath" || echo "")
 
