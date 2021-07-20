@@ -437,8 +437,13 @@ function installChart() {
     writeJSONToYamlFile "$inlineValues" "$inlineValuesFile"
     ##
 
-    local subCommand=$(isSet $isRenderMode && echo "template" || echo "upgrade --install")
-
+    local subCommand
+    if isSet $isRenderMode; then
+        subCommand="template"
+    else
+        subCommand=$(isSet $isHelmChart && echo "upgrade --install" || echo "deploy")
+    fi
+    
     # precedence order
     #
     # chart default
@@ -448,11 +453,9 @@ function installChart() {
     # deployment (file)
     # deployment (inline)
 
-    echo "sub: $subCommand"
     local templateCommand=$(isSet $isHelmChart && echo "helm" || echo "k8sRunCdk8sChart")
-    echo "templateCommand: $templateCommand"
 
-    local fullTemplateCommand="$templateCommand $subCommand $name $chartPath $helmVersionArg $helmEnvValues -f $envFile $chartDefaultFileArg \
+    local fullTemplateCommand="$templateCommand "$subCommand" $name $chartPath $helmVersionArg $helmEnvValues -f $envFile $chartDefaultFileArg \
         -f $chartDefaultInlineValuesFile $deploymentFileArg -f $inlineValuesFile"
 
     isSet "$isDryrunMode" && echo "$fullTemplateCommand"
