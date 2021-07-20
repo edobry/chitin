@@ -446,6 +446,38 @@ function installChart() {
     return 0
 }
 
+function k8sRunCdk8sChart() {
+    requireArg "subcommand" "$1" || return 1
+    requireArg "chart instance name" "$2" || return 1
+    # requireArg "chart name" "$3" || return 1
+    requireArg "chart package" "$3" || return 1
+    requireArg "argument list" "$4" || return 1
+
+    local subcommand="$1"
+    local instanceName="$2"
+    # local name="$3"
+    local package="$3"
+    shift; shift; shift;
+    
+    npm exec --package $package --yes cluster-script-chart -- $subcommand $instanceName $@
+}
+
+function k8sRunLocalCdk8sChart() {
+    requireArg "subcommand" "$1" || return 1
+    requireArg "chart instance name" "$2" || return 1
+    requireArg "chart name" "$3" || return 1
+    requireArg "chart dir" "$4" || return 1
+    requireArg "argument list" "$5" || return 1
+
+    local subcommand="$1"
+    local instanceName="$2"
+    local name="$3"
+    local dir="$4"
+    shift; shift; shift;
+    
+    k8sRunCdk8sChart $subcommand cluster-script-chart "$CA_PROJECT_DIR/dataeng-charts/charts/$dir" $@
+}
+
 function teardownChart() {
     local runtimeConfig="$1"
     local deploymentOptions="$2"
