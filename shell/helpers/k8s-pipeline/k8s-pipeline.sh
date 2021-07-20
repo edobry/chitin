@@ -420,7 +420,7 @@ function installChart() {
     isSet "$isDryrunMode" && echo "$envValues" | prettyYaml
     isSet "$isDryrunMode" && echo
 
-    local envFile=$(tempFile)
+    local envFile=$(tempFile).yaml
     notSet "$isDryrunMode" && writeJSONToYamlFile "$envValues" "$envFile"
 
     local chartDefaultFilePath="$envDir/chartDefaults/$chart.yaml"
@@ -430,10 +430,10 @@ function installChart() {
     local deploymentFileArg=$([ -f "$deploymentFilePath" ] && echo "-f $deploymentFilePath" || echo "")
 
     local chartDefaultInlineValues=$(readJSON "$allChartDefaults" ".\"$chart\" | .values // {}")
-    local chartDefaultInlineValuesFile=$(tempFile)
+    local chartDefaultInlineValuesFile=$(tempFile).yaml
     writeJSONToYamlFile "$chartDefaultInlineValues" "$chartDefaultInlineValuesFile"
 
-    local inlineValuesFile=$(tempFile)
+    local inlineValuesFile=$(tempFile).yaml
     writeJSONToYamlFile "$inlineValues" "$inlineValuesFile"
     ##
 
