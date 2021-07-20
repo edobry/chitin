@@ -322,6 +322,16 @@ function installChart() {
     local config=$(readJSON "$deploymentOptions" '.value')
     local chart=$(readJSON "$config" '.chart')
 
+    local chartType=$(readJSON "$config" '.type // "helm"')
+    requireArgOptions "a chart type" "$chartType" "helm cdk8s" || return 1
+
+    local isHelmChart
+    if [[ "$chartType" == 'helm' ]]; then
+        isHelmChart=true
+    fi
+
+    # echo "chart: $chartType $isHelmChart"
+
     local chartDefaults
     chartDefaults=$(readJSON "$allChartDefaults" ".\"$chart\" | del(.values)")
     local chartDefaultCode=$?
@@ -337,7 +347,8 @@ function installChart() {
     if [[ "$source" == "local" ]]; then
         local chartPath="$chart"
     elif [[ "$source" == "remote" ]]; then
-        local chartPath="fimbulvetr/$chart"
+        local chartPath=$(isSet $isHelmChart && echo "fimbulvetr/$chart" || echo "@chainalysis/$chart")
+        # echo "chartPath: $chartPath"
     else
         echo "Invalid source '$source', set 'local' or 'remote'"
         return 1
@@ -349,7 +360,7 @@ function installChart() {
     isSet "$isDryrunMode" && echo "$mergedConfig" | prettyYaml
 
     # update chart deps
-    if notSet $isDryrunMode && [[ $source == "local" ]] && [[ -d $chartPath ]]; then
+    if notSet $isDryrunMode && [[ $source == "local" ]] && isSet $isHelmChart && [[ -d $chartPath ]]; then
         if ! helm dep update $chartPath; then
             echo "Skipping due to missing dependency!"
             return 1
@@ -358,7 +369,7 @@ function installChart() {
 
     ## version
     local version
-    if notSet $isTestingMode; then
+    if notSet $isTestingMode && isSet $isHelmChart; then
         if [[ -z $expectedVersion ]]; then
             local latestVersion
             latestVersion=$(helmChartGetLatestVersion "$source" "$chartPath")
@@ -374,7 +385,7 @@ function installChart() {
         fi
     fi
 
-    local helmVersionArg=$([ -n $version ] && echo "--version=$version" || echo "")
+    local helmVersionArg=$([[ -n $version ]] && isSet $isHelmChart && echo "--version=$version" || echo "")
     ##
 
     local inlineValues=$(readJSON "$mergedConfig" '.values // {}')
@@ -426,7 +437,7 @@ function installChart() {
     writeJSONToYamlFile "$inlineValues" "$inlineValuesFile"
     ##
 
-    local helmSubCommand=$(isSet $isRenderMode && echo "template" || echo "upgrade --install")
+    local subCommand=$(isSet $isRenderMode && echo "template" || echo "upgrade --install")
 
     # precedence order
     #
@@ -437,11 +448,15 @@ function installChart() {
     # deployment (file)
     # deployment (inline)
 
-    local helmCommand="helm $helmSubCommand $name $chartPath $helmVersionArg $helmEnvValues -f $envFile $chartDefaultFileArg \
+    echo "sub: $subCommand"
+    local templateCommand=$(isSet $isHelmChart && echo "helm" || echo "k8sRunCdk8sChart")
+    echo "templateCommand: $templateCommand"
+
+    local fullTemplateCommand="$templateCommand $subCommand $name $chartPath $helmVersionArg $helmEnvValues -f $envFile $chartDefaultFileArg \
         -f $chartDefaultInlineValuesFile $deploymentFileArg -f $inlineValuesFile"
 
-    isSet "$isDryrunMode" && echo "$helmCommand"
-    notSet "$isDryrunMode" && $(echo "$helmCommand")
+    isSet "$isDryrunMode" && echo "$fullTemplateCommand"
+    notSet "$isDryrunMode" && $(echo "$fullTemplateCommand")
 
     return 0
 }
