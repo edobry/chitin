@@ -130,7 +130,7 @@ Functions:
 - `awsEbsAuthorizeSnapshotAccess`: authorizes access to a snapshot from another account
 - `awsEbsCopySnapshotCrossAccount`: authorizes access to, and then copies a snapshot across to another account
 
-##### EC2 (Keypairs)
+##### EC2
 
 Functions:
 
@@ -143,6 +143,8 @@ Functions:
 - `awsEc2DownloadKeypair`: reads a given EC2 Keypair out from SSM, persists locally, and permissions for use
 - `awsEc2GetInstanceKeypairName`: queries the name of the keypair used for the given EC2 instance
 - `awsEc2DownloadKeypairForInstance`: queries the appropriate keypair for an EC2 instance and downloads it
+- `awsEc2ListNetworkInterfaceAddresses`: lists all ENIs along with their associated private IP addresses
+- `awsEc2GetNetworkInterface`: gets the description for a given ENI
 
 ##### Route 53
 

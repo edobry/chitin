@@ -170,3 +170,27 @@ function awsEc2DownloadKeypairForInstance() {
 
     awsEc2DownloadKeypair $keypairName
 }
+
+function awsEc2ListNetworkInterfaceAddressesJson() {
+    checkAuthAndFail || return 1
+
+    aws ec2 describe-network-interfaces | jq -cr \
+        '.NetworkInterfaces[] | {
+            id: .NetworkInterfaceId,
+            addresses: [.PrivateIpAddresses[].PrivateIpAddress]
+        }'
+}
+
+# lists all ENIs along with their associated private IP addresses
+function awsEc2ListNetworkInterfaceAddresses() {
+    readJSON "$(awsEc2ListNetworkInterfaceAddressesJson)" '"\(.id) - \(.addresses | join(", "))"'
+}
+
+# gets the description for a given ENI
+# args: ENI ID
+function awsEc2GetNetworkInterface() {
+    checkAuthAndFail || return 1
+    requireArg 'network interface ID' "$1" || return 1
+
+    aws ec2 describe-network-interfaces --network-interface-ids "$1"
+}
