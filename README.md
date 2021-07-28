@@ -16,6 +16,7 @@ Required:
 Optionally required:
 
 - `yq v3.3.2` [link](https://github.com/mikefarah/yq)
+  - make sure you install from `brew` and not `pip`
 - `aws`
 - `terraform`
 - `docker`
