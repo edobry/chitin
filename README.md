@@ -15,8 +15,9 @@ Required:
 
 Optionally required:
 
-- `yq v3.3.2` [link](https://github.com/mikefarah/yq)
-- `aws`
+- `yq v4.11.2` [link](https://github.com/mikefarah/yq)
+  - make sure you install from `brew` and not `pip`
+- `aws v2.0.57`
 - `terraform`
 - `docker`
 - `kubectl/kubectx`

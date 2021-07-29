@@ -173,8 +173,8 @@ function k8sPipeline() {
     local runtimeConfig=$(echo "$envConfig" | jq -nc \
         --arg envName "$envName" \
         --arg envDir "$envDir" \
-        --arg envFile "$envFile" \
         --arg target "$target" \
+        --arg region "$region" \
         --arg isDebugMode "$isDebugMode" \
         --arg isDryrunMode "$isDryrunMode" \
         --arg isTestingMode "$isTestingMode" \
@@ -186,6 +186,7 @@ function k8sPipeline() {
         env: $envName,
         envDir: $envDir,
         target: $target,
+        region: $region,
         flags: {
             isDebugMode: ($isDebugMode != ""),
             isDryrunMode: ($isDryrunMode != ""),
@@ -309,8 +310,8 @@ function installChart() {
     local deploymentOptions="$2"
     local allChartDefaults="$3"
 
+    local region=$(readJSON "$runtimeConfig" '.region')
     local envDir=$(readJSON "$runtimeConfig" '.envDir')
-    local envFile=$(readJSON "$runtimeConfig" '.envFile')
     local isDeployMode=$(checkJSONFlag isDeployMode "$runtimeConfig")
     local isRenderMode=$(checkJSONFlag isRenderMode "$runtimeConfig")
     local isChartMode=$(checkJSONFlag isChartMode "$runtimeConfig")
@@ -420,8 +421,8 @@ function installChart() {
     isSet "$isDryrunMode" && echo "$envValues" | prettyYaml
     isSet "$isDryrunMode" && echo
 
-    local envFile=$(tempFile).yaml
-    notSet "$isDryrunMode" && writeJSONToYamlFile "$envValues" "$envFile"
+    local envFile=$(tempFile).json
+    notSet "$isDryrunMode" && echo "$envValues" > "$envFile"
 
     local chartDefaultFilePath="$envDir/chartDefaults/$chart.yaml"
     local chartDefaultFileArg=$([ -f $chartDefaultFilePath ] && echo "-f $chartDefaultFilePath" || echo "")
