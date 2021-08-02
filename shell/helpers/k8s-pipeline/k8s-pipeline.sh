@@ -400,7 +400,6 @@ function installChart() {
     fi
 
     local helmVersionArg=$([[ -n $version ]] && isSet $isHelmChart && echo "--version=$version" || echo "")
-    local cdk8sVersionArg=$([[ "$source" == "remote" ]] && echo "@$expectedVersion" || echo "_")
     ##
 
     local inlineValues=$(readJSON "$mergedConfig" '.values // {}')
@@ -467,7 +466,7 @@ function installChart() {
     # per env chart default (inline)
     # deployment (file)
     # deployment (inline)
-
+    local cdk8sVersionArg=$([[ -n $expectedVersion ]] && echo "$expectedVersion" || echo "_")
     local templateCommand=$(isSet $isHelmChart && echo "helm" || echo "k8sRunCdk8sChart $source $chart $cdk8sVersionArg")
 
     local fullTemplateCommand="$templateCommand "$subCommand" $name $chartPath $helmVersionArg $helmEnvValues -f $envFile $chartDefaultFileArg \
@@ -490,7 +489,7 @@ function k8sRunCdk8sChart() {
 
     local source=$1
     local chart=$2
-    local version=$([[ "$3" == "_" ]] && echo "" || echo "$3")
+    local version=$([[ "$3" == "_" ]] && echo "" || echo "@$3")
     local subcommand="$4"
     local instanceName="$5"
     local package="$6"
