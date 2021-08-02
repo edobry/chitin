@@ -142,6 +142,13 @@ function k8sPipeline() {
     fi
     checkAccountAuthAndFail "$account" || return 1
 
+    local vpnTest
+    vpnTest=$(netTestVpn)
+    if [[ $? -ne 0 ]]; then
+        echo "$vpnTest"
+        return 1
+    fi
+
     ## env init
     notSet $isDryrunMode && kubectx $context
 
