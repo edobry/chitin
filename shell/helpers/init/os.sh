@@ -7,6 +7,10 @@ if [[ `uname` == 'Darwin' ]]; then
     function openUrl() {
         open $1
     }
+
+    function base64Decode() {
+        base64 -D
+    }
 else
     function toClip() {
         xclip -selection clipboard
@@ -14,5 +18,9 @@ else
 
     function openUrl() {
         xdg-open $1
+    }
+
+    function base64Decode() {
+        base64 --decode
     }
 fi
