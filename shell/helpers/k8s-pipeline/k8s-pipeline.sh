@@ -377,23 +377,30 @@ function installChart() {
 
     ## version
     local version
-    if notSet $isTestingMode && isSet $isHelmChart; then
-        if [[ -z $expectedVersion ]]; then
-            local latestVersion
-            latestVersion=$(helmChartGetLatestVersion "$source" "$chartPath")
-            [[ $? -ne 0 ]] && { echo "Couldn't fetch latest version, skipping"; echo "$latestVersion"; return 1; }
+    if notSet $isTestingMode; then
+        if isSet $isHelmChart; then
+            if [[ -z $expectedVersion ]]; then
+                local latestVersion
+                latestVersion=$(helmChartGetLatestVersion "$source" "$chartPath")
+                [[ $? -ne 0 ]] && { echo "Couldn't fetch latest version, skipping"; echo "$latestVersion"; return 1; }
 
-            echo "No version configured, using '$chart:$latestVersion'; consider locking the deployment to this version"
-            version=$latestVersion
-        elif ! helmChartCheckVersion "$source" "$chartPath" "$expectedVersion"; then
-            echo "Could not find expected version for $source chart: '$chartPath':$expectedVersion"
-            return 1
+                echo "No version configured, using '$chart:$latestVersion'; consider locking the deployment to this version"
+                version=$latestVersion
+            elif ! helmChartCheckVersion "$source" "$chartPath" "$expectedVersion"; then
+                echo "Could not find expected version for $source chart: '$chartPath':$expectedVersion"
+                return 1
+            else
+                version=$expectedVersion
+            fi
         else
-            version=$expectedVersion
+            if [[ "$source" == "remote" ]]; then
+                version=$expectedVersion
+            fi
         fi
     fi
 
     local helmVersionArg=$([[ -n $version ]] && isSet $isHelmChart && echo "--version=$version" || echo "")
+    local cdk8sVersionArg=$([[ "$source" == "remote" ]] && echo "@$expectedVersion" || echo "_")
     ##
 
     local inlineValues=$(readJSON "$mergedConfig" '.values // {}')
@@ -461,7 +468,7 @@ function installChart() {
     # deployment (file)
     # deployment (inline)
 
-    local templateCommand=$(isSet $isHelmChart && echo "helm" || echo "k8sRunCdk8sChart")
+    local templateCommand=$(isSet $isHelmChart && echo "helm" || echo "k8sRunCdk8sChart $source $chart $cdk8sVersionArg")
 
     local fullTemplateCommand="$templateCommand "$subCommand" $name $chartPath $helmVersionArg $helmEnvValues -f $envFile $chartDefaultFileArg \
         -f $chartDefaultInlineValuesFile $deploymentFileArg -f $inlineValuesFile"
@@ -473,35 +480,26 @@ function installChart() {
 }
 
 function k8sRunCdk8sChart() {
-    requireArg "subcommand" "$1" || return 1
-    requireArg "chart instance name" "$2" || return 1
-    # requireArg "chart name" "$3" || return 1
-    requireArg "chart package" "$3" || return 1
-    requireArg "argument list" "$4" || return 1
+    requireArg "source" "$1" || return 1
+    requireArg "chart" "$2" || return 1
+    requireArg "version" "$3" || return 1
+    requireArg "subcommand" "$4" || return 1
+    requireArg "chart instance name" "$5" || return 1
+    requireArg "chart package" "$6" || return 1
+    requireArg "argument list" "$7" || return 1
 
-    local subcommand="$1"
-    local instanceName="$2"
-    # local name="$3"
-    local package="$3"
-    shift; shift; shift;
+    local source=$1
+    local chart=$2
+    local version=$([[ "$3" == "_" ]] && echo "" || echo "$3")
+    local subcommand="$4"
+    local instanceName="$5"
+    local package="$6"
+    shift; shift; shift; shift; shift; shift;
+
+    local sourceArg=$([[ "$source" == "remote" ]] && echo "--package $package$version" || echo "--prefix $package")
+    local chartArg=$([[ "$source" == "remote" ]] && echo "$chart" || echo "$(basename $chart)-chart" )
     
-    npm exec --package $package --yes cluster-script-chart -- $subcommand $instanceName $@
-}
-
-function k8sRunLocalCdk8sChart() {
-    requireArg "subcommand" "$1" || return 1
-    requireArg "chart instance name" "$2" || return 1
-    requireArg "chart name" "$3" || return 1
-    requireArg "chart dir" "$4" || return 1
-    requireArg "argument list" "$5" || return 1
-
-    local subcommand="$1"
-    local instanceName="$2"
-    local name="$3"
-    local dir="$4"
-    shift; shift; shift;
-    
-    k8sRunCdk8sChart $subcommand cluster-script-chart "$CA_PROJECT_DIR/dataeng-charts/charts/$dir" $@
+    npm exec $sourceArg $chart -- $subcommand $instanceName $@
 }
 
 function teardownChart() {
