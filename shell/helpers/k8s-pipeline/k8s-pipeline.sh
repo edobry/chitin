@@ -164,6 +164,11 @@ function k8sPipeline() {
         return 0
     fi
 
+    if isSet "$isDebugPodMode"; then
+        debugPod --az ${region}a
+        return 0
+    fi
+
     ## parse target
     local target
     requireArg "deployments to limit to, or 'all' to not limit" "$1" || return 1
