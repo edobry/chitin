@@ -179,7 +179,7 @@ function awsAuth() {
 
     if ! checkAuth; then
         echo "Authenticating..."
-        AWS_PROFILE=$AWS_ORG_SSO_PROFILE gimme-aws-creds --roles $AWS_SSO_ORG_ROLE_ARN ${=mfaArg}
+        AWS_PROFILE=$AWS_ORG_SSO_PROFILE gimme-aws-creds --roles $AWS_SSO_ORG_ROLE_ARN ${mfaArg}
     fi
 
     local role=$(awsRole)
