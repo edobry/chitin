@@ -441,5 +441,15 @@ function k8sApplyInstance() {
 function k8sDeleteInstance() {
     requireArg "an instance name" "$1" || return 1
 
-    kubectl delete -l instance="$1" all
+    kubectl delete -l instance="$1" $(k8sGetResourceList delete)
+}
+
+function k8sGetResourceList() {
+    requireArg "an API verb" "$1" || return 1
+
+    kubectl api-resources --namespaced=true --verbs="$1" -o name | tr '\n' ,| sed 's/,$//'
+}
+
+function k8sGetAllResources() {
+    kubectl get $(k8sGetResourceList list) --ignore-not-found $@
 }
