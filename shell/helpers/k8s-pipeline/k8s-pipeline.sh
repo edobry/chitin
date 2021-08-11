@@ -48,7 +48,7 @@ function k8sPipeline() {
         shift
     fi
 
-    requireArgOptions "a subcommand" "$1" 'render deploy teardown k9s debugPod' || return 1
+    requireArgOptions "a subcommand" "$1" 'render deploy teardown redeploy k9s debugPod' || return 1
     requireArg "the environment name" "$2" || return 1
     local subCommand="$1"
     local envName="$2"
@@ -63,6 +63,7 @@ function k8sPipeline() {
     local isTeardownMode
     local isRenderMode
     local isDeployMode
+    local isRedeployMode
     local isK9sMode
     local isDebugPodMode
     if [[ "$subCommand" == "teardown" ]]; then
@@ -74,6 +75,9 @@ function k8sPipeline() {
     elif [[ "$subCommand" == "deploy" ]]; then
         isDeployMode=true
         echo "-- DEPLOY MODE --"
+    elif [[ "$subCommand" == "redeploy" ]]; then
+        isRedeployMode=true
+        echo "-- REDEPLOY MODE --"
     elif [[ "$subCommand" == "k9s" ]]; then
         isK9sMode=true
     elif [[ "$subCommand" == "debugPod" ]]; then
@@ -182,6 +186,17 @@ function k8sPipeline() {
     fi
     ##
 
+    local modeCommand
+    if isSet $isTeardownMode; then
+        modeCommand='teardownChart'
+    elif isSet $isRenderMode || isSet $isDeployMode; then
+        modeCommand='installChart'
+    elif isSet $isRedeployMode; then
+        modeCommand='redeployChart'
+        unset isRenderMode
+        isDeployMode=true
+    fi
+
     local runtimeConfig=$(echo "$envConfig" | jq -nc \
         --arg envName "$envName" \
         --arg envDir "$envDir" \
@@ -192,6 +207,7 @@ function k8sPipeline() {
         --arg isTestingMode "$isTestingMode" \
         --arg isTeardownMode "$isTeardownMode" \
         --arg isDeployMode "$isDeployMode" \
+        --arg isRedeployMode "$isRedeployMode" \
         --arg isRenderMode "$isRenderMode" \
         --arg isChartMode "$isChartMode" \
         'inputs * {
@@ -205,6 +221,7 @@ function k8sPipeline() {
             isTestingMode: ($isTestingMode != ""),
             isTeardownMode: ($isTeardownMode != ""),
             isDeployMode: ($isDeployMode != ""),
+            isRedeployMode: ($isRedeployMode != ""),
             isRenderMode: ($isRenderMode != ""),
             isChartMode: ($isChartMode != "")
         } }')
@@ -218,8 +235,6 @@ function k8sPipeline() {
     notSet "$isTestingMode" && notSet "$isDryrunMode" && notSet "$isTeardownMode" && helm repo update
     
     local chartDefaults=$(readJSON "$runtimeConfig" '.chartDefaults')
-
-    local modeCommand=$(notSet $isTeardownMode && echo installChart || echo teardownChart)
 
     local cdModeFlag=$(isSet $isCdMode && echo "true" || echo "false")
 
@@ -541,6 +556,15 @@ function teardownChart() {
 
     isSet "$isDryrunMode" echo "$fullTeardownCommand"
     notSet "$isDryrunMode" && $(echo "$fullTeardownCommand")
+}
+
+function redeployChart() {
+    local runtimeConfig="$1"
+    local deploymentOptions="$2"
+    local allChartDefaults="$3"
+
+    teardownChart "$runtimeConfig" "$deploymentOptions" "$chartDefaults"
+    installChart "$runtimeConfig" "$deploymentOptions" "$chartDefaults"
 }
 
 function targetMatches() {
