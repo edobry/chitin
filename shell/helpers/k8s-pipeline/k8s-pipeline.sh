@@ -425,7 +425,7 @@ function installChart() {
 
     # generate environment-specific configuration and write to a temporary file
     local envValues=$(jq -cr '{
-        region: $region, nodeSelector: {
+        region: $region, nodegroup: .environment.eksNodegroup, nodeSelector: {
             "eks.amazonaws.com/nodegroup": (.environment.eksNodegroup // empty) } }' \
             --arg region $region <<< "$runtimeConfig")
     
