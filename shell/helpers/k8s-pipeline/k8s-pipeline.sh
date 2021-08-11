@@ -343,8 +343,6 @@ function installChart() {
         isHelmChart=true
     fi
 
-    # echo "chart: $chartType $isHelmChart"
-
     local chartDefaults
     chartDefaults=$(readJSON "$allChartDefaults" ".\"$chart\" | del(.values)")
     local chartDefaultCode=$?
@@ -480,6 +478,12 @@ function installChart() {
     isSet "$isDryrunMode" && echo "$fullTemplateCommand"
     notSet "$isDryrunMode" && $(echo "$fullTemplateCommand")
 
+    if notSet "$isRenderMode" && notSet "$isHelmChart"; then
+        local renderCommand="k8sApplyInstance $name dist"
+        isSet "$isDryrunMode" && echo "$renderCommand"
+        notSet "$isDryrunMode" && $(echo "$renderCommand")
+    fi
+
     return 0
 }
 
@@ -503,7 +507,7 @@ function k8sRunCdk8sChart() {
     local sourceArg=$([[ "$source" == "remote" ]] && echo "--package $package$version" || echo "--prefix $package")
     local chartArg=$([[ "$source" == "remote" ]] && echo "$chart" || echo "$(basename $chart)-chart" )
     
-    npm exec $sourceArg $chart -- $subcommand $instanceName $@
+    npm exec $sourceArg $chart -- template $instanceName $@
 }
 
 function teardownChart() {
@@ -520,14 +524,23 @@ function teardownChart() {
     local config=$(readJSON "$deploymentOptions" '.value')
     local chart=$(readJSON "$config" '.chart')
 
+    local chartType=$(readJSON "$config" '.type // "helm"')
+    requireArgOptions "a chart type" "$chartType" "helm cdk8s" || return 1
+
+    local isHelmChart
+    if [[ "$chartType" == 'helm' ]]; then
+        isHelmChart=true
+    fi
+
     (targetMatches "$runtimeConfig" "$deploymentOptions") || return 0
 
     echo -e "\nTearing down '$name'..."
 
-    helmCommand="helm uninstall $name"
+    local teardownCommand=$(isSet $isHelmChart && echo "helm uninstall" || echo "k8sDeleteInstance")
+    local fullTeardownCommand="$teardownCommand $name"
 
-    isSet "$isDryrunMode" echo "$helmCommand"
-    notSet "$isDryrunMode" && $(echo "$helmCommand")
+    isSet "$isDryrunMode" echo "$fullTeardownCommand"
+    notSet "$isDryrunMode" && $(echo "$fullTeardownCommand")
 }
 
 function targetMatches() {
