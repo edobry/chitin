@@ -428,3 +428,18 @@ function k8sListServices() {
 function k8sListPostgresServices() {
     kubectl get services | grep postgres | tail -n +2 | cut -d ' ' -f 1
 }
+
+function k8sApplyInstance() {
+    requireArg "an instance name" "$1" || return 1
+    requireArg "the manifest directory" "$2" || return 1
+
+
+    echo "kubectl apply -f $2 -l instance=$1"
+    kubectl apply -f "$2" -l instance="$1"
+}
+
+function k8sDeleteInstance() {
+    requireArg "an instance name" "$1" || return 1
+
+    kubectl delete -l instance="$1" all
+}
