@@ -433,8 +433,6 @@ function k8sApplyInstance() {
     requireArg "an instance name" "$1" || return 1
     requireArg "the manifest directory" "$2" || return 1
 
-
-    echo "kubectl apply -f $2 -l instance=$1"
     kubectl apply -f "$2" -l instance="$1"
 }
 

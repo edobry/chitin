@@ -494,6 +494,8 @@ function installChart() {
     notSet "$isDryrunMode" && $(echo "$fullTemplateCommand")
 
     if notSet "$isRenderMode" && notSet "$isHelmChart"; then
+        echo "Applying rendered manifests..."
+
         local renderCommand="k8sApplyInstance $name dist"
         isSet "$isDryrunMode" && echo "$renderCommand"
         notSet "$isDryrunMode" && $(echo "$renderCommand")
