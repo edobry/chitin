@@ -445,7 +445,7 @@ function k8sDeleteInstance() {
 function k8sGetResourceList() {
     requireArg "an API verb" "$1" || return 1
 
-    kubectl api-resources --namespaced=true --verbs="$1" -o name | tr '\n' ,| sed 's/,$//'
+    kubectl api-resources --verbs="$1" -o name | tr '\n' ,| sed 's/,$//'
 }
 
 function k8sGetAllResources() {
