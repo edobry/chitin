@@ -349,6 +349,7 @@ function installChart() {
 
     if [[ "$source" == "local" ]]; then
         local chartPath="$chart"
+        chart=$(basename "$chart")
     elif [[ "$source" == "remote" ]]; then
         local chartPath="fimbulvetr/$chart"
     else
