@@ -40,5 +40,5 @@ function k9sEnv() {
     checkAuth "$1" || awsAuth "$1"
 
     echo "Launching K9s in context '$2', namespace '$3'"
-    k9s --context "$2" --namespace "$3" -c deployments --request-timeout 30s
+    k9s --context "$2" --namespace "$3" -c deployments
 }
