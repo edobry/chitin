@@ -14,3 +14,17 @@ function sshTunnel() {
     echo "Opening tunnel from localhost:$localPort to $destinationHost:$destinationPort..."
     ssh -L $localPort:$destinationHost:$destinationPort -N $*
 }
+
+function sshValidateRsaKey() {
+    requireArg 'a keyfile' "$1" || return 1
+
+    openssl rsa -inform PEM -in "$1" -noout
+}
+
+# generates the corresponding public key for the given private key file
+# args: path to private key file
+function sshGetPublicKey() {
+    requireArg 'a keyfile' "$1" || return 1
+    
+    ssh-keygen -yf "$1"
+}

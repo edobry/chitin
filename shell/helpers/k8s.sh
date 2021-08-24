@@ -428,3 +428,26 @@ function k8sListServices() {
 function k8sListPostgresServices() {
     kubectl get services | grep postgres | tail -n +2 | cut -d ' ' -f 1
 }
+
+function k8sApplyInstance() {
+    requireArg "an instance name" "$1" || return 1
+    requireArg "the manifest directory" "$2" || return 1
+
+    kubectl apply -f "$2" -l instance="$1"
+}
+
+function k8sDeleteInstance() {
+    requireArg "an instance name" "$1" || return 1
+
+    kubectl delete -l instance="$1" $(k8sGetResourceList delete)
+}
+
+function k8sGetResourceList() {
+    requireArg "an API verb" "$1" || return 1
+
+    kubectl api-resources --verbs="$1" -o name | tr '\n' ,| sed 's/,$//'
+}
+
+function k8sGetAllResources() {
+    kubectl get $(k8sGetResourceList list) --ignore-not-found $@
+}

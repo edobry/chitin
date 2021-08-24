@@ -48,7 +48,7 @@ function k8sPipeline() {
         shift
     fi
 
-    requireArgOptions "a subcommand" "$1" 'render deploy teardown k9s debugPod' || return 1
+    requireArgOptions "a subcommand" "$1" 'render deploy teardown redeploy k9s debugPod' || return 1
     requireArg "the environment name" "$2" || return 1
     local subCommand="$1"
     local envName="$2"
@@ -63,6 +63,7 @@ function k8sPipeline() {
     local isTeardownMode
     local isRenderMode
     local isDeployMode
+    local isRedeployMode
     local isK9sMode
     local isDebugPodMode
     if [[ "$subCommand" == "teardown" ]]; then
@@ -74,6 +75,9 @@ function k8sPipeline() {
     elif [[ "$subCommand" == "deploy" ]]; then
         isDeployMode=true
         echo "-- DEPLOY MODE --"
+    elif [[ "$subCommand" == "redeploy" ]]; then
+        isRedeployMode=true
+        echo "-- REDEPLOY MODE --"
     elif [[ "$subCommand" == "k9s" ]]; then
         isK9sMode=true
     elif [[ "$subCommand" == "debugPod" ]]; then
@@ -182,6 +186,17 @@ function k8sPipeline() {
     fi
     ##
 
+    local modeCommand
+    if isSet $isTeardownMode; then
+        modeCommand='teardownChart'
+    elif isSet $isRenderMode || isSet $isDeployMode; then
+        modeCommand='installChart'
+    elif isSet $isRedeployMode; then
+        modeCommand='redeployChart'
+        unset isRenderMode
+        isDeployMode=true
+    fi
+
     local runtimeConfig=$(echo "$envConfig" | jq -nc \
         --arg envName "$envName" \
         --arg envDir "$envDir" \
@@ -192,6 +207,7 @@ function k8sPipeline() {
         --arg isTestingMode "$isTestingMode" \
         --arg isTeardownMode "$isTeardownMode" \
         --arg isDeployMode "$isDeployMode" \
+        --arg isRedeployMode "$isRedeployMode" \
         --arg isRenderMode "$isRenderMode" \
         --arg isChartMode "$isChartMode" \
         'inputs * {
@@ -205,6 +221,7 @@ function k8sPipeline() {
             isTestingMode: ($isTestingMode != ""),
             isTeardownMode: ($isTeardownMode != ""),
             isDeployMode: ($isDeployMode != ""),
+            isRedeployMode: ($isRedeployMode != ""),
             isRenderMode: ($isRenderMode != ""),
             isChartMode: ($isChartMode != "")
         } }')
@@ -218,8 +235,6 @@ function k8sPipeline() {
     notSet "$isTestingMode" && notSet "$isDryrunMode" && notSet "$isTeardownMode" && helm repo update
     
     local chartDefaults=$(readJSON "$runtimeConfig" '.chartDefaults')
-
-    local modeCommand=$(notSet $isTeardownMode && echo installChart || echo teardownChart)
 
     local cdModeFlag=$(isSet $isCdMode && echo "true" || echo "false")
 
@@ -335,6 +350,14 @@ function installChart() {
     local config=$(readJSON "$deploymentOptions" '.value')
     local chart=$(readJSON "$config" '.chart')
 
+    local chartType=$(readJSON "$config" '.type // "helm"')
+    requireArgOptions "a chart type" "$chartType" "helm cdk8s" || return 1
+
+    local isHelmChart
+    if [[ "$chartType" == 'helm' ]]; then
+        isHelmChart=true
+    fi
+
     local chartDefaults
     chartDefaults=$(readJSON "$allChartDefaults" ".\"$chart\" | del(.values)")
     local chartDefaultCode=$?
@@ -351,7 +374,8 @@ function installChart() {
         local chartPath="$chart"
         chart=$(basename "$chart")
     elif [[ "$source" == "remote" ]]; then
-        local chartPath="fimbulvetr/$chart"
+        local chartPath=$(isSet $isHelmChart && echo "fimbulvetr/$chart" || echo "@chainalysis/$chart")
+        # echo "chartPath: $chartPath"
     else
         echo "Invalid source '$source', set 'local' or 'remote'"
         return 1
@@ -363,7 +387,7 @@ function installChart() {
     isSet "$isDryrunMode" && echo "$mergedConfig" | prettyYaml
 
     # update chart deps
-    if notSet $isDryrunMode && [[ $source == "local" ]] && [[ -d $chartPath ]]; then
+    if notSet $isDryrunMode && [[ $source == "local" ]] && isSet $isHelmChart && [[ -d $chartPath ]]; then
         if ! helm dep update $chartPath; then
             echo "Skipping due to missing dependency!"
             return 1
@@ -373,22 +397,28 @@ function installChart() {
     ## version
     local version
     if notSet $isTestingMode; then
-        if [[ -z $expectedVersion ]]; then
-            local latestVersion
-            latestVersion=$(helmChartGetLatestVersion "$source" "$chartPath")
-            [[ $? -ne 0 ]] && { echo "Couldn't fetch latest version, skipping"; echo "$latestVersion"; return 1; }
+        if isSet $isHelmChart; then
+            if [[ -z $expectedVersion ]]; then
+                local latestVersion
+                latestVersion=$(helmChartGetLatestVersion "$source" "$chartPath")
+                [[ $? -ne 0 ]] && { echo "Couldn't fetch latest version, skipping"; echo "$latestVersion"; return 1; }
 
-            echo "No version configured, using '$chart:$latestVersion'; consider locking the deployment to this version"
-            version=$latestVersion
-        elif ! helmChartCheckVersion "$source" "$chartPath" "$expectedVersion"; then
-            echo "Could not find expected version for $source chart: '$chartPath':$expectedVersion"
-            return 1
+                echo "No version configured, using '$chart:$latestVersion'; consider locking the deployment to this version"
+                version=$latestVersion
+            elif ! helmChartCheckVersion "$source" "$chartPath" "$expectedVersion"; then
+                echo "Could not find expected version for $source chart: '$chartPath':$expectedVersion"
+                return 1
+            else
+                version=$expectedVersion
+            fi
         else
-            version=$expectedVersion
+            if [[ "$source" == "remote" ]]; then
+                version=$expectedVersion
+            fi
         fi
     fi
 
-    local helmVersionArg=$([ -n $version ] && echo "--version=$version" || echo "")
+    local helmVersionArg=$([[ -n $version ]] && isSet $isHelmChart && echo "--version=$version" || echo "")
     ##
 
     local inlineValues=$(readJSON "$mergedConfig" '.values // {}')
@@ -411,7 +441,7 @@ function installChart() {
 
     # generate environment-specific configuration and write to a temporary file
     local envValues=$(jq -cr '{
-        region: $region, nodeSelector: {
+        region: $region, nodegroup: .environment.eksNodegroup, nodeSelector: {
             "eks.amazonaws.com/nodegroup": (.environment.eksNodegroup // empty) } }' \
             --arg region $region <<< "$runtimeConfig")
     
@@ -423,7 +453,7 @@ function installChart() {
     isSet "$isDryrunMode" && echo "$envValues" | prettyYaml
     isSet "$isDryrunMode" && echo
 
-    local envFile=$(tempFile)
+    local envFile=$(tempFile).json
     notSet "$isDryrunMode" && echo "$envValues" > "$envFile"
 
     local chartDefaultFilePath="$envDir/chartDefaults/$chart.yaml"
@@ -433,15 +463,20 @@ function installChart() {
     local deploymentFileArg=$([ -f "$deploymentFilePath" ] && echo "-f $deploymentFilePath" || echo "")
 
     local chartDefaultInlineValues=$(readJSON "$allChartDefaults" ".\"$chart\" | .values // {}")
-    local chartDefaultInlineValuesFile=$(tempFile)
+    local chartDefaultInlineValuesFile=$(tempFile).yaml
     writeJSONToYamlFile "$chartDefaultInlineValues" "$chartDefaultInlineValuesFile"
 
-    local inlineValuesFile=$(tempFile)
+    local inlineValuesFile=$(tempFile).yaml
     writeJSONToYamlFile "$inlineValues" "$inlineValuesFile"
     ##
 
-    local helmSubCommand=$(isSet $isRenderMode && echo "template" || echo "upgrade --install")
-
+    local subCommand
+    if isSet $isRenderMode; then
+        subCommand="template"
+    else
+        subCommand=$(isSet $isHelmChart && echo "upgrade --install" || echo "deploy")
+    fi
+    
     # precedence order
     #
     # chart default
@@ -450,14 +485,53 @@ function installChart() {
     # per env chart default (inline)
     # deployment (file)
     # deployment (inline)
+    local cdk8sVersionArg=$([[ -n $expectedVersion ]] && echo "$expectedVersion" || echo "_")
+    local templateCommand=$(isSet $isHelmChart && echo "helm" || echo "k8sRunCdk8sChart $source $chart $cdk8sVersionArg")
 
-    local helmCommand="helm $helmSubCommand $name $chartPath $helmVersionArg $helmEnvValues -f $envFile $chartDefaultFileArg \
+    local fullTemplateCommand="$templateCommand "$subCommand" $name $chartPath $helmVersionArg $helmEnvValues -f $envFile $chartDefaultFileArg \
         -f $chartDefaultInlineValuesFile $deploymentFileArg -f $inlineValuesFile"
 
-    isSet "$isDryrunMode" && echo "$helmCommand"
-    notSet "$isDryrunMode" && $(echo "$helmCommand")
+    isSet "$isDryrunMode" && echo "$fullTemplateCommand"
+    local result
+    notSet "$isDryrunMode" && $(echo "$fullTemplateCommand")
+    result=$?
+
+    if notSet "$isRenderMode" && notSet "$isHelmChart"; then
+        if [[ $result -eq 0 ]]; then
+            echo "Applying rendered manifests..."
+
+            local renderCommand="k8sApplyInstance $name dist"
+            isSet "$isDryrunMode" && echo "$renderCommand"
+            notSet "$isDryrunMode" && $(echo "$renderCommand")
+        else
+            echo 'Error rendering chart!'
+        fi
+    fi
 
     return 0
+}
+
+function k8sRunCdk8sChart() {
+    requireArg "source" "$1" || return 1
+    requireArg "chart" "$2" || return 1
+    requireArg "version" "$3" || return 1
+    requireArg "subcommand" "$4" || return 1
+    requireArg "chart instance name" "$5" || return 1
+    requireArg "chart package" "$6" || return 1
+    requireArg "argument list" "$7" || return 1
+
+    local source=$1
+    local chart=$2
+    local version=$([[ "$3" == "_" ]] && echo "" || echo "@$3")
+    local subcommand="$4"
+    local instanceName="$5"
+    local package="$6"
+    shift; shift; shift; shift; shift; shift;
+
+    local sourceArg=$([[ "$source" == "remote" ]] && echo "--package $package$version" || echo "--prefix $package")
+    local chartArg=$([[ "$source" == "remote" ]] && echo "$chart" || echo "$(basename $chart)-chart" )
+    
+    npm exec $sourceArg $chart -- template $instanceName $@
 }
 
 function teardownChart() {
@@ -474,14 +548,32 @@ function teardownChart() {
     local config=$(readJSON "$deploymentOptions" '.value')
     local chart=$(readJSON "$config" '.chart')
 
+    local chartType=$(readJSON "$config" '.type // "helm"')
+    requireArgOptions "a chart type" "$chartType" "helm cdk8s" || return 1
+
+    local isHelmChart
+    if [[ "$chartType" == 'helm' ]]; then
+        isHelmChart=true
+    fi
+
     (targetMatches "$runtimeConfig" "$deploymentOptions") || return 0
 
     echo -e "\nTearing down '$name'..."
 
-    helmCommand="helm uninstall $name"
+    local teardownCommand=$(isSet $isHelmChart && echo "helm uninstall" || echo "k8sDeleteInstance")
+    local fullTeardownCommand="$teardownCommand $name"
 
-    isSet "$isDryrunMode" echo "$helmCommand"
-    notSet "$isDryrunMode" && $(echo "$helmCommand")
+    isSet "$isDryrunMode" echo "$fullTeardownCommand"
+    notSet "$isDryrunMode" && $(echo "$fullTeardownCommand")
+}
+
+function redeployChart() {
+    local runtimeConfig="$1"
+    local deploymentOptions="$2"
+    local allChartDefaults="$3"
+
+    teardownChart "$runtimeConfig" "$deploymentOptions" "$chartDefaults"
+    installChart "$runtimeConfig" "$deploymentOptions" "$chartDefaults"
 }
 
 function targetMatches() {

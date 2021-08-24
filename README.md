@@ -277,6 +277,7 @@ The `k8s-pipeline` helper module adds functionality which helps deploy workloads
 Functions:
 
 - `k8sPipeline`: automates Helm operations, enabling simple deployments
+- `k9sPipeline`: launches `k9s` preconfigured for the specified environment
 
 #### Kafka
 

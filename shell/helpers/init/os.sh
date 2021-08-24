@@ -21,6 +21,6 @@ else
     }
 
     function base64Decode() {
-        base64 --decode
+        base64 -d
     }
 fi
