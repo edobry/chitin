@@ -528,10 +528,12 @@ function k8sRunCdk8sChart() {
     local package="$6"
     shift; shift; shift; shift; shift; shift;
 
-    local sourceArg=$([[ "$source" == "remote" ]] && echo "--package $package$version" || echo "--prefix $package")
-    local chartArg=$([[ "$source" == "remote" ]] && echo "$chart" || echo "$(basename $chart)-chart" )
-    
-    npm exec $sourceArg $chart -- template $instanceName $@
+    if [[ "$source" == "remote" ]]; then
+        npm exec --package $package$version chart -- template $instanceName $@
+    else
+        # $(basename $chart)-chart
+        npm exec --prefix $package chart -- template $instanceName $@
+    fi
 }
 
 function teardownChart() {
