@@ -2,8 +2,7 @@
 
 if [[ -z "$IS_DOCKER" ]]; then
     SOURCE_DIR=$(dirname -- "$0")
-
-    if [[ "$0" = /* ]]; then
+    if [[ "$0" = '/*' ]]; then
         SCRIPT_PATH="$0"
     elif [ ! -z ${BASH_SOURCE[0]} ]; then
         SCRIPT_PATH="${BASH_SOURCE[0]}"
