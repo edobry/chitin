@@ -1,6 +1,6 @@
 function gitIsRepoRoot() {
     requireArg "a directory" "$1"
-    
+
     [[ -d "$1/.git" ]]
 }
 
@@ -30,7 +30,7 @@ function sparseCheckout() {
 
     # fetch single file
     git remote add origin "$remoteRepo" > /dev/null 2>&1
-    git fetch --depth=1 origin master > /dev/null 2>&1
-    git checkout master > /dev/null 2>&1
+    git fetch --depth=1 origin main > /dev/null 2>&1
+    git checkout main > /dev/null 2>&1
     popd > /dev/null
 }
