@@ -14,7 +14,7 @@ function awsEksGetImageVersion() {
     local namespace="$3"
 
     echo "Checking current version of $resourceId..."
-    local currentImage=$(getK8sImage $resourceType $resourceId $namespace)
+    local currentImage=$(k8sGetImage $resourceType $resourceId $namespace)
 
     awsEksExtractImageVersion "$currentImage"
 }
@@ -31,7 +31,7 @@ function awsEksUpgradeComponent() {
     local namespace="$3"
     local newVersion="v$4"
 
-    local currentImage=$(getK8sImage $resourceType $resourceId $namespace)
+    local currentImage=$(k8sGetImage $resourceType $resourceId $namespace)
     local currentVersion=$(awsEksExtractImageVersion $currentImage)
 
     if [[ $currentVersion == $newVersion ]]; then
@@ -59,7 +59,7 @@ function awsEksUpgradeVpcCniPlugin() {
     local newVersion="v$1"
     local region="$2"
 
-    local currentImage=$(getK8sImage $resourceType $resourceId $namespace)
+    local currentImage=$(k8sGetImage $resourceType $resourceId $namespace)
     local currentVersion=$(awsEksExtractImageVersion $currentImage)
 
     if [[ $currentVersion == $newVersion ]]; then

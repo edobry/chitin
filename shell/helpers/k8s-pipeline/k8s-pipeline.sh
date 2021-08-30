@@ -169,7 +169,7 @@ function k8sPipeline() {
     fi
 
     if isSet "$isDebugPodMode"; then
-        debugPod --az ${region}a
+        k8sDebugPod --az ${region}a
         return 0
     fi
 

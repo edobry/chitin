@@ -235,8 +235,8 @@ The `k8s-env` helper sets up your Kubernetes configuration for working with our 
 
 Functions:
 
-- `getCurrentK8sContext`: gets the current k8s context config
-- `deleteK8sContext`: deletes a k8s context
+- `k8sGetCurrentContext`: gets the current k8s context config
+- `k8sDeleteContext`: deletes a k8s context
 
 ##### Helpers
 
@@ -250,18 +250,18 @@ associated administrative tasks.
 
 Functions:
 
-- `debugPod`: launches a debug pod in the cluster preloaded with common networking tools, drops you into its shell when created
-- `downDeploy/upDeploy/reDeploy`: stop/start/restart a deployment
-- `downDeployAndWait`: scales down a deployment to 0 replicas, and awaits the operation's completion
-- `secretEncode`: base64-encodes a string for use in a Secret
+- `k8sDebugPod`: launches a debug pod in the cluster preloaded with common networking tools, drops you into its shell when created
+- `k8sDownDeploy/k8sUpDeploy/k8sReDeploy`: stop/start/restart a deployment
+- `k8sDownDeployAndWait`: scales down a deployment to 0 replicas, and awaits the operation's completion
+- `k8sSecretEncode`: base64-encodes a string for use in a Secret
 - `rds`: connects to an RDS instance from the service name
 - `getServiceExternalUrl`: fetches the external url, with port, for a Service with a load balancer configured
 - `getServiceEndpoint`: fetches the endpoint url for both services and proxies to zen garden
-- `killDeploymentPods`: kills all pods for a deployment, useful for forcing a restart during dev
-- `getK8sImage`: gets the container image for a given resource
-- `getServiceAccountToken`: gets the token for a given ServiceAccount
-- `createTmpK8sSvcAccContext`: creates a temporary k8s context for a ServiceAccount
-- `runAsServiceAccount`: impersonates a given ServiceAccount and runs a command
+- `k8sKillDeploymentPods`: kills all pods for a deployment, useful for forcing a restart during dev
+- `k8sGetImage`: gets the container image for a given resource
+- `k8sGetServiceAccountToken`: gets the token for a given ServiceAccount
+- `k8sCreateTmpSvcAccContext`: creates a temporary k8s context for a ServiceAccount
+- `k8sRunAsServiceAccount`: impersonates a given ServiceAccount and runs a command
 - `kubectlAsServiceAccount`: impersonates a given ServiceAccount and runs a kubectl command using its token
 - `k8sGetResourceAnnotation`: gets an annotation value for the given resource
 - `k8sGetServiceExternalHostname`: gets the external hostname created for a given Service

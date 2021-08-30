@@ -18,14 +18,14 @@ function k8sEnvInit() {
 k8sEnvInit
 
 # gets the current k8s context config
-function getCurrentK8sContext() {
+function k8sGetCurrentContext() {
     kubectl config view -o json | jq -cr --arg ctx $(kubectl config current-context) \
         '.contexts[] | select(.name == $ctx).context'
 }
 
 # deletes a k8s context
 # args: context name
-function deleteK8sContext() {
+function k8sDeleteContext() {
     requireArg "a context name" "$1" || return 1
     local contextName="$1"
 
