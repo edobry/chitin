@@ -285,10 +285,9 @@ Functions:
 
 Functions:
 
-- `listTopics`: lists all known topics
-- `readTopic`: reads from a topic at a certain offset
-- `resetTopics`: resets an MSK cluster's topics by destroying and recreating using terraform
-- `resetCoinTopic`: pauses `tx-producer`, and then resets the MSK cluster's coin-specific topics using terraform
+- `kafkaListTopics`: lists all known topics
+- `kafkaReadTopic`: reads from a topic at a certain offset
+- `kafkaResetTopics`: resets an MSK cluster's topics by destroying and recreating using terraform
 - `kafkacli`: tool to query tx-producer kafka topics
 
 #### Coin Collection
@@ -300,6 +299,7 @@ Functions:
 
 - `ccResetBackendDb`: pauses an `ib-backend`, recreates the db, and unpauses
 - `ccCreateTransferDbs`: creates a transfer database for each coin name passed in
+- `ccResetCoinTopic`: pauses `tx-producer`, and then resets the MSK cluster's coin-specific topics using terraform
 - `ccGetLatestClusterVersion`: finds the latest cluster version by querying S3
 - `ccUpgradeEnvironmentClusterVersion`: upgrades an environment's cluster version to either the specified or latest
 
