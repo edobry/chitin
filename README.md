@@ -196,10 +196,10 @@ Functions:
 
 Functions:
 
-- `listDynamoTables`: lists all DyanmoDB tables
-- `listDynamoTableItems`: lists all items in the given DynamoDB table
-- `getDynamoItem`: gets a specific DynamoDB item
-- `updateDynamoItem`: updates the value of a specific DynamoDB item
+- `awsDynamoListTables`: lists all DyanmoDB tables
+- `awsDynamoListTableItems`: lists all items in the given DynamoDB table
+- `awsDynamoGetItem`: gets a specific DynamoDB item
+- `awsDynamoUpdateItem`: updates the value of a specific DynamoDB item
 
 #### Docker
 
