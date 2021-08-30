@@ -178,10 +178,10 @@ Functions:
 
 Functions:
 
-- `listSecureParams`: lists all SSM parameter names
-- `getSecureParam`: fetches and decrypts an SSM parameter
-- `setSecureParam`: sets an SSM parameter
-- `deleteSecureParam`: deletes an SSM parameter
+- `awsSsmListParams`: lists all SSM parameter names
+- `awsSsmGetParam`: fetches and decrypts an SSM parameter
+- `awsSsmSetParam`: sets an SSM parameter
+- `awsSsmDeleteParam`: deletes an SSM parameter
 
 ##### MSK
 
