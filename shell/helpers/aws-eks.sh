@@ -149,8 +149,8 @@ function awsEksUpdateNodegroup() {
     response=$(aws eks update-nodegroup-version --cluster-name $1 --nodegroup-name $2 2>/dev/null)
     [[ $? -eq 0 ]] || return 1
 
-    local updateStatus=$(readJSON "$response" '.update.status')
-    local newVersion=$(readJSON "$response" '.update.params[] | select(.type == "ReleaseVersion") | .value')
+    local updateStatus=$(jsonRead "$response" '.update.status')
+    local newVersion=$(jsonRead "$response" '.update.params[] | select(.type == "ReleaseVersion") | .value')
 
     echo "Status of node group '$2' update to version '$newVersion' is $updateStatus"
 }

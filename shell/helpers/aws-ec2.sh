@@ -183,7 +183,7 @@ function awsEc2ListNetworkInterfaceAddressesJson() {
 
 # lists all ENIs along with their associated private IP addresses
 function awsEc2ListNetworkInterfaceAddresses() {
-    readJSON "$(awsEc2ListNetworkInterfaceAddressesJson)" '"\(.id) - \(.addresses | join(", "))"'
+    jsonRead "$(awsEc2ListNetworkInterfaceAddressesJson)" '"\(.id) - \(.addresses | join(", "))"'
 }
 
 # gets the description for a given ENI

@@ -61,11 +61,11 @@ function dtDebug() {
 }
 
 function dtReadConfig() {
-    readJSON "$CA_DT_CONFIG" $@
+    jsonRead "$CA_DT_CONFIG" $@
 }
 
 function dtReadConfigFile() {
-    readJSONFile $(getDTConfigLocation)/config.json $@
+    jsonReadFile $(getDTConfigLocation)/config.json $@
 }
 
 function dtReadModuleConfig() {

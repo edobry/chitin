@@ -292,8 +292,8 @@ function createTmpK8sSvcAccContext() {
 
     local ctxName="tmp-ctx-svc-acc-$svcAccountName"
     kubectl config set-context $ctxName \
-        --cluster $(readJSON "$currentCtx" '.cluster') \
-        --namespace $(readJSON "$currentCtx" '.namespace') \
+        --cluster $(jsonRead "$currentCtx" '.cluster') \
+        --namespace $(jsonRead "$currentCtx" '.namespace') \
         --user $svcAccountName > /dev/null
 
     echo "$ctxName"

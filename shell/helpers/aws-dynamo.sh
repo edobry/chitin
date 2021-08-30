@@ -44,7 +44,7 @@ function awsDynamoUpdateItem() {
     local newValue="$4"
 
     local newValExpression=$(jq -nc --arg val "$newValue" '{ ":val": { S: $val } }')
-    local itemKeyReadable=$(readJSON "$itemKey" 'to_entries[] | "\(.key) = \(.value.S)"')
+    local itemKeyReadable=$(jsonRead "$itemKey" 'to_entries[] | "\(.key) = \(.value.S)"')
 
     echo "Setting DynamoDB value..."
     echo "Table: '$tableName'"

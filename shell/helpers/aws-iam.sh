@@ -77,8 +77,8 @@ function awsIamShowPolicy() {
 
     echo "$policyAttachments" |\
     while read -r attachment; do
-        local header=$(readJSON "$attachment" '"\(.Effect) \(.Resource)"')
-        local actions=$([[ $(readJSON "$attachment" '.Action') != "*" ]] && readJSON "$attachment" '.Action[]' || echo "All actions")
+        local header=$(jsonRead "$attachment" '"\(.Effect) \(.Resource)"')
+        local actions=$([[ $(jsonRead "$attachment" '.Action') != "*" ]] && jsonRead "$attachment" '.Action[]' || echo "All actions")
 
         echo "$header"
         echo "---------------------------"
@@ -118,7 +118,7 @@ function awsIamCreateProgrammaticCreds() {
 
     awsIamAuthorizeAssumeRole $newIamRole $newIamUsername
 
-    readJSON "$createKeyOutput" '.AccessKey | { user: .UserName, role: $roleName, id: .AccessKeyId, key: .SecretAccessKey }'\
+    jsonRead "$createKeyOutput" '.AccessKey | { user: .UserName, role: $roleName, id: .AccessKeyId, key: .SecretAccessKey }'\
         --arg roleName $newIamRole
 }
 
@@ -126,10 +126,10 @@ function awsIamDeleteProgrammaticCreds() {
     requireJsonArg "of programmatic credentials" "$1" || return 1
 
     local creds="$1"
-    validateJSONFields "$creds" user role || return 1
+    validateJsonFields "$creds" user role || return 1
 
-    awsIamDeleteProgrammaticUser quiet $(readJSON "$creds" '.user')
-    awsIamDeleteRole yes quiet $(readJSON "$creds" '.role')
+    awsIamDeleteProgrammaticUser quiet $(jsonRead "$creds" '.user')
+    awsIamDeleteRole yes quiet $(jsonRead "$creds" '.role')
 }
 
 # args: (optional) "quiet"
@@ -347,9 +347,9 @@ function awsIamAssumeRoleShell() {
      fi
 
     echo "Starting subshell as role '$1'..."
-    AWS_ACCESS_KEY_ID="$(readJSON "$awsCreds" '.Credentials.AccessKeyId')" \
-        AWS_SECRET_ACCESS_KEY="$(readJSON "$awsCreds" '.Credentials.SecretAccessKey')" \
-        AWS_SESSION_TOKEN="$(readJSON "$awsCreds" '.Credentials.SessionToken')" \
+    AWS_ACCESS_KEY_ID="$(jsonRead "$awsCreds" '.Credentials.AccessKeyId')" \
+        AWS_SECRET_ACCESS_KEY="$(jsonRead "$awsCreds" '.Credentials.SecretAccessKey')" \
+        AWS_SESSION_TOKEN="$(jsonRead "$awsCreds" '.Credentials.SessionToken')" \
         $SHELL
     echo "Exiting assumed role '$1' session"
 }
