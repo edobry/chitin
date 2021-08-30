@@ -1,10 +1,10 @@
-function extractEksImageVersion() {
+function awsEksExtractImageVersion() {
     requireArg "an EKS Docker image" "$1" || return 1
 
     echo "$1" | cut -d ":" -f 2 | sed 's/-eksbuild\.1//'
 }
 
-function getEKSImageVersion() {
+function awsEksGetImageVersion() {
     requireArg "a resource type" "$1" || return 1
     requireArg "a resource identifier" "$2" || return 1
     requireArg "a namespace" "$3" || return 1
@@ -16,10 +16,10 @@ function getEKSImageVersion() {
     echo "Checking current version of $resourceId..."
     local currentImage=$(getK8sImage $resourceType $resourceId $namespace)
 
-    extractEksImageVersion "$currentImage"
+    awsEksExtractImageVersion "$currentImage"
 }
 
-function upgradeEksComponent() {
+function awsEksUpgradeComponent() {
     requireArg "a resource type" "$1" || return 1
     requireArg "a resource identifier" "$2" || return 1
     requireArg "a namespace" "$3" || return 1
@@ -32,7 +32,7 @@ function upgradeEksComponent() {
     local newVersion="v$4"
 
     local currentImage=$(getK8sImage $resourceType $resourceId $namespace)
-    local currentVersion=$(extractEksImageVersion $currentImage)
+    local currentVersion=$(awsEksExtractImageVersion $currentImage)
 
     if [[ $currentVersion == $newVersion ]]; then
         echo "Current version of $resourceId is already up-to-date!"
@@ -48,7 +48,7 @@ function upgradeEksComponent() {
     echo "Done!"
 }
 
-function upgradeEksVpcCniPlugin() {
+function awsEksUpgradeVpcCniPlugin() {
     requireArg "the new version" "$1" || return 1
     requireArg "the region" "$2" || return 1
     checkAuthAndFail || return 1
@@ -60,7 +60,7 @@ function upgradeEksVpcCniPlugin() {
     local region="$2"
 
     local currentImage=$(getK8sImage $resourceType $resourceId $namespace)
-    local currentVersion=$(extractEksImageVersion $currentImage)
+    local currentVersion=$(awsEksExtractImageVersion $currentImage)
 
     if [[ $currentVersion == $newVersion ]]; then
         echo "Current version of $resourceId is already up-to-date!"
@@ -80,7 +80,7 @@ function upgradeEksVpcCniPlugin() {
 }
 
 
-function upgradeEKS() {
+function awsEksUpgrade() {
     requireArg "the new K8s version" "$1" || return 1
     requireArg "the new kube-proxy version" "$2" || return 1
     requireArg "the new CoreDNS version" "$3" || return 1
@@ -96,37 +96,37 @@ function upgradeEKS() {
 
     echo "Upgrading cluster components to version $newClusterVersion..."
 
-    upgradeEksComponent daemonset kube-proxy kube-system $newKubeProxyVersion
-    upgradeEksComponent deployment coredns kube-system $newCoreDnsVersion
-    upgradeEksVpcCniPlugin $newVpcCniPluginVersion $region
+    awsEksUpgradeComponent daemonset kube-proxy kube-system $newKubeProxyVersion
+    awsEksUpgradeComponent deployment coredns kube-system $newCoreDnsVersion
+    awsEksUpgradeVpcCniPlugin $newVpcCniPluginVersion $region
 }
 
-function listEksNodegroups() {
+function awsEksListNodegroups() {
     requireArg "a cluster name" "$1" || return 1
     checkAuthAndFail || return 1
 
     aws eks list-nodegroups --cluster-name "$1" | jq -r '.nodegroups[]'
 }
 
-function listEksClusters() {
+function awsEksListClusters() {
     checkAuthAndFail || return 1
 
     aws eks list-clusters | jq -r '.clusters[]'
 }
 
-function updateEksNodegroups() {
+function awsEksUpdateNodegroups() {
     requireArg "a cluster name" "$1" || return 1
     checkAuthAndFail || return 1
 
     local clusterName="$1"
-    local nodeGroups=$(listEksNodegroups $clusterName)
+    local nodeGroups=$(awsEksListNodegroups $clusterName)
 
     echo "Updating node groups for cluster $clusterName..."
 
     echo $nodeGroups |\
     while read -r nodegroup; do
         echo -e "Starting update for node group $nodegroup..."
-        updateEksNodegroup $clusterName $nodegroup
+        awsEksUpdateNodegroup $clusterName $nodegroup
     done
 
     echo -e "\nWaiting for node group updates to complete..."
@@ -134,13 +134,13 @@ function updateEksNodegroups() {
     echo $nodeGroups |\
     while read -r nodegroup; do
         echo "Waiting for $nodegroup..."
-        waitForEksNodeGroupActive $clusterName $nodegroup
+        awsEksWaitForNodeGroupActive $clusterName $nodegroup
     done
 
     echo "Done!"
 }
 
-function updateEksNodegroup() {
+function awsEksUpdateNodegroup() {
     requireArg "a cluster name" "$1" || return 1
     requireArg "a node group name" "$2" || return 1
     checkAuthAndFail || return 1
@@ -155,7 +155,7 @@ function updateEksNodegroup() {
     echo "Status of node group '$2' update to version '$newVersion' is $updateStatus"
 }
 
-function waitForEksNodeGroupActive() {
+function awsEksWaitForNodeGroupActive() {
     requireArg "a cluster name" "$1" || return 1
     requireArg "a node group name" "$2" || return 1
     checkAuthAndFail || return 1
