@@ -310,11 +310,11 @@ Functions:
 
 Functions:
 
-- `updateZCashParams`: ensures existence of an up-to-date EBS snapshot containing the latest ZCash encryption parameter files.
-- `createZCashParamsVolume`: creates an EBS volume containing the latest ZCash encryption parameter files
-- `snapshotNodeState`: pauses a p2p node, snapshots the EBS volume backing it, and unpauses
-- `cloneNodeState`: clones an existing node's state by snapshotting and then creating a volume
-- `cloneNodeStateCrossAccount`: clones an existing node's state across accounts by snapshotting, authorizing, copying, and then creating a volume
+- `p2pUpdateZCashParams`: ensures existence of an up-to-date EBS snapshot containing the latest ZCash encryption parameter files.
+- `p2pCreateZCashParamsVolume`: creates an EBS volume containing the latest ZCash encryption parameter files
+- `p2pSnapshotNodeState`: pauses a p2p node, snapshots the EBS volume backing it, and unpauses
+- `p2pCloneNodeState`: clones an existing node's state by snapshotting and then creating a volume
+- `p2pCloneNodeStateCrossAccount`: clones an existing node's state across accounts by snapshotting, authorizing, copying, and then creating a volume
 
 #### SSH
 
