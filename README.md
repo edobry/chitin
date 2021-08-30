@@ -298,10 +298,10 @@ Functions:
 
 Functions:
 
-- `resetBackendDb`: pauses an `ib-backend`, recreates the db, and unpauses
-- `createTransferDbs`: creates a transfer database for each coin name passed in
-- `getLatestClusterVersion`: finds the latest cluster version by querying S3
-- `upgradeEnvironmentClusterVersion`: upgrades an environment's cluster version to either the specified or latest
+- `ccResetBackendDb`: pauses an `ib-backend`, recreates the db, and unpauses
+- `ccCreateTransferDbs`: creates a transfer database for each coin name passed in
+- `ccGetLatestClusterVersion`: finds the latest cluster version by querying S3
+- `ccUpgradeEnvironmentClusterVersion`: upgrades an environment's cluster version to either the specified or latest
 
 #### P2P Nodes
 
