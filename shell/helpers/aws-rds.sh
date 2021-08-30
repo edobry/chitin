@@ -1,11 +1,11 @@
 # lists all RDS instances in the account, with names
-function listDatabases() {
+function awsRdsListDatabases() {
     aws rds describe-db-instances | jq -r '.DBInstances[] | .DBInstanceIdentifier'
 }
 
 # checks the existence of an RDS snapshot with the given name
 # args: RDS snapshot name
-function checkRdsSnapshotExistence() {
+function awsRdsCheckSnapshotExistence() {
     requireArg "a snapshot name" $1 || return 1
 
     aws rds describe-db-snapshots --db-snapshot-identifier $1 > /dev/null 2>&1
@@ -15,8 +15,8 @@ function checkRdsSnapshotExistence() {
 
 # polls the status of the given RDS snapshot until it is available
 # args: RDS snapshot name
-function waitUntilRdsSnapshotReady() {
-    if ! checkRdsSnapshotExistence $1; then
+function awsRdsWaitUntilSnapshotReady() {
+    if ! awsRdsCheckSnapshotExistence $1; then
         echo "No snapshot with the given name found!"
         return 1
     fi
@@ -34,8 +34,8 @@ function waitUntilRdsSnapshotReady() {
 
 # waits for the RDS snapshot with the given name to be available, and then deletes it
 # args: RDS snapshot name
-function deleteRdsSnapshot() {
-    waitUntilRdsSnapshotReady $1
+function awsRdsDeleteSnapshot() {
+    awsRdsWaitUntilSnapshotReady $1
 
     aws rds delete-db-snapshot --db-snapshot-identifier $1 > /dev/null
 
@@ -50,7 +50,7 @@ function deleteRdsSnapshot() {
 
 # checks the existence of an RDS instance with the given name
 # args: RDS instance name
-function checkRdsInstanceExistence() {
+function awsRdsCheckInstanceExistence() {
     requireArg "an instance name" $1 || return 1
 
     aws rds describe-db-instances --db-instance-identifier $1 > /dev/null 2>&1
@@ -60,19 +60,19 @@ function checkRdsInstanceExistence() {
 
 # snapshots the given RDS instance
 # args: RDS instance name, RDS snapshot name
-function snapshotRds() {
+function awsRdsSnapshot() {
     requireArg "an RDS instance name" $1 || return 1
     requireArg "a snapshot name" $2 || return 1
 
     local rdsName=$1
     local snapshotName=$2
 
-    if ! checkRdsInstanceExistence $rdsName; then
+    if ! awsRdsCheckInstanceExistence $rdsName; then
         echo "No RDS instance with the given name exists!"
         return 1
     fi
 
-    if checkRdsSnapshotExistence $snapshotName; then
+    if awsRdsCheckSnapshotExistence $snapshotName; then
         echo "Snapshot with given name already exists!"
         return 1
     fi

@@ -160,11 +160,11 @@ Functions:
 
 Functions:
 
-- `checkRdsSnapshotExistence`: checks the existence of an RDS snapshot with the given name
-- `waitUntilRdsSnapshotReady`: polls the status of the given RDS snapshot until it is available
-- `deleteRdsSnapshot`: waits for the RDS snapshot with the given name to be available, and then deletes it
-- `checkRdsInstanceExistence`: checks the existence of an RDS instance with the given name
-- `snapshotRds`: snapshots the given RDS instance
+- `awsRdsCheckSnapshotExistence`: checks the existence of an RDS snapshot with the given name
+- `awsRdsWaitUntilSnapshotReady`: polls the status of the given RDS snapshot until it is available
+- `awsRdsDeleteSnapshot`: waits for the RDS snapshot with the given name to be available, and then deletes it
+- `awsRdsCheckInstanceExistence`: checks the existence of an RDS instance with the given name
+- `awsRdsSnapshot`: snapshots the given RDS instance
 
 ##### S3
 
