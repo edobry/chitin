@@ -59,7 +59,7 @@ function dtLoadConfig() {
     # load meta module
     source $CA_DT_DIR/shell/helpers/meta.sh
 
-    local configLocation=$(getDTConfigLocation)
+    local configLocation=$(dtGetConfigLocation)
 
     local json5ConfigFileName="config.json5"
     local json5ConfigFilePath="$configLocation/$json5ConfigFileName"
@@ -68,7 +68,7 @@ function dtLoadConfig() {
         dtLog "initializing config file at '$json5ConfigFilePath'"
         mkdir -p $configLocation
         cp $CA_DT_DIR/shell/$json5ConfigFileName $json5ConfigFilePath
-        dtLog "please complete the initialization by running modifyDTConfig"
+        dtLog "please complete the initialization by running dtModifyConfig"
     fi
 
     local configFile

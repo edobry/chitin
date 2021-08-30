@@ -103,7 +103,7 @@ function k8sPipeline() {
 
     local apiVersion=$(jsonRead "$envConfig" '.apiVersion // empty')
     if isSet $apiVersion; then
-        checkDTVersion "$apiVersion" || return 1
+        dtCheckVersion "$apiVersion" || return 1
     fi
 
     local tfEnv=$(jsonRead "$envConfig" '.environment.tfEnv // empty')
@@ -292,7 +292,7 @@ function createK8sPipelineEnv() {
     local k8sContext="$4"
     local k8sNamespace="$5"
 
-    local apiVersion=$(getReleasedDTVersion)
+    local apiVersion=$(dtGetReleasedVersion)
     local config=$(jq -n \
         --arg apiVersion $apiVersion \
         --arg envName $envName \
