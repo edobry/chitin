@@ -93,27 +93,27 @@ function k8sPipeline() {
 
     ## load env config
     local configFile=$envDir/config.json
-    if ! validateJSONFile $configFile; then
+    if ! validateJsonFile $configFile; then
         echo "Config file at '$configFile' is not valid JSON, exiting!"
         return 1
     fi
 
-    local envConfig=$(readJSONFile $configFile)
-    isSet "$isDebugMode" && echo "envConfig:" && readJSON "$envConfig" '.'
+    local envConfig=$(jsonReadFile $configFile)
+    isSet "$isDebugMode" && echo "envConfig:" && jsonRead "$envConfig" '.'
 
-    local apiVersion=$(readJSON "$envConfig" '.apiVersion // empty')
+    local apiVersion=$(jsonRead "$envConfig" '.apiVersion // empty')
     if isSet $apiVersion; then
-        checkDTVersion "$apiVersion" || return 1
+        dtCheckVersion "$apiVersion" || return 1
     fi
 
-    local tfEnv=$(readJSON "$envConfig" '.environment.tfEnv // empty')
-    local tfModule=$(readJSON "$envConfig" ".environment.tfModule // empty")
+    local tfEnv=$(jsonRead "$envConfig" '.environment.tfEnv // empty')
+    local tfModule=$(jsonRead "$envConfig" ".environment.tfModule // empty")
 
     local accountPath="environment.awsAccount"
-    local account=$(readJSON "$envConfig" ".$accountPath // empty")
+    local account=$(jsonRead "$envConfig" ".$accountPath // empty")
     requireArg "the AWS account name as '$accountPath'" "$account" || return 1
 
-    local region=$(readJSON "$envConfig" '.environment.awsRegion // empty')
+    local region=$(jsonRead "$envConfig" '.environment.awsRegion // empty')
     if [[ -z $region ]]; then
         region=$(awsGetRegion)
         if [[ -z $region ]]; then
@@ -123,11 +123,11 @@ function k8sPipeline() {
     fi
 
     local contextPath="environment.k8sContext"
-    local context=$(readJSON "$envConfig" ".$contextPath // empty")
+    local context=$(jsonRead "$envConfig" ".$contextPath // empty")
     requireArg "the K8s context name as '$contextPath'" "$context" || return 1
 
     local namespacePath="environment.k8sNamespace"
-    local namespace=$(readJSON "$envConfig" ".$namespacePath // empty")
+    local namespace=$(jsonRead "$envConfig" ".$namespacePath // empty")
     requireArg "the K8s namespace name as '$namespacePath'" "$namespace" || return 1
 
     echo "Initializing DP environment '$envName'..."
@@ -169,7 +169,7 @@ function k8sPipeline() {
     fi
 
     if isSet "$isDebugPodMode"; then
-        debugPod --az ${region}a
+        k8sDebugPod --az ${region}a
         return 0
     fi
 
@@ -226,19 +226,19 @@ function k8sPipeline() {
             isChartMode: ($isChartMode != "")
         } }')
 
-    isSet "$isDebugMode" && readJSON "$runtimeConfig" '.'
+    isSet "$isDebugMode" && jsonRead "$runtimeConfig" '.'
 
     # if the environment specifies a base SSM path, use that, otherwise default
-    local baseSsmPath=$(readJSON "$runtimeConfig" '"/\(.environment.ssmOverride // "dataeng-\($envName)")"' --arg envName dev)
+    local baseSsmPath=$(jsonRead "$runtimeConfig" '"/\(.environment.ssmOverride // "dataeng-\($envName)")"' --arg envName dev)
     # isSet $isDryrunMode && echo "Base SSM Path: '$baseSsmPath'"
 
     notSet "$isTestingMode" && notSet "$isDryrunMode" && notSet "$isTeardownMode" && helm repo update
     
-    local chartDefaults=$(readJSON "$runtimeConfig" '.chartDefaults')
+    local chartDefaults=$(jsonRead "$runtimeConfig" '.chartDefaults')
 
     local cdModeFlag=$(isSet $isCdMode && echo "true" || echo "false")
 
-    local deployments=$(readJSON "$runtimeConfig" '
+    local deployments=$(jsonRead "$runtimeConfig" '
         # store the root object for later
         . as $root |
 
@@ -292,7 +292,7 @@ function createK8sPipelineEnv() {
     local k8sContext="$4"
     local k8sNamespace="$5"
 
-    local apiVersion=$(getReleasedDTVersion)
+    local apiVersion=$(dtGetReleasedVersion)
     local config=$(jq -n \
         --arg apiVersion $apiVersion \
         --arg envName $envName \
@@ -337,8 +337,8 @@ function installChart() {
     local deploymentOptions="$2"
     local allChartDefaults="$3"
 
-    local region=$(readJSON "$runtimeConfig" '.region')
-    local envDir=$(readJSON "$runtimeConfig" '.envDir')
+    local region=$(jsonRead "$runtimeConfig" '.region')
+    local envDir=$(jsonRead "$runtimeConfig" '.envDir')
     local isDeployMode=$(checkJSONFlag isDeployMode "$runtimeConfig")
     local isRenderMode=$(checkJSONFlag isRenderMode "$runtimeConfig")
     local isChartMode=$(checkJSONFlag isChartMode "$runtimeConfig")
@@ -346,11 +346,11 @@ function installChart() {
     local isDryrunMode=$(checkJSONFlag isDryrunMode "$runtimeConfig")
     local isTestingMode=$(checkJSONFlag isTestingMode "$runtimeConfig")
 
-    local name=$(readJSON "$deploymentOptions" '.key')
-    local config=$(readJSON "$deploymentOptions" '.value')
-    local chart=$(readJSON "$config" '.chart')
+    local name=$(jsonRead "$deploymentOptions" '.key')
+    local config=$(jsonRead "$deploymentOptions" '.value')
+    local chart=$(jsonRead "$config" '.chart')
 
-    local chartType=$(readJSON "$config" '.type // "helm"')
+    local chartType=$(jsonRead "$config" '.type // "helm"')
     requireArgOptions "a chart type" "$chartType" "helm cdk8s" || return 1
 
     local isHelmChart
@@ -359,16 +359,16 @@ function installChart() {
     fi
 
     local chartDefaults
-    chartDefaults=$(readJSON "$allChartDefaults" ".\"$chart\" | del(.values)")
+    chartDefaults=$(jsonRead "$allChartDefaults" ".\"$chart\" | del(.values)")
     local chartDefaultCode=$?
 
     local mergedConfig="$config"
     if [[ $chartDefaultCode -eq 0 ]]; then
-        mergedConfig=$(mergeJSON "$config" "$chartDefaults")
+        mergedConfig=$(jsonMerge "$config" "$chartDefaults")
     fi
 
-    local source=$(readJSON "$mergedConfig" '.source // "remote"')
-    local expectedVersion=$(readJSON "$mergedConfig" '.version // ""')
+    local source=$(jsonRead "$mergedConfig" '.source // "remote"')
+    local expectedVersion=$(jsonRead "$mergedConfig" '.version // ""')
 
     if [[ "$source" == "local" ]]; then
         local chartPath="$chart"
@@ -421,14 +421,14 @@ function installChart() {
     local helmVersionArg=$([[ -n $version ]] && isSet $isHelmChart && echo "--version=$version" || echo "")
     ##
 
-    local inlineValues=$(readJSON "$mergedConfig" '.values // {}')
-    local nestValues=$(readJSON "$mergedConfig" '.nestValues // empty')
+    local inlineValues=$(jsonRead "$mergedConfig" '.values // {}')
+    local nestValues=$(jsonRead "$mergedConfig" '.nestValues // empty')
 
     ## secrets
-    local secretPresets=$(readJSON "$runtimeConfig" '.externalResources.secretPresets // {}')
-    local secretPreset=$(readJSON "$inlineValues" '."$secretPreset" // empty')
+    local secretPresets=$(jsonRead "$runtimeConfig" '.externalResources.secretPresets // {}')
+    local secretPreset=$(jsonRead "$inlineValues" '."$secretPreset" // empty')
     if isSet $secretPreset; then
-        local externalSecretsValues=$(readJSON "$secretPresets" '.[$name] // {}' --arg name $secretPreset)
+        local externalSecretsValues=$(jsonRead "$secretPresets" '.[$name] // {}' --arg name $secretPreset)
 
         # substitute the secret preset values
         inlineValues=$(echo "$inlineValues" | jq -nc \
@@ -462,12 +462,12 @@ function installChart() {
     local deploymentFilePath="$envDir/deployments/$name.yaml"
     local deploymentFileArg=$([ -f "$deploymentFilePath" ] && echo "-f $deploymentFilePath" || echo "")
 
-    local chartDefaultInlineValues=$(readJSON "$allChartDefaults" ".\"$chart\" | .values // {}")
+    local chartDefaultInlineValues=$(jsonRead "$allChartDefaults" ".\"$chart\" | .values // {}")
     local chartDefaultInlineValuesFile=$(tempFile).yaml
-    writeJSONToYamlFile "$chartDefaultInlineValues" "$chartDefaultInlineValuesFile"
+    jsonWriteToYamlFile "$chartDefaultInlineValues" "$chartDefaultInlineValuesFile"
 
     local inlineValuesFile=$(tempFile).yaml
-    writeJSONToYamlFile "$inlineValues" "$inlineValuesFile"
+    jsonWriteToYamlFile "$inlineValues" "$inlineValuesFile"
     ##
 
     local subCommand
@@ -541,16 +541,16 @@ function teardownChart() {
     local deploymentOptions="$2"
     local allChartDefaults="$3"
 
-    local target=$(readJSON "$runtimeConfig" '.target')
+    local target=$(jsonRead "$runtimeConfig" '.target')
     local isChartMode=$(checkJSONFlag isChartMode "$runtimeConfig")
     local isDebugMode=$(checkJSONFlag isDebugMode "$runtimeConfig")
     local isDryrunMode=$(checkJSONFlag isDryrunMode "$runtimeConfig")
 
-    local name=$(readJSON "$deploymentOptions" '.key')
-    local config=$(readJSON "$deploymentOptions" '.value')
-    local chart=$(readJSON "$config" '.chart')
+    local name=$(jsonRead "$deploymentOptions" '.key')
+    local config=$(jsonRead "$deploymentOptions" '.value')
+    local chart=$(jsonRead "$config" '.chart')
 
-    local chartType=$(readJSON "$config" '.type // "helm"')
+    local chartType=$(jsonRead "$config" '.type // "helm"')
     requireArgOptions "a chart type" "$chartType" "helm cdk8s" || return 1
 
     local isHelmChart
@@ -585,13 +585,13 @@ function targetMatches() {
     local runtimeConfig="$1"
     local deploymentOptions="$2"
 
-    local deployTarget=$(readJSON "$runtimeConfig" '.target // empty')
+    local deployTarget=$(jsonRead "$runtimeConfig" '.target // empty')
     local isChartMode=$(checkJSONFlag isChartMode "$runtimeConfig")
     local isDebugMode=$(checkJSONFlag isDebugMode "$runtimeConfig")
 
-    local deploymentName=$(readJSON "$deploymentOptions" '.key')
-    local config=$(readJSON "$deploymentOptions" '.value')
-    local chartName=$(readJSON "$config" '.chart')
+    local deploymentName=$(jsonRead "$deploymentOptions" '.key')
+    local config=$(jsonRead "$deploymentOptions" '.value')
+    local chartName=$(jsonRead "$config" '.chart')
 
     # if limiting to "all", always pass
     notSet $deployTarget && return 0
@@ -639,7 +639,7 @@ function k8sPipelineInitEnv() {
     echo -e "Environment initialized!\n"
 }
 
-local tfModule=coin-collection/$(readJSON "$envConfig" ".tfModule // \"$envName\"")
+local tfModule=coin-collection/$(jsonRead "$envConfig" ".tfModule // \"$envName\"")
 
 DP_RESOURCES_DIR=$envDir/resources
 function createDatabaseServicesFromTerraform() {

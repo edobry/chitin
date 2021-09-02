@@ -1,22 +1,22 @@
-function getDTVersion() {
+function dtGetVersion() {
     pushd $CA_PROJECT_DIR/dataeng-tools > /dev/null
     git describe HEAD --tags
     popd > /dev/null
 }
 
-function getDTLocation() {
+function dtGetLocation() {
     echo $CA_PROJECT_DIR/dataeng-tools
 }
 
-function getReleasedDTVersion() {
-    getDTVersion | cut -d '-' -f 1
+function dtGetReleasedVersion() {
+    dtGetVersion | cut -d '-' -f 1
 }
 
-function checkDTVersion() {
+function dtCheckVersion() {
     requireArg "the minimum version" "$1" || return 1
 
     local minimumVersion="$1"
-    local installedVersion=$(getDTVersion)
+    local installedVersion=$(dtGetVersion)
 
     if ! checkVersion $minimumVersion $installedVersion; then
         echo "Installed DT version $installedVersion does not meet minimum of $minimumVersion!"
@@ -24,7 +24,7 @@ function checkDTVersion() {
     fi
 }
 
-function checkEmbeddedDTVersion() {
+function dtCheckEmbeddedVersion() {
     if [[ ! -d dataeng-tools ]]; then
         echo "No embedded dataeng-tools found!"
         return 1
@@ -35,25 +35,25 @@ function checkEmbeddedDTVersion() {
     popd > /dev/null
 }
 
-function getDTConfigLocation() {
+function dtGetConfigLocation() {
     echo "${XDG_CONFIG_HOME:-$HOME/.config}/dataeng-tools"
 }
 
-function showDTConfig() {
-    cat $(getDTConfigLocation)/config.json | prettyJson
+function dtShowConfig() {
+    cat $(dtGetConfigLocation)/config.json | prettyJson
 }
 
-function showDTEnvvars() {
+function dtShowEnvvars() {
     env | grep "CA_"
 }
 
 function dtDebug() {
     echo -e "DT configuration\n"
-    echo -e "DT version: $(getDTVersion)\n"
-    showDTConfig
+    echo -e "DT version: $(dtGetVersion)\n"
+    dtShowConfig
 
     echo -e "\nDT envvars:\n"
-    showDTEnvvars
+    dtShowEnvvars
     echo
     hr
     echo -e "\n\nAWS configuration:\n"
@@ -61,11 +61,11 @@ function dtDebug() {
 }
 
 function dtReadConfig() {
-    readJSON "$CA_DT_CONFIG" $@
+    jsonRead "$CA_DT_CONFIG" $@
 }
 
 function dtReadConfigFile() {
-    readJSONFile $(getDTConfigLocation)/config.json $@
+    jsonReadFile $(dtGetConfigLocation)/config.json $@
 }
 
 function dtReadModuleConfig() {
@@ -79,8 +79,8 @@ function dtReadModuleConfig() {
     dtReadConfig ".modules[\$modName]$fieldPath" --arg modName $moduleName $@
 }
 
-function modifyDTConfig() {
-    nano $(getDTConfigLocation)/config.json5
+function dtModifyConfig() {
+    nano $(dtGetConfigLocation)/config.json5
     echo "DT config updated, reinitializing..."
     reinitDT
 }

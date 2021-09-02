@@ -1,4 +1,4 @@
-function parseStream() {
+function jsonParseStream() {
     jq . -c | jq .
 }
 
@@ -10,19 +10,19 @@ function prettyYaml() {
     yq e -P -
 }
 
-function validateJSON() {
+function validateJson() {
     requireArg "a minified JSON string" "$1" || return 1
 
     echo "$1" | jq -e . > /dev/null 2>&1
 }
 
-function validateJSONFile() {
+function validateJsonFile() {
     requireFileArg "JSON file" "$1" || return 1
 
-    validateJSON $(readJSONFile "$1")
+    validateJson $(jsonReadFile "$1")
 }
 
-function validateJSONFields() {
+function validateJsonFields() {
     requireJsonArg "to validate" "$1" || return 1
     requireArg "(a) field(s) to validate" "$2" || return 1
 
@@ -37,7 +37,7 @@ function validateJSONFields() {
         fields="$fields, .$i"
     done
 
-    if ! readJSON "$json" "$fields" -e >/dev/null; then
+    if ! jsonRead "$json" "$fields" -e >/dev/null; then
         echo "One of the required fields '$requiredFields' is not present!"
         return 1
     fi
@@ -46,12 +46,12 @@ function validateJSONFields() {
 # checks that an argument is supplied and that it is numeric, and prints a message if not
 # args: name of arg, arg value
 function requireJsonArg() {
-    requireArgWithCheck "$1" "$2" validateJSON "a valid minified JSON string "
+    requireArgWithCheck "$1" "$2" validateJson "a valid minified JSON string "
 }
 
 # reads (a value at a certain path from) a JSON File
 # args: json file path, jq path to read (optional)
-function readJSONFile() {
+function jsonReadFile() {
     requireFileArg "JSON file" "$1" || return 1
 
     local jsonFile="$1"
@@ -62,7 +62,7 @@ function readJSONFile() {
 
 # reads the value at a certain path from a JSON object
 # args: minified json string, jq path to read
-function readJSON() {
+function jsonRead() {
     requireArg "a JSON string" "$1" || return 1
     requireArg "a jq path" "$2" || return 1
 
@@ -75,7 +75,7 @@ function readJSON() {
 
 # merges two JSON objects together
 # args: N>2 minified json strings
-function mergeJSON() {
+function jsonMerge() {
     requireArg "a JSON string" "$1" || return 1
     requireArg "another JSON string" "$2" || return 1
 
@@ -91,14 +91,14 @@ function jsonMergeDeep() {
     jq -sc 'reduce .[] as $item ({}; . * $item)' <<< $@
 }
 
-function writeJSONToYamlFile() {
+function jsonWriteToYamlFile() {
     requireArg "a JSON string" "$1" || return 1
     requireArg "a target file path" "$2" || return 1
 
     echo "$1" | prettyYaml > "$2"
 }
 
-function convertJSON5() {
+function json5Convert() {
     requireArg "a JSON5 filepath" "$1" || return 1
 
     local json5filePath="$1"

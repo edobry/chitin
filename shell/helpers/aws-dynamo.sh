@@ -1,5 +1,5 @@
 # lists all DyanmoDB tables
-function listDynamoTables() {
+function awsDynamoListTables() {
     checkAuthAndFail || return 1
 
     aws dynamodb list-tables
@@ -7,7 +7,7 @@ function listDynamoTables() {
 
 # lists all items in the given DynamoDB table
 # args: table name
-function listDynamoTableItems() {
+function awsDynamoListTableItems() {
     requireArg "a table name" "$1" || return 1
     checkAuthAndFail || return 1
 
@@ -18,7 +18,7 @@ function listDynamoTableItems() {
 
 # gets a specific DynamoDB item
 # args: table name, item key
-function getDynamoItem() {
+function awsDynamoGetItem() {
     requireArg "a table name" "$1" || return 1
     requireArg "an item key" "$2" || return 1
     checkAuthAndFail || return 1
@@ -31,7 +31,7 @@ function getDynamoItem() {
 
 # updates the value of a specific DynamoDB item
 # args: table name, item key, field to set, new value
-function updateDynamoItem() {
+function awsDynamoUpdateItem() {
     requireArg "a table name" "$1" || return 1
     requireArg "an item key" "$2" || return 1
     requireArg "the item field to set" "$3" || return 1
@@ -44,7 +44,7 @@ function updateDynamoItem() {
     local newValue="$4"
 
     local newValExpression=$(jq -nc --arg val "$newValue" '{ ":val": { S: $val } }')
-    local itemKeyReadable=$(readJSON "$itemKey" 'to_entries[] | "\(.key) = \(.value.S)"')
+    local itemKeyReadable=$(jsonRead "$itemKey" 'to_entries[] | "\(.key) = \(.value.S)"')
 
     echo "Setting DynamoDB value..."
     echo "Table: '$tableName'"

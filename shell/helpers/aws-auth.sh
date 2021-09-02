@@ -25,7 +25,7 @@ function initAwsAuthEnv() {
     export TF_VAR_aws_sessionname=${CA_GOOGLE_USERNAME}
 
     # download generated AWS config
-    sparseCheckout git@github.com:chainalysis/terraform.git $CA_DT_DIR/shell/terraform util/aws/config
+    gitSparseCheckout git@github.com:chainalysis/terraform.git $CA_DT_DIR/shell/terraform util/aws/config
     export AWS_CONFIG_FILE=$embeddedAwsConfig
 
     export CA_DT_AWS_ENV_INIT=true    
