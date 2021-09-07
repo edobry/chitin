@@ -121,6 +121,7 @@ function autoinitDT() {
         shopt -s globstar
     else
         setopt ksh_glob
+        setopt shwordsplit
     fi
     set -o pipefail
 
