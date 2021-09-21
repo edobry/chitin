@@ -337,12 +337,19 @@ Functions:
 - `tfGetLockTableItem`: get a specific TF remote state lock digest
 - `tfUpdateLockDigest`: set a specific TF remote state lock digest
 - `tfSourceToLocal`: convert a terraform module source to a local path, useful for development
+- `tgMigrate`: runs a tfMigrate migration using `terragrunt`
 
 #### Network
 
 Functions:
 
 - `checksumUrl`: downloads a file from a url and checksums it
+
+#### Github
+
+Functions:
+
+- `githubOpenDirectory`: opens the current git repository directory in the Github UI
 
 ### Contributing
 
