@@ -2,10 +2,11 @@
 
 if [[ -z "$IS_DOCKER" ]]; then
     SOURCE_DIR=$(dirname -- "$0")
+    # echo "source dir: $SOURCE_DIR"
+    # echo "0: $0"
+    # echo "bash source: $BASH_SOURCE"
 
-    if [[ "$0" = /* ]]; then
-        SCRIPT_PATH="$0"
-    elif [ ! -z ${BASH_SOURCE[0]} ]; then
+    if [ ! -z ${BASH_SOURCE[0]} ]; then
         SCRIPT_PATH="${BASH_SOURCE[0]}"
     else
         SCRIPT_PATH="$SOURCE_DIR/init.sh"
@@ -158,11 +159,14 @@ function initDT() {
 }
 
 function dtRunInitCommand() {
-    local initCommand=$(dtReadModuleConfig init '.command//empty')
-    # echo "initcommand: $initCommand"
-    [[ -z "$initCommand" ]] && return 0
+    local initCommand
+    initCommand=$(dtReadModuleConfigField init command)
+    if [[ $? -eq 0 ]]; then
+        $initCommand
+    fi
 
-    $initCommand
+    # echo "initcommand: $initCommand"
+    # [[ -z "$initCommand" ]] && return 0
 }
 
 alias dtReinit=reinitDT
