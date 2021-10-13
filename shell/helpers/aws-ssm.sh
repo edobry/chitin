@@ -1,11 +1,11 @@
 # lists all SSM parameter names
-function listSecureParams() {
+function awsSsmListParams() {
     aws ssm describe-parameters | jq -r '.Parameters[].Name'
 }
 
 # fetches and decrypts an SSM parameter
 # args: path
-function getSecureParam() {
+function awsSsmGetParam() {
     requireArg "a parameter path" "$1" || return 1
 
     aws ssm get-parameter --name $1 --with-decryption 2>/dev/null | jq ".Parameter.Value" | sed "s/\"//g"
@@ -13,7 +13,7 @@ function getSecureParam() {
 
 # sets an SSM parameter
 # args: path
-function setSecureParam() {
+function awsSsmSetParam() {
     requireArg "a parameter path" "$1" || return 1
     requireArg "the parameter value" "$2" || return 1
 
@@ -22,7 +22,7 @@ function setSecureParam() {
 
 # deletes an SSM parameter
 # args: path
-function deleteSecureParam() {
+function awsSsmDeleteParam() {
     requireArg "a parameter path" "$1" || return 1
 
    aws ssm delete-parameter --name "$1"

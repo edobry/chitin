@@ -1,6 +1,6 @@
 function gitIsRepoRoot() {
     requireArg "a directory" "$1"
-    
+
     [[ -d "$1/.git" ]]
 }
 
@@ -11,7 +11,7 @@ function gitGetCurrentCommitHash() {
 # initiates a sparse repository in a subdirectory in order to fetch one specific file
 # args: remote repo url, repo name, relative filepath
 # ref: https://stackoverflow.com/questions/60190759/how-do-i-clone-fetch-or-sparse-checkout-a-single-directory-or-a-list-of-directo/60190760#60190760
-function sparseCheckout() {
+function gitSparseCheckout() {
     requireArg "a remote repository" "$1"
     requireArg "the name of the repository" "$2"
     requireArg "a filepath" "$3"
@@ -25,12 +25,12 @@ function sparseCheckout() {
 
     # init sparse repo
     git init > /dev/null
-    git config core.sparseCheckout true
+    git config core.gitSparseCheckout true
     echo "$filepath" >> .git/info/sparse-checkout
 
     # fetch single file
     git remote add origin "$remoteRepo" > /dev/null 2>&1
-    git fetch --depth=1 origin master > /dev/null 2>&1
-    git checkout master > /dev/null 2>&1
+    git fetch --depth=1 origin main > /dev/null 2>&1
+    git checkout main > /dev/null 2>&1
     popd > /dev/null
 }

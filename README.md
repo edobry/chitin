@@ -160,11 +160,11 @@ Functions:
 
 Functions:
 
-- `checkRdsSnapshotExistence`: checks the existence of an RDS snapshot with the given name
-- `waitUntilRdsSnapshotReady`: polls the status of the given RDS snapshot until it is available
-- `deleteRdsSnapshot`: waits for the RDS snapshot with the given name to be available, and then deletes it
-- `checkRdsInstanceExistence`: checks the existence of an RDS instance with the given name
-- `snapshotRds`: snapshots the given RDS instance
+- `awsRdsCheckSnapshotExistence`: checks the existence of an RDS snapshot with the given name
+- `awsRdsWaitUntilSnapshotReady`: polls the status of the given RDS snapshot until it is available
+- `awsRdsDeleteSnapshot`: waits for the RDS snapshot with the given name to be available, and then deletes it
+- `awsRdsCheckInstanceExistence`: checks the existence of an RDS instance with the given name
+- `awsRdsSnapshot`: snapshots the given RDS instance
 
 ##### S3
 
@@ -178,10 +178,10 @@ Functions:
 
 Functions:
 
-- `listSecureParams`: lists all SSM parameter names
-- `getSecureParam`: fetches and decrypts an SSM parameter
-- `setSecureParam`: sets an SSM parameter
-- `deleteSecureParam`: deletes an SSM parameter
+- `awsSsmListParams`: lists all SSM parameter names
+- `awsSsmGetParam`: fetches and decrypts an SSM parameter
+- `awsSsmSetParam`: sets an SSM parameter
+- `awsSsmDeleteParam`: deletes an SSM parameter
 
 ##### MSK
 
@@ -196,10 +196,10 @@ Functions:
 
 Functions:
 
-- `listDynamoTables`: lists all DyanmoDB tables
-- `listDynamoTableItems`: lists all items in the given DynamoDB table
-- `getDynamoItem`: gets a specific DynamoDB item
-- `updateDynamoItem`: updates the value of a specific DynamoDB item
+- `awsDynamoListTables`: lists all DyanmoDB tables
+- `awsDynamoListTableItems`: lists all items in the given DynamoDB table
+- `awsDynamoGetItem`: gets a specific DynamoDB item
+- `awsDynamoUpdateItem`: updates the value of a specific DynamoDB item
 
 #### Docker
 
@@ -235,8 +235,8 @@ The `k8s-env` helper sets up your Kubernetes configuration for working with our 
 
 Functions:
 
-- `getCurrentK8sContext`: gets the current k8s context config
-- `deleteK8sContext`: deletes a k8s context
+- `k8sGetCurrentContext`: gets the current k8s context config
+- `k8sDeleteContext`: deletes a k8s context
 
 ##### Helpers
 
@@ -250,18 +250,18 @@ associated administrative tasks.
 
 Functions:
 
-- `debugPod`: launches a debug pod in the cluster preloaded with common networking tools, drops you into its shell when created
-- `downDeploy/upDeploy/reDeploy`: stop/start/restart a deployment
-- `downDeployAndWait`: scales down a deployment to 0 replicas, and awaits the operation's completion
-- `secretEncode`: base64-encodes a string for use in a Secret
+- `k8sDebugPod`: launches a debug pod in the cluster preloaded with common networking tools, drops you into its shell when created
+- `k8sDownDeploy/k8sUpDeploy/k8sReDeploy`: stop/start/restart a deployment
+- `k8sDownDeployAndWait`: scales down a deployment to 0 replicas, and awaits the operation's completion
+- `k8sSecretEncode`: base64-encodes a string for use in a Secret
 - `rds`: connects to an RDS instance from the service name
 - `getServiceExternalUrl`: fetches the external url, with port, for a Service with a load balancer configured
 - `getServiceEndpoint`: fetches the endpoint url for both services and proxies to zen garden
-- `killDeploymentPods`: kills all pods for a deployment, useful for forcing a restart during dev
-- `getK8sImage`: gets the container image for a given resource
-- `getServiceAccountToken`: gets the token for a given ServiceAccount
-- `createTmpK8sSvcAccContext`: creates a temporary k8s context for a ServiceAccount
-- `runAsServiceAccount`: impersonates a given ServiceAccount and runs a command
+- `k8sKillDeploymentPods`: kills all pods for a deployment, useful for forcing a restart during dev
+- `k8sGetImage`: gets the container image for a given resource
+- `k8sGetServiceAccountToken`: gets the token for a given ServiceAccount
+- `k8sCreateTmpSvcAccContext`: creates a temporary k8s context for a ServiceAccount
+- `k8sRunAsServiceAccount`: impersonates a given ServiceAccount and runs a command
 - `kubectlAsServiceAccount`: impersonates a given ServiceAccount and runs a kubectl command using its token
 - `k8sGetResourceAnnotation`: gets an annotation value for the given resource
 - `k8sGetServiceExternalHostname`: gets the external hostname created for a given Service
@@ -285,10 +285,9 @@ Functions:
 
 Functions:
 
-- `listTopics`: lists all known topics
-- `readTopic`: reads from a topic at a certain offset
-- `resetTopics`: resets an MSK cluster's topics by destroying and recreating using terraform
-- `resetCoinTopic`: pauses `tx-producer`, and then resets the MSK cluster's coin-specific topics using terraform
+- `kafkaListTopics`: lists all known topics
+- `kafkaReadTopic`: reads from a topic at a certain offset
+- `kafkaResetTopics`: resets an MSK cluster's topics by destroying and recreating using terraform
 - `kafkacli`: tool to query tx-producer kafka topics
 
 #### Coin Collection
@@ -298,10 +297,11 @@ Functions:
 
 Functions:
 
-- `resetBackendDb`: pauses an `ib-backend`, recreates the db, and unpauses
-- `createTransferDbs`: creates a transfer database for each coin name passed in
-- `getLatestClusterVersion`: finds the latest cluster version by querying S3
-- `upgradeEnvironmentClusterVersion`: upgrades an environment's cluster version to either the specified or latest
+- `ccResetBackendDb`: pauses an `ib-backend`, recreates the db, and unpauses
+- `ccCreateTransferDbs`: creates a transfer database for each coin name passed in
+- `ccResetCoinTopic`: pauses `tx-producer`, and then resets the MSK cluster's coin-specific topics using terraform
+- `ccGetLatestClusterVersion`: finds the latest cluster version by querying S3
+- `ccUpgradeEnvironmentClusterVersion`: upgrades an environment's cluster version to either the specified or latest
 
 #### P2P Nodes
 
@@ -310,11 +310,11 @@ Functions:
 
 Functions:
 
-- `updateZCashParams`: ensures existence of an up-to-date EBS snapshot containing the latest ZCash encryption parameter files.
-- `createZCashParamsVolume`: creates an EBS volume containing the latest ZCash encryption parameter files
-- `snapshotNodeState`: pauses a p2p node, snapshots the EBS volume backing it, and unpauses
-- `cloneNodeState`: clones an existing node's state by snapshotting and then creating a volume
-- `cloneNodeStateCrossAccount`: clones an existing node's state across accounts by snapshotting, authorizing, copying, and then creating a volume
+- `p2pUpdateZCashParams`: ensures existence of an up-to-date EBS snapshot containing the latest ZCash encryption parameter files.
+- `p2pCreateZCashParamsVolume`: creates an EBS volume containing the latest ZCash encryption parameter files
+- `p2pSnapshotNodeState`: pauses a p2p node, snapshots the EBS volume backing it, and unpauses
+- `p2pCloneNodeState`: clones an existing node's state by snapshotting and then creating a volume
+- `p2pCloneNodeStateCrossAccount`: clones an existing node's state across accounts by snapshotting, authorizing, copying, and then creating a volume
 
 #### SSH
 
@@ -337,12 +337,19 @@ Functions:
 - `tfGetLockTableItem`: get a specific TF remote state lock digest
 - `tfUpdateLockDigest`: set a specific TF remote state lock digest
 - `tfSourceToLocal`: convert a terraform module source to a local path, useful for development
+- `tgMigrate`: runs a tfMigrate migration using `terragrunt`
 
 #### Network
 
 Functions:
 
 - `checksumUrl`: downloads a file from a url and checksums it
+
+#### Github
+
+Functions:
+
+- `githubOpenDirectory`: opens the current git repository directory in the Github UI
 
 ### Contributing
 

@@ -25,7 +25,7 @@ function initAwsAuthEnv() {
     export TF_VAR_aws_sessionname=${CA_GOOGLE_USERNAME}
 
     # download generated AWS config
-    sparseCheckout git@github.com:chainalysis/terraform.git $CA_DT_DIR/shell/terraform util/aws/config
+    gitSparseCheckout git@github.com:chainalysis/terraform.git $CA_DT_DIR/shell/terraform util/aws/config
     export AWS_CONFIG_FILE=$embeddedAwsConfig
 
     export CA_DT_AWS_ENV_INIT=true    
@@ -173,13 +173,13 @@ function awsAuth() {
     requireArg "a profile name" $1 || return 1
 
     local mfaCode="$2"
-    local mfaArg=$(isSet "$mfaCode" && echo --mfa-code $mfaCode || echo '')
+    local mfaArg=$(isSet "$mfaCode" && echo "--mfa-code $mfaCode" || echo '')
     export AWS_PROFILE=$1
     export AWS_SSO_ORG_ROLE_ARN=arn:aws:iam::${AWS_ORG_IDENTITY_ACCOUNT_ID}:role/${CA_DEPT_ROLE}
 
     if ! checkAuth; then
         echo "Authenticating..."
-        AWS_PROFILE=$AWS_ORG_SSO_PROFILE gimme-aws-creds --roles $AWS_SSO_ORG_ROLE_ARN ${mfaArg}
+        AWS_PROFILE=$AWS_ORG_SSO_PROFILE gimme-aws-creds --roles $AWS_SSO_ORG_ROLE_ARN $mfaArg
     fi
 
     local role=$(awsRole)

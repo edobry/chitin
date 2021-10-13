@@ -55,8 +55,8 @@ function awsEc2CreateKeypair() {
 
     local ssmPath="/$accountName/keypairs/$keypairName"
     echo "Writing keypair to SSM at '$ssmPath'..."
-    setSecureParam $ssmPath/public "$publicKey"
-    setSecureParam $ssmPath/private "$(cat $privKeyFile)"
+    awsSsmSetParam $ssmPath/public "$publicKey"
+    awsSsmSetParam $ssmPath/private "$(cat $privKeyFile)"
 
     echo "Cleaning up..."
     rm $privKeyFile
@@ -99,8 +99,8 @@ function awsEc2DeleteKeypair() {
 
     local ssmPath="/$accountName/keypairs/$keypairName"
     echo "Deleting keypair from SSM at '$ssmPath'..."
-    deleteSecureParam $ssmPath/public
-    deleteSecureParam $ssmPath/private
+    awsSsmDeleteParam $ssmPath/public
+    awsSsmDeleteParam $ssmPath/private
 }
 
 # reads a given EC2 Keypair out from SSM, persists locally, and permissions for use
@@ -121,12 +121,12 @@ function awsEc2DownloadKeypair() {
     local privKeyPath="$keypairsPath/$keypairName"
     echo "Downloading keypair from SSM at '$ssmPath' to '$keypairsPath'..."
     local privKey
-    privKey=$(getSecureParam $ssmPath/private)
+    privKey=$(awsSsmGetParam $ssmPath/private)
     if [[ $? -ne 0 ]]; then
         echo "Keypair not downloadable!"
         return 1
     fi
-    local pubKey=$(getSecureParam $ssmPath/public)
+    local pubKey=$(awsSsmGetParam $ssmPath/public)
     
     echo "$privKey" | unescapeNewlines > $privKeyPath
     echo "$pubKey" | unescapeNewlines > $privKeyPath.pub
@@ -183,7 +183,7 @@ function awsEc2ListNetworkInterfaceAddressesJson() {
 
 # lists all ENIs along with their associated private IP addresses
 function awsEc2ListNetworkInterfaceAddresses() {
-    readJSON "$(awsEc2ListNetworkInterfaceAddressesJson)" '"\(.id) - \(.addresses | join(", "))"'
+    jsonRead "$(awsEc2ListNetworkInterfaceAddressesJson)" '"\(.id) - \(.addresses | join(", "))"'
 }
 
 # gets the description for a given ENI
