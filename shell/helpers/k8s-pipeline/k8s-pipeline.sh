@@ -245,7 +245,7 @@ function k8sPipeline() {
         # reformat & merge externalResources.deployments into deployments
         {
             externalResourceDeployments: (
-                .externalResources.deployments | to_entries |
+                (.externalResources.deployments // {}) | to_entries |
                     map({ key: .key,
                         value: { chart: "external-service", values: .value }
                     })),
