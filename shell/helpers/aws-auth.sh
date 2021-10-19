@@ -131,7 +131,7 @@ function deAuth() {
 
 # checks if you're authenticated
 function checkAuth() {
-    if ! awsId > /dev/null; then
+    if ! awsId > /dev/null 2>&1; then
         echo "Unauthenticated!"
         return 1
     fi
@@ -209,6 +209,6 @@ function awsGetRegion() {
     aws configure get region
 }
 
-function showAWSEnvvars() {
+function awsShowEnvvars() {
     env | grep 'AWS_' | grep -v "CA_"
 }

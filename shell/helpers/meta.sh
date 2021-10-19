@@ -57,7 +57,7 @@ function dtDebug() {
     echo
     hr
     echo -e "\n\nAWS configuration:\n"
-    showAWSEnvvars
+    awsShowEnvvars
 }
 
 function dtReadConfig() {
