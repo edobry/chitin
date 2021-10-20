@@ -76,7 +76,27 @@ function dtReadModuleConfig() {
     local fieldPath="$1"
     [[ -z $fieldPath ]] || shift
 
-    dtReadConfig ".modules[\$modName]$fieldPath" --arg modName $moduleName $@
+    local config=$(dtReadConfig ".modules[\$modName]$fieldPath" --arg modName $moduleName $@)
+    if [[ "$config" == 'null' ]]; then
+        dtLog "'$moduleName' config section not initialized!"
+        return 1
+    fi
+
+    echo $config
+}
+
+function dtReadModuleConfigField() {
+    requireArg "a module name" "$1" || return 1
+    requireArg "a field name" "$2" || return 1
+
+    local config
+    config=$(dtReadModuleConfig "$1")
+    if [[ $? -ne 0 ]]; then
+        echo "$config"
+        return 1
+    fi
+
+    jsonRead "$config" ".$2 // empty"
 }
 
 function dtModifyConfig() {
