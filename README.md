@@ -338,6 +338,11 @@ Functions:
 - `tfUpdateLockDigest`: set a specific TF remote state lock digest
 - `tfSourceToLocal`: convert a terraform module source to a local path, useful for development
 - `tgMigrate`: runs a tfMigrate migration using `terragrunt`
+- `tgGetSource`: reads the terragrunt module source
+- `tgSourceToLocal`: converts the terragrunt module source to a local path
+- `tgSourceToRemote`: converts the terragrunt module source to a github URL
+- `tgGoToLocalSource`: navigates to the terragrunt source module locally
+- `tgGoToRemoteSource`: opens the terragrunt module source in the browser
 
 #### Network
 

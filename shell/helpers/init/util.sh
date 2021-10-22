@@ -33,6 +33,13 @@ function replaceNewlines() {
     tr '\n' ' ' | sed -e 's/  *$//'
 }
 
+function sedStripRef() {
+    sed 's/\?ref=.*$//g'
+}
+function sedStripGitEx() {
+    sed 's/\.git//'
+}
+
 function checkNumeric() {
     [[ $1 =~ '^[0-9]+$' ]]
 }
