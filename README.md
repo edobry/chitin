@@ -191,6 +191,9 @@ Functions:
 - `awsMskFindClusterArnByName`: finds the ARN of the MSK cluster with the given name
 - `awsMskGetConnection`: gets the connection string of the MSK cluster with the given identifier
 - `awsMskGetZkConnection`: gets the Zookeeper connection string of the MSK cluster with the given identifier
+- `awsMskGetBrokers`: gets the broker list of the given MSK cluster with the given identifier
+- `awsMskGetBrokerArns`: gets the list of broker ARNs of the given MSK cluster with the given identifier
+- `awsMskRebootBroker`: reboots the MSK broker with the given cluster identifier and broker ID
 
 ##### DynamoDB
 
