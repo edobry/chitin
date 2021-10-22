@@ -358,7 +358,7 @@ Functions:
 
 #### Secret
 
-This module provides a configurable secrets-management interface for other modules to use; it was designed with the (`pass` command)[https://www.passwordstore.org/] in mind, but can be used with others, given a compatible CLI.
+This module provides a configurable secrets-management interface for other modules to use; it was designed with the [`pass` command](https://www.passwordstore.org/) in mind, but can be used with others, given a compatible CLI.
 
 ##### Configuration
 
