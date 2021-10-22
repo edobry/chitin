@@ -1,5 +1,6 @@
 CA_DT_SECRETS_MODULE_NAME=dtSecret
 
+# retrieves a secret with the given name from the secret store
 function dtSecretGet() {
     requireArg "a secret name" "$1" || return 1
 

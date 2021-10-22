@@ -331,6 +331,28 @@ Functions:
 
 - `sshTunnel`: sets up an SSH tunnel to forward from a local port
 
+#### Secret
+
+This module provides a configurable secrets-management interface for other modules to use; it was designed with the (`pass` command)[https://www.passwordstore.org/] in mind, but can be used with others, given a compatible CLI.
+
+##### Configuration
+
+Add a section to your dtConfig with the `command` to use:
+
+```json
+{
+  "modules": {
+    "dtSecret": {
+      "command": "pass"
+    }
+  }
+}
+```
+
+Functions:
+
+- `dtSecretGet`: retrieves a secret with the given name from the secret store
+
 #### Terraform
 
 > Requires: `terraform`, `jq`
