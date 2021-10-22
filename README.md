@@ -383,8 +383,26 @@ Functions:
 
 #### Github
 
+##### Configuration
+
+This module leverages `dtSecret` for managing the Github PAT; add a section to your dtConfig with the name of the secret to use:
+
+```json
+{
+  "modules": {
+    "github": {
+      "secretName": "gh-pat"
+    }
+  }
+}
+```
+
 Functions:
 
+- `githubListTeams`: lists all known Github teams
+- `githubAppJwt`: generates a JWT for Github authentication for the specified app
+- `jwtValidate`: validates the signature of the specified JWT
+- `githubAppCreateInstallationToken`: creates an installation token for the given Github app installation
 - `githubOpenDirectory`: opens the current git repository directory in the Github UI
 
 ### Contributing
