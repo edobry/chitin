@@ -46,6 +46,31 @@ Linux only:
 
 ### Modules
 
+#### Artifactory
+
+This module provides helpers for Artifactory authentication.
+
+##### Configuration
+
+This module leverages `dtSecret` for managing your Artifactory credentials; add a section to your dtConfig with the names of the secrets to use:
+
+```json
+{
+  "modules": {
+    "artifactory": {
+      "userSecretName": "Chainalysis/artifactory/username",
+      "passSecretName": "Chainalysis/artifactory/password"
+    }
+  }
+}
+```
+
+Functions
+
+- `artifactoryGetUsername`: retrieves your Artifactory username using dtSecret
+- `artifactoryGetPassword`: retrieves your Artifactory password using dtSecret
+- `artifactoryConfigureEnvironment`: exposes your Artifactory credentials in your current shell session
+
 #### AWS
 
 > Requires: `aws`, `jq`
