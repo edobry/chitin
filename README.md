@@ -94,6 +94,12 @@ If you enable the shell integration, you can use the following functions to assu
 - `awsAuth`: authenticate if needed, and assume a profile
 - `withProfile`: run a command with a specific AWS profile
 
+##### ASG
+
+Functions
+
+- `awsAsgGetTags`: gets the tags for the ASG with the given name
+
 ##### IAM
 
 Functions
