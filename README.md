@@ -46,6 +46,31 @@ Linux only:
 
 ### Modules
 
+#### Artifactory
+
+This module provides helpers for Artifactory authentication.
+
+##### Configuration
+
+This module leverages `dtSecret` for managing your Artifactory credentials; add a section to your dtConfig with the names of the secrets to use:
+
+```json
+{
+  "modules": {
+    "artifactory": {
+      "userSecretName": "Chainalysis/artifactory/username",
+      "passSecretName": "Chainalysis/artifactory/password"
+    }
+  }
+}
+```
+
+Functions
+
+- `artifactoryGetUsername`: retrieves your Artifactory username using dtSecret
+- `artifactoryGetPassword`: retrieves your Artifactory password using dtSecret
+- `artifactoryConfigureEnvironment`: exposes your Artifactory credentials in your current shell session
+
 #### AWS
 
 > Requires: `aws`, `jq`
@@ -331,6 +356,28 @@ Functions:
 
 - `sshTunnel`: sets up an SSH tunnel to forward from a local port
 
+#### Secret
+
+This module provides a configurable secrets-management interface for other modules to use; it was designed with the [`pass` command](https://www.passwordstore.org/) in mind, but can be used with others, given a compatible CLI.
+
+##### Configuration
+
+Add a section to your dtConfig with the `command` to use:
+
+```json
+{
+  "modules": {
+    "dtSecret": {
+      "command": "pass"
+    }
+  }
+}
+```
+
+Functions:
+
+- `dtSecretGet`: retrieves a secret with the given name from the secret store
+
 #### Terraform
 
 > Requires: `terraform`, `jq`
@@ -361,8 +408,26 @@ Functions:
 
 #### Github
 
+##### Configuration
+
+This module leverages `dtSecret` for managing the Github PAT; add a section to your dtConfig with the name of the secret to use:
+
+```json
+{
+  "modules": {
+    "github": {
+      "secretName": "gh-pat"
+    }
+  }
+}
+```
+
 Functions:
 
+- `githubListTeams`: lists all known Github teams
+- `githubAppJwt`: generates a JWT for Github authentication for the specified app
+- `jwtValidate`: validates the signature of the specified JWT
+- `githubAppCreateInstallationToken`: creates an installation token for the given Github app installation
 - `githubOpenDirectory`: opens the current git repository directory in the Github UI
 
 ### Contributing
