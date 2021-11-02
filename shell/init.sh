@@ -31,21 +31,6 @@ function loadDTDir() {
     done
 }
 
-function checkDTDep() {
-    local depName=$(jsonRead "$1" '.key')
-    local expectedVersion=$(jsonRead "$1" '.value.version')
-    local versionCommand=$(jsonRead "$1" '.value.command')
-
-    if ! checkCommand "$depName"; then
-        dtLog "$depName not installed!"
-        return 1
-    fi
-
-    local currentVersion=$(eval "$versionCommand")
-
-    checkVersionAndFail "$depName" "$expectedVersion" "$currentVersion" || return 1
-}
-
 function initJq() {
     # we need at least jq to bootstrap
     if ! checkCommand jq; then
@@ -100,19 +85,6 @@ function dtLoadConfig() {
     export CA_DEPT_ROLE=$departmentRole
 }
 
-function checkDTDeps() {
-    local json5DepFilePath="$CA_DT_DIR/shell/dependencies.json5"
-
-    local depFilePath
-    depFilePath=$(json5Convert "$json5DepFilePath")
-    [[ $? -eq 0 ]] || return 1
-
-    jsonReadFile "$depFilePath" '.dependencies|to_entries[]' | \
-    while read -r dep; do
-        checkDTDep "$dep" || return 1
-    done
-}
-
 function autoinitDT() {
     if [[ ! -z "$CA_FAIL_ON_ERROR" ]]; then
         set -e
@@ -137,7 +109,12 @@ function initDT() {
     initJq
     dtLoadConfig "$1"
 
-    ([[ -z "$IS_DOCKER" ]] && ! checkDTDeps) && (dtBail; return 1)
+    # set -x
+    if [[ -z "$IS_DOCKER" ]]; then
+        dtToolCheckVersions
+        dtModuleCheckTools "init" || (dtBail; return 1)
+    fi
+    # set +x
 
     export CA_DP_DIR=$CA_PROJECT_DIR/dataeng-pipeline
 

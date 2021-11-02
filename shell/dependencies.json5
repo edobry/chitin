@@ -1,6 +1,6 @@
 {
     // you probably dont want to touch any of this
-    "dependencies": {
+    "tools": {
         "jq": {
             "version": "1.6",
             "command": "jq --version | awk -F '-' '{ print $2 }'"
@@ -14,8 +14,19 @@
             "command": "aws --version | awk '{ print $1 }' | sed 's/aws-cli\\///'"
         },
         "kubectl": {
-            "version": "1.18",
+            "version": "1.22",
             "command": "kubectl version --client=true  -o=json | jq -r '.clientVersion.gitVersion' | sed 's/v//'"
+        }
+    },
+    "modules": {
+        "init": {
+            "dependencies": ["jq"]
+        },
+        "aws": {
+            "dependencies": ["aws"]
+        },
+        "k8s": {
+            "dependencies": ["aws", "kubectl"]
         }
     }
 }
