@@ -19,14 +19,14 @@ function dtCheckVersion() {
     local installedVersion=$(dtGetVersion)
 
     if ! checkVersion $minimumVersion $installedVersion; then
-        echo "Installed DT version $installedVersion does not meet minimum of $minimumVersion!"
+        dtLog "Installed DT version $installedVersion does not meet minimum of $minimumVersion!"
         return 1
     fi
 }
 
 function dtCheckEmbeddedVersion() {
     if [[ ! -d dataeng-tools ]]; then
-        echo "No embedded dataeng-tools found!"
+        dtLog "No embedded dataeng-tools found!"
         return 1
     fi
 
@@ -85,6 +85,55 @@ function dtReadModuleConfig() {
     echo $config
 }
 
+function dtModuleCheckEnabled() {
+    requireArg "a module name or config" "$1" || return 1
+
+    local config=$([[ "$2" == "loaded" ]] && echo "$1" || dtReadModuleConfig "$1")
+    jsonCheckBool 'enabled' "$config"
+}
+
+function dtModuleCheckTools() {
+    requireArg "a module name" "$1" || return 1
+
+    local moduleDepConfig
+    moduleDepConfig=$(jsonRead "$CA_DT_DEPS" '.modules[$x] // empty' --arg x "$1")
+    if [[ $? -ne 0 ]]; then
+        dtLog "No dependency configuration for module $1 found!"
+        return 1
+    fi
+
+    jsonRead "$moduleDepConfig" '.dependencies[]' |\
+    while read -r dep; do
+        if ! dtToolCheckValid $dep; then
+            dtLog "module $1 will not load, as tool dependency $dep is unmet!"
+            return 1
+        fi
+    done
+}
+
+function dtModuleShouldLoad() {
+    requireArg "a module name" "$1" || return 1
+
+    local name=$1
+    shift
+
+    local returnConfig
+    if [[ "$1" == "return-config" ]]; then
+        returnConfig=true
+        shift
+    fi
+
+    local moduleConfig
+    moduleConfig=$(dtReadModuleConfig ${1:-$name})
+    local moduleConfigLoadReturn=$?
+    
+    [[ ! -z "$returnConfig" ]] && echo "$moduleConfig"
+
+    [[ $moduleConfigLoadReturn -eq 0 ]] || return 1
+    dtModuleCheckEnabled "$moduleConfig" loaded || return 1
+    dtModuleCheckTools "$name" || return 1
+}
+
 function dtReadModuleConfigField() {
     requireArg "a module name" "$1" || return 1
     requireArg "a field name" "$2" || return 1
@@ -101,6 +150,58 @@ function dtReadModuleConfigField() {
 
 function dtModifyConfig() {
     nano $(dtGetConfigLocation)/config.json5
-    echo "DT config updated, reinitializing..."
+    dtLog "config updated, reinitializing..."
     reinitDT
+}
+
+function dtToolCheckVersions() {
+    local json5DepFilePath="$CA_DT_DIR/shell/dependencies.json5"
+
+    local depFilePath
+    depFilePath=$(json5Convert "$json5DepFilePath")
+    [[ $? -eq 0 ]] || return 1
+    local toolStatus=()
+
+    export CA_DT_DEPS=$(jsonReadFile "$depFilePath")
+    
+    jsonRead "$CA_DT_DEPS" '.tools|to_entries[]' | \
+    while read -r dep; do
+        local depName=$(jsonRead "$dep" '.key')
+        local expectedVersion=$(jsonRead "$dep" '.value.version')
+        local versionCommand=$(jsonRead "$dep" '.value.command')
+
+        if ! checkCommand "$depName"; then
+            dtLog "$depName not installed!"
+            toolStatus+=(("$depName" $(jq -nc '{ installed: false }')))
+        fi
+
+        local currentVersion=$(eval "$versionCommand")
+        if checkVersionAndFail "$depName" "$expectedVersion" "$currentVersion"; then
+            toolStatus+=("$(jq -nc --arg depName "$depName" '{ ($depName): { installed: true, validVersion: true } }')")
+        else
+            toolStatus+=("$(jq -nc --arg depName "$depName" '{ ($depName): { installed: true, validVersion: false } }')")
+        fi
+    done
+
+    export CA_DT_TOOL_STATUS=$(jq -sc 'add' <(for x in "${toolStatus[@]}" ; do echo "$x" ; done))
+}
+
+function dtToolCheckValid() {
+    requireArg "a tool name" "$1" || return 1
+    [[ -z "$CA_DT_TOOL_STATUS" ]] && return 1
+
+    echo "$CA_DT_TOOL_STATUS" | jq -e ".\"$1\" | (.installed and .validVersion)" >/dev/null
+}
+
+function dtModuleLoadNested() {    
+    for module in $(find $CA_DT_HELPERS_PATH -type d -maxdepth 1 -not -path $CA_DT_HELPERS_PATH); do
+        local moduleName=$(basename $module)
+        local moduleInitScriptPath="$module/$moduleName-init.sh"
+        if [[ -f $moduleInitScriptPath ]]; then
+            source $moduleInitScriptPath
+            [[ $? -eq 0 ]] || continue
+        fi
+
+        dtLoadDir $(find $module -type f -name '*.sh' -not -path $moduleInitScriptPath)
+    done
 }

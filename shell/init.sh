@@ -25,25 +25,10 @@ function dtBail() {
     return 1
 }
 
-function loadDTDir() {
-    for f in "$@"; do
-        source $f;
+function dtLoadDir() {
+    for file in "$@"; do
+        source $file;
     done
-}
-
-function checkDTDep() {
-    local depName=$(jsonRead "$1" '.key')
-    local expectedVersion=$(jsonRead "$1" '.value.version')
-    local versionCommand=$(jsonRead "$1" '.value.command')
-
-    if ! checkCommand "$depName"; then
-        dtLog "$depName not installed!"
-        return 1
-    fi
-
-    local currentVersion=$(eval "$versionCommand")
-
-    checkVersionAndFail "$depName" "$expectedVersion" "$currentVersion" || return 1
 }
 
 function initJq() {
@@ -100,19 +85,6 @@ function dtLoadConfig() {
     export CA_DEPT_ROLE=$departmentRole
 }
 
-function checkDTDeps() {
-    local json5DepFilePath="$CA_DT_DIR/shell/dependencies.json5"
-
-    local depFilePath
-    depFilePath=$(json5Convert "$json5DepFilePath")
-    [[ $? -eq 0 ]] || return 1
-
-    jsonReadFile "$depFilePath" '.dependencies|to_entries[]' | \
-    while read -r dep; do
-        checkDTDep "$dep" || return 1
-    done
-}
-
 function autoinitDT() {
     if [[ ! -z "$CA_FAIL_ON_ERROR" ]]; then
         set -e
@@ -131,22 +103,29 @@ function autoinitDT() {
 
 alias dtShell=initDT
 function initDT() {
+    export CA_DT_HELPERS_PATH=$CA_DT_DIR/shell/helpers
+
     # load init scripts
-    loadDTDir $CA_DT_DIR/shell/helpers/init/**/*.sh
+    dtLoadDir $CA_DT_DIR/shell/helpers/init/**/*.sh
 
     initJq
     dtLoadConfig "$1"
-
-    ([[ -z "$IS_DOCKER" ]] && ! checkDTDeps) && (dtBail; return 1)
-
     export CA_DP_DIR=$CA_PROJECT_DIR/dataeng-pipeline
 
+    # set -x
+    if [[ -z "$IS_DOCKER" ]]; then
+        dtToolCheckVersions
+        dtModuleCheckTools "init" || (dtBail; return 1)
+    fi
+    # set +x
+
     # load helpers
-    loadDTDir $(ls $CA_DT_DIR/shell/helpers/**/*.sh | grep -v "/init")
+    dtLoadDir $CA_DT_HELPERS_PATH/*.sh
+    dtModuleLoadNested
 
     # zsh completions only loaded on zsh shells
-    if [ -n "$ZSH_VERSION" ]; then
-        loadDTDir $CA_DT_DIR/shell/helpers/**/*.zsh
+    if [[ -n "$ZSH_VERSION" ]]; then
+        dtLoadDir $CA_DT_HELPERS_PATH/**/*.zsh
     fi
 
     export CA_DT_ENV_INITIALIZED=true

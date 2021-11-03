@@ -144,7 +144,7 @@ function checkVersionAndFail() {
     local majorExpected=$(getMajorVersionComponent $minimumVersion)
 
     if ! checkVersion "$2" "$3"; then
-        echo "invalid $1 version: expected $expectedVersion <= X < $(($majorExpected + 1)).0.0; found $currentVersion"
+        dtLog "invalid $1 version: expected $expectedVersion <= X < $(($majorExpected + 1)).0.0; found $currentVersion"
         return 1
     fi
 }
