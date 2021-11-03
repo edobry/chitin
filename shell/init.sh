@@ -25,9 +25,9 @@ function dtBail() {
     return 1
 }
 
-function loadDTDir() {
-    for f in "$@"; do
-        source $f;
+function dtLoadDir() {
+    for file in "$@"; do
+        source $file;
     done
 }
 
@@ -103,11 +103,14 @@ function autoinitDT() {
 
 alias dtShell=initDT
 function initDT() {
+    export CA_DT_HELPERS_PATH=$CA_DT_DIR/shell/helpers
+
     # load init scripts
-    loadDTDir $CA_DT_DIR/shell/helpers/init/**/*.sh
+    dtLoadDir $CA_DT_DIR/shell/helpers/init/**/*.sh
 
     initJq
     dtLoadConfig "$1"
+    export CA_DP_DIR=$CA_PROJECT_DIR/dataeng-pipeline
 
     # set -x
     if [[ -z "$IS_DOCKER" ]]; then
@@ -116,14 +119,13 @@ function initDT() {
     fi
     # set +x
 
-    export CA_DP_DIR=$CA_PROJECT_DIR/dataeng-pipeline
-
     # load helpers
-    loadDTDir $(ls $CA_DT_DIR/shell/helpers/**/*.sh | grep -v "/init")
+    dtLoadDir $CA_DT_HELPERS_PATH/*.sh
+    dtModuleLoadNested
 
     # zsh completions only loaded on zsh shells
-    if [ -n "$ZSH_VERSION" ]; then
-        loadDTDir $CA_DT_DIR/shell/helpers/**/*.zsh
+    if [[ -n "$ZSH_VERSION" ]]; then
+        dtLoadDir $CA_DT_HELPERS_PATH/**/*.zsh
     fi
 
     export CA_DT_ENV_INITIALIZED=true

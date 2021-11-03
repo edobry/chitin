@@ -114,15 +114,24 @@ function dtModuleCheckTools() {
 function dtModuleShouldLoad() {
     requireArg "a module name" "$1" || return 1
 
-    local moduleConfig
-    moduleConfig=$(dtReadModuleConfig ${2:-$1})
-    if [[ $? -ne 0 ]]; then
-        echo "$moduleConfig"
-        return 1
+    local name=$1
+    shift
+
+    local returnConfig
+    if [[ "$1" == "return-config" ]]; then
+        returnConfig=true
+        shift
     fi
+
+    local moduleConfig
+    moduleConfig=$(dtReadModuleConfig ${1:-$name})
+    local moduleConfigLoadReturn=$?
     
+    [[ ! -z "$returnConfig" ]] && echo "$moduleConfig"
+
+    [[ $moduleConfigLoadReturn -eq 0 ]] || return 1
     dtModuleCheckEnabled "$moduleConfig" loaded || return 1
-    dtModuleCheckTools "$1" || return 1
+    dtModuleCheckTools "$name" || return 1
 }
 
 function dtReadModuleConfigField() {
@@ -182,4 +191,17 @@ function dtToolCheckValid() {
     [[ -z "$CA_DT_TOOL_STATUS" ]] && return 1
 
     echo "$CA_DT_TOOL_STATUS" | jq -e ".\"$1\" | (.installed and .validVersion)" >/dev/null
+}
+
+function dtModuleLoadNested() {    
+    for module in $(find $CA_DT_HELPERS_PATH -type d -maxdepth 1 -not -path $CA_DT_HELPERS_PATH); do
+        local moduleName=$(basename $module)
+        local moduleInitScriptPath="$module/$moduleName-init.sh"
+        if [[ -f $moduleInitScriptPath ]]; then
+            source $moduleInitScriptPath
+            [[ $? -eq 0 ]] || continue
+        fi
+
+        dtLoadDir $(find $module -type f -name '*.sh' -not -path $moduleInitScriptPath)
+    done
 }
