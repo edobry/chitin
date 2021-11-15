@@ -92,6 +92,13 @@ function dtModuleCheckEnabled() {
     jsonCheckBool 'enabled' "$config"
 }
 
+function dtToolCheckValid() {
+    requireArg "a tool name" "$1" || return 1
+    [[ -z "$CA_DT_TOOL_STATUS" ]] && return 1
+    
+    echo "$CA_DT_TOOL_STATUS" | jq -e --arg dep jq '.[$dep] | (.installed and .validVersion)' >/dev/null
+}
+
 function dtModuleCheckTools() {
     requireArg "a module name" "$1" || return 1
 
@@ -104,7 +111,7 @@ function dtModuleCheckTools() {
 
     jsonRead "$moduleDepConfig" '.dependencies[]' |\
     while read -r dep; do
-        if ! dtToolCheckValid $dep; then
+        if ! dtToolCheckValid "$dep"; then
             dtLog "module $1 will not load, as tool dependency $dep is unmet!"
             return 1
         fi
@@ -164,7 +171,6 @@ function dtToolCheckVersions() {
 
     export CA_DT_DEPS=$(jsonReadFile "$depFilePath")
     
-    jsonRead "$CA_DT_DEPS" '.tools|to_entries[]' | \
     while read -r dep; do
         local depName=$(jsonRead "$dep" '.key')
         local expectedVersion=$(jsonRead "$dep" '.value.version')
@@ -172,25 +178,19 @@ function dtToolCheckVersions() {
 
         if ! checkCommand "$depName"; then
             dtLog "$depName not installed!"
-            toolStatus+=(("$depName" $(jq -nc '{ installed: false }')))
-        fi
-
-        local currentVersion=$(eval "$versionCommand")
-        if checkVersionAndFail "$depName" "$expectedVersion" "$currentVersion"; then
-            toolStatus+=("$(jq -nc --arg depName "$depName" '{ ($depName): { installed: true, validVersion: true } }')")
+            toolStatus+=("$(jq -nc --arg depName "$depName" '{ ($depName): { installed: false } }')")
         else
-            toolStatus+=("$(jq -nc --arg depName "$depName" '{ ($depName): { installed: true, validVersion: false } }')")
+            local currentVersion=$(eval "$versionCommand")
+            
+            if checkVersionAndFail "$depName" "$expectedVersion" "$currentVersion"; then
+                toolStatus+=("$(jq -nc --arg depName "$depName" '{ ($depName): { installed: true, validVersion: true } }')")
+            else
+                toolStatus+=("$(jq -nc --arg depName "$depName" '{ ($depName): { installed: true, validVersion: false } }')")
+            fi
         fi
-    done
+    done < <(jsonRead "$CA_DT_DEPS" '.tools|to_entries[]')
 
     export CA_DT_TOOL_STATUS=$(jq -sc 'add' <(for x in "${toolStatus[@]}" ; do echo "$x" ; done))
-}
-
-function dtToolCheckValid() {
-    requireArg "a tool name" "$1" || return 1
-    [[ -z "$CA_DT_TOOL_STATUS" ]] && return 1
-
-    echo "$CA_DT_TOOL_STATUS" | jq -e ".\"$1\" | (.installed and .validVersion)" >/dev/null
 }
 
 function dtModuleLoadNested() {    
