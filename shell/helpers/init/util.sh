@@ -112,7 +112,7 @@ function requireArgOptions() {
 }
 
 # checks that an argument is supplied and that it passes the check, and prints a message if not
-# args: name of arg, arg value, validation command, (optionak) validation failure prefix
+# args: name of arg, arg value, validation command, (optional) validation failure prefix
 function requireArgWithCheck() {
     if [[ -z "$2" ]] || ! eval "$3 '$2'"; then
         echo "Please supply ${4}${1:-a value}!"
