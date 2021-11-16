@@ -194,7 +194,7 @@ function dtToolCheckVersions() {
 }
 
 function dtModuleLoadNested() {    
-    for module in $(find $CA_DT_HELPERS_PATH -type d -maxdepth 1 -not -path $CA_DT_HELPERS_PATH); do
+    for module in $(find $CA_DT_HELPERS_PATH -maxdepth 1 -type d -not -path $CA_DT_HELPERS_PATH); do
         local moduleName=$(basename $module)
         local moduleInitScriptPath="$module/$moduleName-init.sh"
         if [[ -f $moduleInitScriptPath ]]; then
