@@ -113,10 +113,10 @@ function initDT() {
     export CA_DP_DIR=$CA_PROJECT_DIR/dataeng-pipeline
 
     # set -x
-    # if [[ -z "$IS_DOCKER" ]]; then
+    if [[ -z "$IS_DOCKER" ]]; then
         dtToolCheckVersions
         dtModuleCheckTools "init" || (dtBail; return 1)
-    # fi
+    fi
     # set +x
 
     # load helpers
