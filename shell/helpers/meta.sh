@@ -166,7 +166,7 @@ function dtToolCheckVersions() {
 
     local depFilePath
     depFilePath=$(json5Convert "$json5DepFilePath")
-    [[ $? -ne 0 ]] || return 1
+    [[ $? -eq 0 ]] || return 1
     local toolStatus=()
 
     export CA_DT_DEPS=$(jsonReadFile "$depFilePath")
