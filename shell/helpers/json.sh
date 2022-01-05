@@ -57,7 +57,7 @@ function jsonReadFile() {
     local jsonFile="$1"
     shift
 
-    cat "$jsonFile" | jq -cr $*
+    cat "$jsonFile" | jq -cr "$@"
 }
 
 # reads the value at a certain path from a JSON object
@@ -70,7 +70,7 @@ function jsonRead() {
     local jqPath="$2"
     shift && shift
 
-    jq -cr $* "$jqPath" <<< $jsonString
+    jq -cr "$@" "$jqPath" <<< $jsonString
 }
 
 # merges two JSON objects together
