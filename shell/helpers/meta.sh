@@ -102,6 +102,8 @@ function dtToolCheckValid() {
 function dtModuleCheckTools() {
     requireArg "a module name" "$1" || return 1
 
+    isSet "$IS_DOCKER" && return 0
+
     local moduleDepConfig
     moduleDepConfig=$(jsonRead "$CA_DT_DEPS" '.modules[$x] // empty' --arg x "$1")
     if [[ $? -ne 0 ]]; then
@@ -166,7 +168,7 @@ function dtToolCheckVersions() {
 
     local depFilePath
     depFilePath=$(json5Convert "$json5DepFilePath")
-    [[ $? -ne 0 ]] || return 1
+    [[ $? -eq 0 ]] || return 1
     local toolStatus=()
 
     export CA_DT_DEPS=$(jsonReadFile "$depFilePath")
