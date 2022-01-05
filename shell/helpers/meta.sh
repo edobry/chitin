@@ -134,7 +134,7 @@ function dtModuleShouldLoad() {
     moduleConfig=$(dtReadModuleConfig ${1:-$name})
     local moduleConfigLoadReturn=$?
     
-    [[ ! -z "$returnConfig" ]] && echo "$moduleConfig"
+    isSet "$returnConfig" && echo "$moduleConfig"
 
     [[ $moduleConfigLoadReturn -eq 0 ]] || return 1
     dtModuleCheckEnabled "$moduleConfig" loaded || return 1
@@ -166,7 +166,7 @@ function dtToolCheckVersions() {
 
     local depFilePath
     depFilePath=$(json5Convert "$json5DepFilePath")
-    [[ $? -eq 0 ]] || return 1
+    [[ $? -ne 0 ]] || return 1
     local toolStatus=()
 
     export CA_DT_DEPS=$(jsonReadFile "$depFilePath")
