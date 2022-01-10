@@ -11,6 +11,10 @@ if [[ `uname` == 'Darwin' ]]; then
     function base64Decode() {
         base64 -D
     }
+
+    function netcatTimeout() {
+        nc -G "$1" "$2" "$3"
+    }
 else
     function toClip() {
         xclip -selection clipboard
@@ -22,5 +26,9 @@ else
 
     function base64Decode() {
         base64 -d
+    }
+
+    function netcatTimeout() {
+        nc -w "$1" "$2" "$3"
     }
 fi
