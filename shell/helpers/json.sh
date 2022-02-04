@@ -19,7 +19,7 @@ function validateJson() {
 function validateJsonFile() {
     requireFileArg "JSON file" "$1" || return 1
 
-    validateJson $(jsonReadFile "$1")
+    validateJson "$(jsonReadFile "$1")"
 }
 
 function validateJsonFields() {
