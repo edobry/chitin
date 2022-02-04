@@ -34,3 +34,8 @@ function gitSparseCheckout() {
     git checkout main > /dev/null 2>&1
     popd > /dev/null
 }
+
+function gitCommitPublish() {
+    git commit -m "[publish]" --allow-empty
+    git push
+}
