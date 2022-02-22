@@ -52,6 +52,9 @@ function dtDebug() {
     echo -e "DT version: $(dtGetVersion)\n"
     dtShowConfig
 
+    echo -e "\nDT tool status:"
+    dtToolShowStatus
+
     echo -e "\nDT envvars:\n"
     dtShowEnvvars
     echo
@@ -97,6 +100,10 @@ function dtToolCheckValid() {
     [[ -z "$CA_DT_TOOL_STATUS" ]] && return 1
     
     echo "$CA_DT_TOOL_STATUS" | jq -e --arg dep jq '.[$dep] | (.installed and .validVersion)' >/dev/null
+}
+
+function dtToolShowStatus() {
+    jsonRead "$CA_DT_TOOL_STATUS" 'to_entries[] | "\(.key) - installed: \(.value.installed), valid: \(.value.validVersion)"'
 }
 
 function dtModuleCheckTools() {
