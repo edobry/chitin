@@ -16,6 +16,12 @@ function hr() {
 	printf '%0*d' $(tput cols) | tr 0 ${1:-_}
 }
 
+function getColumn() {
+    requireNumericArg "the column number" "$1" || return 1
+
+    awk "{ print \$$1 }"
+}
+
 function escapeCommas(){
     sed 's/,/\\\,/g'
 }
