@@ -28,3 +28,10 @@ function sshGetPublicKey() {
     
     ssh-keygen -yf "$1"
 }
+
+# registers a remote host's public key with the known_hosts file
+function sshKeyscanHost() {
+    requireArg 'a hostname' "$1" || return 1
+
+    ssh-keyscan -t rsa $(host -t A github.com | awk '{ print $4}') >> ~/.ssh/known_hosts
+}

@@ -180,3 +180,15 @@ function checkCommand() {
 
     command -v "$1" >/dev/null 2>&1
 }
+
+function findFile() {
+    requireArg "a search pattern" "$1" || return 1
+    
+    find * -type f -name "$1"
+}
+
+function deleteFiles() {
+    requireArg "a search pattern" "$1" || return 1
+
+    find . -type f -name "$1" -prune -print -exec rm -rf {} \;
+}
