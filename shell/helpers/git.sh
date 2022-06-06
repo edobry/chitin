@@ -15,10 +15,12 @@ function gitSparseCheckout() {
     requireArg "a remote repository" "$1"
     requireArg "the name of the repository" "$2"
     requireArg "a filepath" "$3"
+    requireArg "a ref" "$4"
 
     local remoteRepo="$1"
     local repoName="$2"
     local filepath="$3"
+    local ref="${4:-"main"}"
 
     mkdir -p "$repoName"
     pushd "$repoName" > /dev/null
@@ -26,12 +28,13 @@ function gitSparseCheckout() {
     # init sparse repo
     git init > /dev/null
     git config core.gitSparseCheckout true
+    git config init.defaultBranch main
     echo "$filepath" >> .git/info/sparse-checkout
 
     # fetch single file
     git remote add origin "$remoteRepo" > /dev/null 2>&1
-    git fetch --depth=1 origin main > /dev/null 2>&1
-    git checkout main > /dev/null 2>&1
+    git fetch --depth=1 origin $ref > /dev/null 2>&1
+    git checkout $ref > /dev/null 2>&1
     popd > /dev/null
 }
 
