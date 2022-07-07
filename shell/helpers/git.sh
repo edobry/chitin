@@ -15,7 +15,6 @@ function gitSparseCheckout() {
     requireArg "a remote repository" "$1"
     requireArg "the name of the repository" "$2"
     requireArg "a filepath" "$3"
-    requireArg "a ref" "$4"
 
     local remoteRepo="$1"
     local repoName="$2"
