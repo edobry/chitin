@@ -39,6 +39,10 @@ function replaceNewlines() {
     tr '\n' ' ' | sed -e 's/  *$//'
 }
 
+function splitOnSpace() {
+    tr ' ' '\n'
+}
+
 function sedStripRef() {
     sed 's/\?ref=.*$//g'
 }
