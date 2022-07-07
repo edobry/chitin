@@ -37,6 +37,14 @@ function gitSparseCheckout() {
     popd > /dev/null
 }
 
+function gitPullMain() {
+    requireDirectoryeArg "a repository path" "$1"
+
+    pushd "$1" > /dev/null
+    git pull origin main > /dev/null 2>&1
+    popd > /dev/null
+}
+
 function gitCommitPublish() {
     git commit -m "[publish]" --allow-empty
     git push
