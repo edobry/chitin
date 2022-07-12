@@ -16,6 +16,10 @@
         "kubectl": {
             "version": "1.22",
             "command": "kubectl version --client=true  -o=json | jq -r '.clientVersion.gitVersion' | sed 's/v//'"
+        },
+        "pcregrep": {
+            "version": "8.45",
+            "command": "pcregrep --version | cut -d ' ' -f 3"
         }
     },
     "modules": {
@@ -23,7 +27,7 @@
             "dependencies": ["jq"]
         },
         "aws": {
-            "dependencies": ["aws"]
+            "dependencies": ["aws", "pcregrep"]
         },
         "k8s": {
             "dependencies": ["aws", "kubectl"]

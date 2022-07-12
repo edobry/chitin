@@ -39,6 +39,10 @@ function replaceNewlines() {
     tr '\n' ' ' | sed -e 's/  *$//'
 }
 
+function splitOnSpace() {
+    tr ' ' '\n'
+}
+
 function sedStripRef() {
     sed 's/\?ref=.*$//g'
 }
@@ -55,6 +59,15 @@ function checkFileExists() {
 
     if [[ ! -f "$1" ]]; then
         echo "No file exists at the given path!"
+        return 1
+    fi
+}
+
+function checkDirectoryExists() {
+    requireArg "a filepath" "$1" || return 1
+
+    if [[ ! -d "$1" ]]; then
+        echo "No directory exists at the given path!"
         return 1
     fi
 }
@@ -92,10 +105,16 @@ function requireNumericArg() {
     requireArgWithCheck "$1" "$2" checkNumeric "a numeric "
 }
 
-# checks that an argument is supplied and that it is numeric, and prints a message if not
+# checks that an argument is supplied and that it points to an existing file, and prints a message if not
 # args: name of arg, arg value
 function requireFileArg() {
     requireArgWithCheck "$1" "$2" checkFileExists "a path to an existing "
+}
+
+# checks that an argument is supplied and that points to an existing directory, and prints a message if not
+# args: name of arg, arg value
+function requireDirectoryeArg() {
+    requireArgWithCheck "$1" "$2" checkDirectoryExists "a path to an existing "
 }
 
 # checks that an argument is supplied and that its one of the allowed options, and prints a message listing the available options if not
