@@ -39,7 +39,7 @@ function replaceNewlines() {
     tr '\n' ' ' | sed -e 's/  *$//'
 }
 
-function splitOnSpace() {
+function splitOnSpaces() {
     tr ' ' '\n'
 }
 
