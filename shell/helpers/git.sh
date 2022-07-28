@@ -21,19 +21,21 @@ function gitSparseCheckout() {
     local filepath="$3"
     local ref="${4:-"main"}"
 
+    echo "Initializing and fetching shallow clone of $repoName..."
+
     mkdir -p "$repoName"
     pushd "$repoName" > /dev/null
 
     # init sparse repo
-    git init > /dev/null
+    git init
     git config core.gitSparseCheckout true
     git config init.defaultBranch main
     echo "$filepath" >> .git/info/sparse-checkout
 
     # fetch single file
-    git remote add origin "$remoteRepo" > /dev/null 2>&1
-    git fetch --depth=1 origin $ref > /dev/null 2>&1
-    git checkout $ref > /dev/null 2>&1
+    git remote add origin "$remoteRepo"
+    git fetch --depth=1 origin $ref
+    git checkout $ref
     popd > /dev/null
 }
 
