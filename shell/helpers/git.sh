@@ -21,6 +21,9 @@ function gitSparseCheckout() {
     local filepath="$3"
     local ref="${4:-"main"}"
 
+    # check if repo already initialized
+    gitIsRepoRoot "$repoName" && return 0
+
     echo "Initializing and fetching shallow clone of $repoName..."
 
     mkdir -p "$repoName"
