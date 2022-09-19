@@ -52,7 +52,7 @@ This module provides helpers for Artifactory authentication.
 
 ##### Configuration
 
-This module leverages `dtSecret` for managing your Artifactory credentials; add a section to your dtConfig with the names of the secrets to use.:
+This module leverages `dtSecret` for managing your Artifactory credentials; add a section to your dtConfig with the names of the secrets to use:
 
 ```json
 {
@@ -63,10 +63,9 @@ This module leverages `dtSecret` for managing your Artifactory credentials; add 
     }
   }
 }
-
 ```
->Note: `passSecretName` password refers to the terraform API key. Use `dtModifyConfig` command on the terminal and add the above to the modules. The `shell/terraform/config.json5` file on this repo is just a template, make sure you add the info using `dtModifyConfig`
-Functions
+
+>Note: `passSecretName` password refers to the artifactory API key. Use `dtModifyConfig` command on the terminal and add the above to the modules. 
 
 Install `pass`. And add the following to the `modules`. It tells the `dtSecret` module what command to use for persisting and fetching secrets:
 ```json
