@@ -65,7 +65,15 @@ This module leverages `dtSecret` for managing your Artifactory credentials; add 
 }
 ```
 
-Functions
+>Note: `passSecretName` password refers to the artifactory API key. Use `dtModifyConfig` command on the terminal and add the above to the modules. 
+
+Install `pass`. And add the following to the `modules`. It tells the `dtSecret` module what command to use for persisting and fetching secrets:
+```json
+"dtSecret": {
+  "command": "pass"
+}
+```
+
 
 - `artifactoryGetUsername`: retrieves your Artifactory username using dtSecret
 - `artifactoryGetPassword`: retrieves your Artifactory password using dtSecret
