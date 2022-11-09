@@ -39,6 +39,10 @@ function replaceNewlines() {
     tr '\n' ' ' | sed -e 's/  *$//'
 }
 
+function newlinesToCommas() {
+    replaceNewlines | sed 's/ /,/g'
+}
+
 function splitOnSpaces() {
     tr ' ' '\n'
 }
