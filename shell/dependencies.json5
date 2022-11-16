@@ -7,7 +7,7 @@
         },
         "yq": {
             "version": "4.11.2",
-            "command": "yq --version 2>&1 | awk '{ print $4 }'"
+            "command": "yq --version 2>&1 | awk '{ print $4 }' | sed 's/v//'"
         },
         "aws": {
             "version": "2.0.57",
