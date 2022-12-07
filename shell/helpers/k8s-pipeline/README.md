@@ -1,5 +1,13 @@
 # K8s Pipeline
 
+> !! -------- DEPRECATION WARNING -------- !!
+>
+> `k8sPipeline` is EOL & will be removed in the next major version release
+>
+> please switch to [`konfigure`](https://github.com/chainalysis/konfigure) ASAP, contact @edobry with questions
+>
+> !! -------- DEPRECATION WARNING -------- !!
+
 This module facilitates deploying workloads to our K8s clusters, providing several convenience features streamlining developer workflows and guarding against common failure modes. It is to be used in conjunction with a Helm/CDK8s chart repository and a live application configuration repository (or within a single application repository).
 
 ### Usage
