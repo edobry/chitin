@@ -1,5 +1,5 @@
 function gitIsRepoRoot() {
-    requireArg "a directory" "$1"
+    requireArg "a directory" "$1" || return 1
 
     [[ -d "$1/.git" ]]
 }
@@ -12,9 +12,9 @@ function gitGetCurrentCommitHash() {
 # args: remote repo url, repo name, relative filepath
 # ref: https://stackoverflow.com/questions/60190759/how-do-i-clone-fetch-or-sparse-checkout-a-single-directory-or-a-list-of-directo/60190760#60190760
 function gitSparseCheckout() {
-    requireArg "a remote repository" "$1"
-    requireArg "the name of the repository" "$2"
-    requireArg "a filepath" "$3"
+    requireArg "a remote repository" "$1" || return 1
+    requireArg "the name of the repository" "$2" || return 1
+    requireArg "a filepath" "$3" || return 1
 
     local remoteRepo="$1"
     local repoName="$2"
@@ -43,7 +43,7 @@ function gitSparseCheckout() {
 }
 
 function gitPullMain() {
-    requireDirectoryeArg "a repository path" "$1"
+    requireDirectoryArg "a repository path" "$1" || return 1
 
     pushd "$1" > /dev/null
     git pull origin main > /dev/null 2>&1
