@@ -202,15 +202,21 @@ function dtToolCheckVersions() {
     export CA_DT_TOOL_STATUS=$(jq -sc 'add' <(for x in "${toolStatus[@]}" ; do echo "$x" ; done))
 }
 
-function dtModuleLoadNested() {    
+function dtModuleLoadNested() {
     for module in $(find $CA_DT_HELPERS_PATH -maxdepth 1 -type d -not -path $CA_DT_HELPERS_PATH); do
-        local moduleName=$(basename $module)
-        local moduleInitScriptPath="$module/$moduleName-init.sh"
-        if [[ -f $moduleInitScriptPath ]]; then
-            source $moduleInitScriptPath
-            [[ $? -eq 0 ]] || continue
-        fi
-
-        dtLoadDir $(find $module -type f -name '*.sh' -not -path $moduleInitScriptPath)
+        dtModuleLoad "$module"
     done
+}
+
+function dtModuleLoad() {
+    requireArg "a module name" "$1" || return 1
+
+    local moduleName=$(basename "$1")
+    local moduleInitScriptPath="$1/$moduleName-init.sh"
+    if [[ -f $moduleInitScriptPath ]]; then
+        source $moduleInitScriptPath
+        [[ $? -eq 0 ]] || return 0
+    fi
+
+    dtLoadDir $(find "$1" -type f -name '*.sh' -not -path $moduleInitScriptPath)
 }
