@@ -72,17 +72,8 @@ function dtLoadConfig() {
 
     export CA_DT_CONFIG="$mergedConfig"
 
-    local projectDir=$(jsonRead "$CA_DT_CONFIG" '.projectDir // empty')
+    local projectDir=$(dtReadConfig '.projectDir // empty')
     export CA_PROJECT_DIR=$projectDir
-
-    local awsAuthEnabled=$(jsonRead "$CA_DT_CONFIG" '.modules."aws-auth".enabled // empty')
-    export CA_DT_AWS_AUTH_ENABLED=$awsAuthEnabled
-
-    local googleUsername=$(jsonRead "$CA_DT_CONFIG" '.modules."aws-auth".googleUsername // empty')
-    export CA_GOOGLE_USERNAME=$googleUsername
-
-    local departmentRole=$(jsonRead "$CA_DT_CONFIG" '.modules."aws-auth".departmentRole // empty')
-    export CA_DEPT_ROLE=$departmentRole
 }
 
 function autoinitDT() {

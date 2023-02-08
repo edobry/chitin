@@ -89,7 +89,7 @@ There are several AWS helper submodules, broken out by service.
 
 The `aws-auth` helper is designed to reduce friction during development, providing
 useful functions for introspecting, and switching between roles, including
-automatically re-authenticating if needed. This shell integration is disabled by default, but you can enable it by setting `CA_DT_AWS_AUTH_ENABLED=true` in step 3 of the setup. This is recommended, but not required.
+automatically re-authenticating if needed. This shell integration is disabled by default, but you can enable it by setting `aws.envEnabled: true` in step 3 of the setup. This is recommended, but not required.
 
 ###### Examples
 

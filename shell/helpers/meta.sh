@@ -64,7 +64,7 @@ function dtDebug() {
 }
 
 function dtReadConfig() {
-    jsonRead "$CA_DT_CONFIG" $@
+    jsonRead "$CA_DT_CONFIG" "$@"
 }
 
 function dtReadConfigFile() {
