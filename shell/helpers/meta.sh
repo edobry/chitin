@@ -88,11 +88,16 @@ function dtReadModuleConfig() {
     echo $config
 }
 
-function dtModuleCheckEnabled() {
+function dtModuleCheckBoolean() {
     requireArg "a module name or config" "$1" || return 1
+    requireArg "a field name" "$2" || return 1
 
     local config=$([[ "$2" == "loaded" ]] && echo "$1" || dtReadModuleConfig "$1")
-    jsonCheckBool 'enabled' "$config"
+    jsonCheckBool "$2" "$config"
+}
+
+function dtModuleCheckEnabled() {
+    dtModuleCheckBoolean $1 enabled
 }
 
 function dtToolCheckValid() {
