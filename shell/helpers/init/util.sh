@@ -117,7 +117,7 @@ function requireFileArg() {
 
 # checks that an argument is supplied and that points to an existing directory, and prints a message if not
 # args: name of arg, arg value
-function requireDirectoryeArg() {
+function requireDirectoryArg() {
     requireArgWithCheck "$1" "$2" checkDirectoryExists "a path to an existing "
 }
 
