@@ -20,6 +20,10 @@
         "pcregrep": {
             "version": "8.45",
             "command": "pcregrep --version | cut -d ' ' -f 3"
+        },
+        "node": {
+            "version": "19.4.0",
+            "command": "node -v | sed 's/v//'"
         }
     },
     "modules": {
@@ -31,6 +35,9 @@
         },
         "k8s": {
             "dependencies": ["aws", "kubectl"]
+        },
+        "node": {
+            "dependencies": ["node"]
         }
     }
 }

@@ -1,10 +1,10 @@
-## dataeng-tools
+# dataeng-tools
 
 This repository contains tools and scripts used by Data Engineering, both
 interactively and in scripting. The primary language is currently Bash but this
 may change in the future.
 
-### Prerequisites
+## Prerequisites
 
 Make sure the following programs are installed on your computer (not every helper
 requires each one, but you may want to install them all to save time):
@@ -12,6 +12,7 @@ requires each one, but you may want to install them all to save time):
 Required:
 
 - `jq v1.6` [link](https://github.com/stedolan/jq)
+- `nodejs v19.4.0`
 
 Optionally required:
 
@@ -27,30 +28,33 @@ Optionally required:
 MacOS only:
 
 - `watch`
+- `pcregrep`
 
 Linux only:
 
 - `xclip`
 
-### Setup
+## Setup
 
 1. Install the prerequisites for the module(s) you want to use (see docs below)
-2. Clone this repository to your usual location
-3. Add the following line to your profile (ie `.bashrc` or `.zshrc`), substituting `<location>`:
+2. Clone this repository to your `project dir` (the directory where you usually run `git clone`)
+3. Add the following line to your profile (ie `.zshrc` or `.bashrc`), substituting `<project dir>`:
 
-   `source <location>/dataeng-tools/shell/init.sh`
+   `source <project dir>/dataeng-tools/shell/init.sh`
 
 4. Start a new shell session, and follow the instructions to modify the config file at `~/.config/dataeng-tools/config.json5` (or equivalent).
 
+You are strongly encouraged to enable & configure the [`aws-env`](#aws-env) and [`k8s-env`](#k8s-env) modules.
+
 > Note: if you would prefer to not automatically load these modules (for performance reasons), set CA_DT_AUTOINIT_DISABLED=true, and use the command `dtShell` when you want to use them
 
-### Modules
+## Modules
 
-#### Artifactory
+### Artifactory
 
 This module provides helpers for Artifactory authentication.
 
-##### Configuration
+#### Configuration
 
 This module leverages `dtSecret` for managing your Artifactory credentials; add a section to your dtConfig with the names of the secrets to use:
 
@@ -68,46 +72,62 @@ This module leverages `dtSecret` for managing your Artifactory credentials; add 
 >Note: `passSecretName` password refers to the artifactory API key. Use `dtModifyConfig` command on the terminal and add the above to the modules. 
 
 Install `pass`. And add the following to the `modules`. It tells the `dtSecret` module what command to use for persisting and fetching secrets:
+
 ```json
 "dtSecret": {
   "command": "pass"
 }
 ```
 
-
 - `artifactoryGetUsername`: retrieves your Artifactory username using dtSecret
 - `artifactoryGetPassword`: retrieves your Artifactory password using dtSecret
 - `artifactoryConfigureEnvironment`: exposes your Artifactory credentials in your current shell session
 
-#### AWS
+### AWS
 
 > Requires: `aws`, `jq`
 
 There are several AWS helper submodules, broken out by service.
 
-##### Auth
+#### AWS Configuration
 
-The `aws-auth` helper is designed to reduce friction during development, providing
-useful functions for introspecting, and switching between roles, including
-automatically re-authenticating if needed. This shell integration is disabled by default, but you can enable it by setting `CA_DT_AWS_AUTH_ENABLED=true` in step 3 of the setup. This is recommended, but not required.
+```json
+{
+  "modules": {
+    "aws": {
+      "enabled": "boolean; whether to load the module",
+      "envEnabled": "boolean; whether to enable the aws-env module",
+      "googleUsername": "string; your full Chainalysis email address",
+      "departmentRole": "string; the AWS org you are a member of [optional]",
+      "defaultProfile": "string; the role to automatically assume [optional]",
+    }
+  }
+}
+```
 
-###### Examples
+#### aws-env
+
+The `aws-env` module is designed to reduce friction in AWS authentication, automatically configuring your `aws` CLI to work with all our accounts and roles, and enabling you to easily switch between them.
+
+This shell integration is disabled by default, but you can enable it by setting `aws.envEnabled: true` in step 3 of the setup. This is recommended, but not required.
+
+##### aws-env Examples
 
 To switch between AWS organizations (if you are a member of multiple):
 
-```
+```shell
 awsOrg engineering-data
 ```
 
 To assume a particular AWS role, authenticating if needed:
 
-```
+```shell
 awsAuth dataeng-dev-admin
 ```
 
 To reset your AWS credentials (which can be useful for debugging):
 
-```
+```shell
 deAuth
 ```
 
@@ -127,13 +147,13 @@ If you enable the shell integration, you can use the following functions to assu
 - `awsAuth`: authenticate if needed, and assume a profile
 - `withProfile`: run a command with a specific AWS profile
 
-##### ASG
+#### ASG
 
 Functions
 
 - `awsAsgGetTags`: gets the tags for the ASG with the given name
 
-##### IAM
+#### IAM
 
 Functions
 
@@ -145,7 +165,7 @@ Functions
 - `awsIamShowPolicy`: shows all policy attachments and their allowed actions for a given policy version
 - `awsIamAssumeRoleShell`: assumes an IAM role in a subshell, can be used to test permissions
 
-##### EBS
+#### EBS
 
 Functions:
 
@@ -170,7 +190,7 @@ Functions:
 - `awsEbsAuthorizeSnapshotAccess`: authorizes access to a snapshot from another account
 - `awsEbsCopySnapshotCrossAccount`: authorizes access to, and then copies a snapshot across to another account
 
-##### EC2
+#### EC2
 
 Functions:
 
@@ -186,7 +206,7 @@ Functions:
 - `awsEc2ListNetworkInterfaceAddresses`: lists all ENIs along with their associated private IP addresses
 - `awsEc2GetNetworkInterface`: gets the description for a given ENI
 
-##### Route 53
+#### Route 53
 
 Functions:
 
@@ -195,7 +215,7 @@ Functions:
 - `awsR53GetRecords`: gets all records in the given hosted zone
 - `awsR53GetARecords`: gets all A records in the given hosted zone
 
-##### RDS
+#### RDS
 
 Functions:
 
@@ -205,7 +225,7 @@ Functions:
 - `awsRdsCheckInstanceExistence`: checks the existence of an RDS instance with the given name
 - `awsRdsSnapshot`: snapshots the given RDS instance
 
-##### S3
+#### S3
 
 Functions:
 
@@ -213,7 +233,7 @@ Functions:
 - `awsS3ReadObject`: downloads and reads the content of a particular S3 object
 - `awsS3KeyExists`: check if the given key in the given s3 bucket exists
 
-##### SSM
+#### SSM
 
 Functions:
 
@@ -222,7 +242,7 @@ Functions:
 - `awsSsmSetParam`: sets an SSM parameter
 - `awsSsmDeleteParam`: deletes an SSM parameter
 
-##### MSK
+#### MSK
 
 Functions:
 
@@ -234,7 +254,7 @@ Functions:
 - `awsMskGetBrokerArns`: gets the list of broker ARNs of the given MSK cluster with the given identifier
 - `awsMskRebootBroker`: reboots the MSK broker with the given cluster identifier and broker ID
 
-##### DynamoDB
+#### DynamoDB
 
 Functions:
 
@@ -243,7 +263,7 @@ Functions:
 - `awsDynamoGetItem`: gets a specific DynamoDB item
 - `awsDynamoUpdateItem`: updates the value of a specific DynamoDB item
 
-#### Docker
+### Docker
 
 Functions:
 
@@ -254,7 +274,7 @@ Functions:
 - `dockerArtifactoryPublish`: tags and pushes a locally-built Docker image to Artifactory
 - `dockerArtifactoryPublishLast`: tags and pushes the last locally-built Docker image to Artifactory
 
-#### Helm
+### Helm
 
 Functions:
 
@@ -269,18 +289,35 @@ Functions:
 - `helmChartGetLatestVersion`: gets the latest version of a given Helm chart
 - `helmChartCheckVersion`: checks the version of a given Helm chart against a desired version
 
-#### K8s
+### K8s
 
-##### Env
+#### k8s-env
 
-The `k8s-env` helper sets up your Kubernetes configuration for working with our EKS environments. It works by adding the `eksconfig.yaml` file to your `KUBECONFIG` environment variable. This shell integration is disabled by default, but you can enable it by setting `DE_K8S_CONFIG_ENABLED=true` in step 2 of the setup. This is recommended, but not required. If you do choose to use it, however, you may want to delete any existing EKS-relevant config from your `~/.kube/config` file, to avoid conflicts.
+The `k8s-env` helper sets up your Kubernetes configuration for working with our EKS environments. It works by generating a `eksconfig.yaml` file and adding it to your `KUBECONFIG` environment variable. A set of known clusters is packaged with this tool, and you can add your own clusters in the `eksClusters` field of the module config like so:
+
+```json
+{
+  "modules": {
+      "k8s-env": {
+          "eksClusters": {
+              "example-prod": {
+                "name": "example-prod-test-cluster",
+                "role": "example-prod-admin"
+              }
+          }
+      }
+  }
+}
+```
+
+This shell integration is disabled by default, but you can enable it by setting `k8s-env.enabled=true`. This is recommended, but not required. If you do choose to use it, however, you may want to delete any existing EKS-relevant config from your `~/.kube/config` file, to avoid conflicts.
 
 Functions:
 
 - `k8sGetCurrentContext`: gets the current k8s context config
 - `k8sDeleteContext`: deletes a k8s context
 
-##### Helpers
+#### Helpers
 
 > Requires: `kubectl`, `yq`, `jq`, `fzf` (optional)
 
@@ -312,16 +349,7 @@ Functions:
 - `k8sDeploymentHasPods`: checks whether a given Deployment has running pods under management
 - `k8sWaitForDeploymentScaleDown`: waits until all pods under management of a given Deployment have scaled down
 
-##### Pipeline
-
-The `k8s-pipeline` helper module adds functionality which helps deploy workloads to K8s clusters, please see [the README](shell/helpers/k8s-pipeline/README.md) for details
-
-Functions:
-
-- `k8sPipeline`: automates Helm operations, enabling simple deployments
-- `k9sPipeline`: launches `k9s` preconfigured for the specified environment
-
-#### Kafka
+### Kafka
 
 > Requires: `docker`, `python`
 
@@ -332,7 +360,7 @@ Functions:
 - `kafkaResetTopics`: resets an MSK cluster's topics by destroying and recreating using terraform
 - `kafkacli`: tool to query tx-producer kafka topics
 
-#### Coin Collection
+### Coin Collection
 
 > Requires: `jq`, `psql`, `kubectl`
 > Depend on: `k8s`
@@ -345,7 +373,7 @@ Functions:
 - `ccGetLatestClusterVersion`: finds the latest cluster version by querying S3
 - `ccUpgradeEnvironmentClusterVersion`: upgrades an environment's cluster version to either the specified or latest
 
-#### P2P Nodes
+### P2P Nodes
 
 > Requires: `node`, `kubectl`
 > Depend on: `aws-auth`, `aws-ebs`
@@ -358,17 +386,17 @@ Functions:
 - `p2pCloneNodeState`: clones an existing node's state by snapshotting and then creating a volume
 - `p2pCloneNodeStateCrossAccount`: clones an existing node's state across accounts by snapshotting, authorizing, copying, and then creating a volume
 
-#### SSH
+### SSH
 
 Functions:
 
 - `sshTunnel`: sets up an SSH tunnel to forward from a local port
 
-#### Secret
+### Secret
 
 This module provides a configurable secrets-management interface for other modules to use; it was designed with the [`pass` command](https://www.passwordstore.org/) in mind, but can be used with others, given a compatible CLI.
 
-##### Configuration
+#### Configuration
 
 Add a section to your dtConfig with the `command` to use:
 
@@ -386,7 +414,7 @@ Functions:
 
 - `dtSecretGet`: retrieves a secret with the given name from the secret store
 
-#### Terraform
+### Terraform
 
 > Requires: `terraform`, `jq`
 
@@ -408,15 +436,15 @@ Functions:
 - `tgGoToLocalSource`: navigates to the terragrunt source module locally
 - `tgGoToRemoteSource`: opens the terragrunt module source in the browser
 
-#### Network
+### Network
 
 Functions:
 
 - `checksumUrl`: downloads a file from a url and checksums it
 
-#### Github
+### Github
 
-##### Configuration
+#### Configuration
 
 This module leverages `dtSecret` for managing the Github PAT; add a section to your dtConfig with the name of the secret to use:
 
@@ -438,6 +466,6 @@ Functions:
 - `githubAppCreateInstallationToken`: creates an installation token for the given Github app installation
 - `githubOpenDirectory`: opens the current git repository directory in the Github UI
 
-### Contributing
+## Contributing
 
 See `CONTRIBUTING.md` for more details about how to contribute.

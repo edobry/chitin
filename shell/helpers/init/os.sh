@@ -8,6 +8,10 @@ if [[ `uname` == 'Darwin' ]]; then
         open $1
     }
 
+    function base64Encode() {
+        base64
+    }
+
     function base64Decode() {
         base64 -D
     }
@@ -22,6 +26,10 @@ else
 
     function openUrl() {
         xdg-open $1
+    }
+
+    function base64Encode() {
+        base64 -w 0
     }
 
     function base64Decode() {
