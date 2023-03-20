@@ -174,8 +174,7 @@ function dtReadModuleConfigField() {
 }
 
 function dtModifyConfig() {
-    [[ -z $EDITOR ]] && EDITOR=nano
-    $EDITOR "$(dtGetConfigLocation)/config.json5"
+    ${EDITOR:-nano} "$(dtGetConfigLocation)/config.json5"
     dtLog "config updated, reinitializing..."
     reinitDT
 }
