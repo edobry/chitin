@@ -45,8 +45,15 @@ function gitSparseCheckout() {
 function gitPullMain() {
     requireDirectoryArg "a repository path" "$1" || return 1
 
+    local mainBranch='main'
+    local remoteMainBranch="origin/$mainBranch"
+
     pushd "$1" > /dev/null
-    git pull origin main > /dev/null 2>&1
+    if [[ "$2" == "hard" ]]; then
+        git fetch origin && git reset --hard $remoteMainBranch
+    else
+        git pull origin $mainBranch > /dev/null 2>&1
+    fi
     popd > /dev/null
 }
 
