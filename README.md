@@ -469,3 +469,19 @@ Functions:
 ## Contributing
 
 See `CONTRIBUTING.md` for more details about how to contribute.
+
+## Used By
+
+This project is used in the following places:
+
+- [konfigure](https://github.com/chainalysis/konfigure/blob/main/src/shell.ts), as an environmental dependency
+- as a [JSL building block](https://github.com/chainalysis/jenkins-shared-library/blob/main/vars/withDataengTools.groovy)
+- various JSL helpers as a Docker image:
+  - [`withNodeBuildEnv`](https://github.com/chainalysis/jenkins-shared-library/blob/aaa7897aee0acac12f8886bd10c34bb405cb1ace/vars/withNodeBuildEnv.groovy#L14)
+  - [`k8sPipeline`](https://github.com/chainalysis/jenkins-shared-library#k8spipelinemap-config)
+    - used in [dataeng-pipeline CD](https://github.com/chainalysis/dataeng-pipeline/blob/89ee112cf026f39f31da2a1248a40726aca126f6/Jenkinsfile#L13)
+  - [`terragruntPipeline`](https://github.com/chainalysis/jenkins-shared-library/blob/main/docs/terraform-functions.md#terragruntpipelinemap-config)
+    - used in [dataeng-infra-live CD](https://github.com/chainalysis/dataeng-infra-live/blob/b97ee651a255fcc46faf93fede4e671e0bcc8ae6/Jenkinsfile#L21)
+- certain dataeng-charts charts:
+  - as an [`initContainer` image](https://github.com/chainalysis/dataeng-charts/blob/db09c6e103f3decb1b6c3189a3034c0a71c3af64/charts/cluster-script/src/main.ts#L50)
+  - or in a [`Job` using a helper](https://github.com/chainalysis/dataeng-charts/blob/db09c6e103f3decb1b6c3189a3034c0a71c3af64/charts/coins/bitcoin/templates/job-snapshot.yaml#L24)
