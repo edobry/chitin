@@ -1,10 +1,12 @@
 {
-    // directory you clone git repositories to
+    // directory you clone git repositories to (absolute path)
     "projectDir": "",
     "modules": {
-        "aws-auth": {
-            // set to true to enable the aws authentication helper shell integration
+        "aws": {
+            // set to true to enable the aws helpers
             "enabled": false,
+            // set to true to enable the aws authentication shell integration
+            "envEnabled": false,
             // <username>@chainalysis.com
             "googleUsername": "",
             // optional, if you don't set this, use awsOrg to set interactively
