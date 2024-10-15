@@ -1,0 +1,23 @@
+{
+    // directory you clone git repositories to (absolute path)
+    "projectDir": "",
+    "modules": {
+        "aws": {
+            // set to true to enable the aws helpers
+            "enabled": false,
+            // set to true to enable the aws authentication shell integration
+            "envEnabled": false,
+            // <username>@chainalysis.com
+            "googleUsername": "",
+            // optional, if you don't set this, use awsOrg to set interactively
+            "departmentRole": "",
+            // set these iff you are using programmatic credentials
+            "programmaticAuth": false,
+            "programmaticRole": ""
+        },
+        "k8s-env": {
+            // set to true to enable the kubeconfig integration
+            "enabled": false
+        }
+    }
+}
