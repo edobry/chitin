@@ -104,7 +104,7 @@ function json5Convert() {
     local json5filePath="$1"
 
     if [[ "${json5filePath: -1}" != '5' ]]; then
-        dtBail "extension must be '.json5'!"
+        chiBail "extension must be '.json5'!"
         return 1
     fi
 

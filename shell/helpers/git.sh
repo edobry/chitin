@@ -61,7 +61,3 @@ function gitCommitPublish() {
     git commit -m "[publish]" --allow-empty
     git push
 }
-
-function gitQlGetCommitTitlesAndAuthor() {
-    gitql -q "select title, author_name from commits" -o json | jq
-}

@@ -1,77 +1,77 @@
-function dtGetVersion() {
-    pushd $CA_PROJECT_DIR/dataeng-tools > /dev/null
+function chiGetVersion() {
+    pushd $CHI_PROJECT_DIR/chitin > /dev/null
     git describe HEAD --tags
     popd > /dev/null
 }
 
-function dtGetLocation() {
-    echo $CA_PROJECT_DIR/dataeng-tools
+function chiGetLocation() {
+    echo $CHI_PROJECT_DIR/chitin
 }
 
-function dtGetReleasedVersion() {
-    dtGetVersion | cut -d '-' -f 1
+function chiGetReleasedVersion() {
+    chiGetVersion | cut -d '-' -f 1
 }
 
-function dtCheckVersion() {
+function chiCheckVersion() {
     requireArg "the minimum version" "$1" || return 1
 
     local minimumVersion="$1"
-    local installedVersion=$(dtGetVersion)
+    local installedVersion=$(chiGetVersion)
 
     if ! checkVersion $minimumVersion $installedVersion; then
-        dtLog "Installed DT version $installedVersion does not meet minimum of $minimumVersion!"
+        chiLog "Installed chitin version $installedVersion does not meet minimum of $minimumVersion!"
         return 1
     fi
 }
 
-function dtCheckEmbeddedVersion() {
-    if [[ ! -d dataeng-tools ]]; then
-        dtLog "No embedded dataeng-tools found!"
+function chiCheckEmbeddedVersion() {
+    if [[ ! -d chitin ]]; then
+        chiLog "No embedded chitin found!"
         return 1
     fi
 
-    pushd dataeng-tools > /dev/null
+    pushd chitin > /dev/null
     git describe HEAD --tags
     popd > /dev/null
 }
 
-function dtGetConfigLocation() {
-    echo "${XDG_CONFIG_HOME:-$HOME/.config}/dataeng-tools"
+function chiGetConfigLocation() {
+    echo "${XDG_CONFIG_HOME:-$HOME/.config}/chitin"
 }
 
-function dtShowConfig() {
-    cat $(dtGetConfigLocation)/config.json | prettyJson
+function chiShowConfig() {
+    cat $(chiGetConfigLocation)/config.json | prettyJson
 }
 
-function dtShowEnvvars() {
-    env | grep "CA_"
+function chiShowEnvvars() {
+    env | grep "CHI_"
 }
 
-function dtDebug() {
-    echo -e "DT configuration\n"
-    echo -e "DT version: $(dtGetVersion)\n"
-    dtShowConfig
+function chiDebug() {
+    echo -e "chitin configuration\n"
+    echo -e "chitin version: $(chiGetVersion)\n"
+    chiShowConfig
 
-    echo -e "\nDT tool status:"
-    dtToolShowStatus
+    echo -e "\nchitin tool status:"
+    chiToolShowStatus
 
-    echo -e "\nDT envvars:\n"
-    dtShowEnvvars
+    echo -e "\nchitin envvars:\n"
+    chiShowEnvvars
     echo
     hr
     echo -e "\n\nAWS configuration:\n"
     awsShowEnvvars
 }
 
-function dtReadConfig() {
-    jsonRead "$CA_DT_CONFIG" "$@"
+function chiReadConfig() {
+    jsonRead "$CHI_CONFIG" "$@"
 }
 
-function dtReadConfigFile() {
-    jsonReadFile $(dtGetConfigLocation)/config.json $@
+function chiReadConfigFile() {
+    jsonReadFile $(chiGetConfigLocation)/config.json $@
 }
 
-function dtReadModuleConfig() {
+function chiReadModuleConfig() {
     requireArg "a module name" "$1" || return 1
 
     local moduleName="$1"
@@ -79,64 +79,64 @@ function dtReadModuleConfig() {
     local fieldPath="$1"
     [[ -z $fieldPath ]] || shift
 
-    local config=$(dtReadConfig ".modules[\$modName]$fieldPath" --arg modName $moduleName $@)
+    local config=$(chiReadConfig ".modules[\$modName]$fieldPath" --arg modName $moduleName $@)
     if [[ "$config" == 'null' ]]; then
-        dtLog "'$moduleName' config section not initialized!"
+        chiLog "'$moduleName' config section not initialized!"
         return 1
     fi
 
     echo $config
 }
 
-function dtModuleCheckBoolean() {
+function chiModuleCheckBoolean() {
     requireArg "a module name or config" "$1" || return 1
     requireArg "a field name" "$2" || return 1
 
-    local config=$([[ "$3" == "loaded" ]] && echo "$1" || dtReadModuleConfig "$1")
+    local config=$([[ "$3" == "loaded" ]] && echo "$1" || chiReadModuleConfig "$1")
     jsonCheckBool "$2" "$config"
 }
 
-function dtModuleCheckEnabled() {
+function chiModuleCheckEnabled() {
     requireArg "a module name or config" "$1" || return 1
 
-    local config=$([[ "$2" == "loaded" ]] && echo "$1" || dtReadModuleConfig "$1")
+    local config=$([[ "$2" == "loaded" ]] && echo "$1" || chiReadModuleConfig "$1")
 
-    dtModuleCheckBoolean "$config" enabled "$2"
+    chiModuleCheckBoolean "$config" enabled "$2"
 }
 
-function dtToolCheckValid() {
+function chiToolCheckValid() {
     requireArg "a tool name" "$1" || return 1
-    [[ -z "$CA_DT_TOOL_STATUS" ]] && return 1
+    [[ -z "$CHI_TOOL_STATUS" ]] && return 1
     
-    echo "$CA_DT_TOOL_STATUS" | jq -e --arg dep jq '.[$dep] | (.installed and .validVersion)' >/dev/null
+    echo "$CHI_TOOL_STATUS" | jq -e --arg dep jq '.[$dep] | (.installed and .validVersion)' >/dev/null
 }
 
-function dtToolShowStatus() {
-    jsonRead "$CA_DT_TOOL_STATUS" 'to_entries[] | "\(.key) - installed: \(.value.installed), valid: \(.value.validVersion)"'
+function chiToolShowStatus() {
+    jsonRead "$CHI_TOOL_STATUS" 'to_entries[] | "\(.key) - installed: \(.value.installed), valid: \(.value.validVersion)"'
 }
 
-function dtModuleCheckTools() {
+function chiModuleCheckTools() {
     requireArg "a module name" "$1" || return 1
 
     isSet "$IS_DOCKER" && return 0
 
     local moduleDepConfig
-    moduleDepConfig=$(jsonRead "$CA_DT_DEPS" '.modules[$x] // empty' --arg x "$1")
+    moduleDepConfig=$(jsonRead "$CHI_DEPS" '.modules[$x] // empty' --arg x "$1")
     if [[ $? -ne 0 ]]; then
-        dtLog "No dependency configuration for module $1 found!"
+        chiLog "No dependency configuration for module $1 found!"
         return 1
     fi
 
     jsonRead "$moduleDepConfig" '.dependencies[]' |\
     while read -r dep; do
-        if ! dtToolCheckValid "$dep"; then
-            dtLog "module $1 will not load, as tool dependency $dep is unmet!"
+        if ! chiToolCheckValid "$dep"; then
+            chiLog "module $1 will not load, as tool dependency $dep is unmet!"
             return 1
         fi
     done
 }
 
-function dtModuleShouldLoad() {
+function chiModuleShouldLoad() {
     requireArg "a module name" "$1" || return 1
 
     local name=$1
@@ -149,22 +149,22 @@ function dtModuleShouldLoad() {
     fi
 
     local moduleConfig
-    moduleConfig=$(dtReadModuleConfig ${1:-$name})
+    moduleConfig=$(chiReadModuleConfig ${1:-$name})
     local moduleConfigLoadReturn=$?
     
     isSet "$returnConfig" && echo "$moduleConfig"
 
     [[ $moduleConfigLoadReturn -eq 0 ]] || return 1
-    dtModuleCheckEnabled "$moduleConfig" loaded || return 1
-    dtModuleCheckTools "$name" || return 1
+    chiModuleCheckEnabled "$moduleConfig" loaded || return 1
+    chiModuleCheckTools "$name" || return 1
 }
 
-function dtReadModuleConfigField() {
+function chiReadModuleConfigField() {
     requireArg "a module name" "$1" || return 1
     requireArg "a field name" "$2" || return 1
 
     local config
-    config=$(dtReadModuleConfig "$1")
+    config=$(chiReadModuleConfig "$1")
     if [[ $? -ne 0 ]]; then
         echo "$config"
         return 1
@@ -173,21 +173,21 @@ function dtReadModuleConfigField() {
     jsonRead "$config" ".$2 // empty"
 }
 
-function dtModifyConfig() {
-    ${EDITOR:-nano} "$(dtGetConfigLocation)/config.json5"
-    dtLog "config updated, reinitializing..."
-    reinitDT
+function chiModifyConfig() {
+    ${EDITOR:-nano} "$(chiGetConfigLocation)/config.json5"
+    chiLog "config updated, reinitializing..."
+    chiReinit
 }
 
-function dtToolCheckVersions() {
-    local json5DepFilePath="$CA_DT_DIR/shell/dependencies.json5"
+function chiToolCheckVersions() {
+    local json5DepFilePath="$CHI_DIR/shell/dependencies.json5"
 
     local depFilePath
     depFilePath=$(json5Convert "$json5DepFilePath")
     [[ $? -eq 0 ]] || return 1
     local toolStatus=()
 
-    export CA_DT_DEPS=$(jsonReadFile "$depFilePath")
+    export CHI_DEPS=$(jsonReadFile "$depFilePath")
     
     while read -r dep; do
         local depName=$(jsonRead "$dep" '.key')
@@ -195,7 +195,7 @@ function dtToolCheckVersions() {
         local versionCommand=$(jsonRead "$dep" '.value.command')
 
         if ! checkCommand "$depName"; then
-            dtLog "$depName not installed!"
+            chiLog "$depName not installed!"
             toolStatus+=("$(jq -nc --arg depName "$depName" '{ ($depName): { installed: false } }')")
         else
             local currentVersion=$(eval "$versionCommand")
@@ -206,18 +206,18 @@ function dtToolCheckVersions() {
                 toolStatus+=("$(jq -nc --arg depName "$depName" '{ ($depName): { installed: true, validVersion: false } }')")
             fi
         fi
-    done < <(jsonRead "$CA_DT_DEPS" '.tools|to_entries[]')
+    done < <(jsonRead "$CHI_DEPS" '.tools|to_entries[]')
 
-    export CA_DT_TOOL_STATUS=$(jq -sc 'add' <(for x in "${toolStatus[@]}" ; do echo "$x" ; done))
+    export CHI_TOOL_STATUS=$(jq -sc 'add' <(for x in "${toolStatus[@]}" ; do echo "$x" ; done))
 }
 
-function dtModuleLoadNested() {
-    for module in $(find $CA_DT_HELPERS_PATH -maxdepth 1 -type d -not -path $CA_DT_HELPERS_PATH); do
-        dtModuleLoad "$module"
+function chiModuleLoadNested() {
+    for module in $(find $CHI_HELPERS_PATH -maxdepth 1 -type d -not -path $CHI_HELPERS_PATH); do
+        chiModuleLoad "$module"
     done
 }
 
-function dtModuleLoad() {
+function chiModuleLoad() {
     requireArg "a module name" "$1" || return 1
 
     local moduleName=$(basename "$1")
@@ -227,5 +227,5 @@ function dtModuleLoad() {
         [[ $? -eq 0 ]] || return 0
     fi
 
-    dtLoadDir $(find "$1" -type f -name '*.sh' -not -path $moduleInitScriptPath)
+    chiLoadDir $(find "$1" -type f -name '*.sh' -not -path $moduleInitScriptPath)
 }

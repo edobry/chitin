@@ -41,7 +41,7 @@ Linux only:
 
 4. Start a new shell session, and follow the instructions to modify the config file at `~/.config/chitin/config.json5` (or equivalent).
 
-> Note: if you would prefer to not automatically load these modules (for performance reasons), set CTN_AUTOINIT_DISABLED=true, and use the command `ctnShell` when you want to use them
+> Note: if you would prefer to not automatically load these modules (for performance reasons), set CHI_AUTOINIT_DISABLED=true, and use the command `chiShell` when you want to use them
 
 ## Modules
 
@@ -57,12 +57,12 @@ This module provides a configurable secrets-management interface for other modul
 
 #### Configuration
 
-Add a section to your dtConfig with the `command` to use:
+Add a section to your chiConfig with the `command` to use:
 
 ```json
 {
   "modules": {
-    "dtSecret": {
+    "chiSecret": {
       "command": "pass"
     }
   }
@@ -71,7 +71,7 @@ Add a section to your dtConfig with the `command` to use:
 
 Functions:
 
-- `dtSecretGet`: retrieves a secret with the given name from the secret store
+- `chiSecretGet`: retrieves a secret with the given name from the secret store
 
 ### Terraform
 
@@ -105,7 +105,7 @@ Functions:
 
 #### Configuration
 
-This module leverages `dtSecret` for managing the Github PAT; add a section to your dtConfig with the name of the secret to use:
+This module leverages `chiSecret` for managing the Github PAT; add a section to your chiConfig with the name of the secret to use:
 
 ```json
 {

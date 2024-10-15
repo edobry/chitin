@@ -12,20 +12,20 @@ if [[ -z "$IS_DOCKER" ]]; then
         SCRIPT_PATH="$SOURCE_DIR/init.sh"
     fi
 
-    export CA_DT_DIR="$(dirname $(dirname $SCRIPT_PATH))"
+    export CHI_DIR="$(dirname $(dirname $SCRIPT_PATH))"
 fi
 
-function dtLog() {
-    echo "dataeng-tools - $1"
+function chiLog() {
+    echo "chitin - $1"
 }
 
-function dtBail() {
-    dtLog "${1:-"something went wrong"}!"
-    dtLog "exiting!"
+function chiBail() {
+    chiLog "${1:-"something went wrong"}!"
+    chiLog "exiting!"
     return 1
 }
 
-function dtLoadDir() {
+function chiLoadDir() {
     for file in "$@"; do
         source $file;
     done
@@ -34,34 +34,34 @@ function dtLoadDir() {
 function initJq() {
     # we need at least jq to bootstrap
     if ! checkCommand jq; then
-        dtBail "jq not installed!" && return 1
+        chiBail "jq not installed!" && return 1
     fi
 
     # bring in jq helpers
-    source $CA_DT_DIR/shell/helpers/json.sh
+    source $CHI_DIR/shell/helpers/json.sh
 }
 
-function dtLoadConfig() {
+function chiLoadConfig() {
     # load meta module
-    source $CA_DT_DIR/shell/helpers/meta.sh
+    source $CHI_DIR/shell/helpers/meta.sh
 
-    local configLocation=$(dtGetConfigLocation)
+    local configLocation=$(chiGetConfigLocation)
 
     local json5ConfigFileName="config.json5"
     local json5ConfigFilePath="$configLocation/$json5ConfigFileName"
 
     if [[ ! -f $json5ConfigFilePath ]]; then
-        dtLog "initializing config file at '$json5ConfigFilePath'"
+        chiLog "initializing config file at '$json5ConfigFilePath'"
         mkdir -p $configLocation
-        cp $CA_DT_DIR/shell/$json5ConfigFileName $json5ConfigFilePath
-        dtLog "please complete the initialization by running dtModifyConfig"
+        cp $CHI_DIR/shell/$json5ConfigFileName $json5ConfigFilePath
+        chiLog "please complete the initialization by running chiModifyConfig"
     fi
 
     local configFile
     configFile=$(json5Convert $json5ConfigFilePath)
     [[ $? -eq 0 ]] || return 1
 
-    local configFileContents=$(dtReadConfigFile)
+    local configFileContents=$(chiReadConfigFile)
     local inlineConfig=$([[ -z "$1" ]] && echo '{}' || echo "$1")
 
     # echo "file config: $configFileContents"
@@ -70,14 +70,14 @@ function dtLoadConfig() {
     local mergedConfig=$(jsonMergeDeep "$configFileContents" "$inlineConfig")
     # echo "merged config: $mergedConfig"
 
-    export CA_DT_CONFIG="$mergedConfig"
+    export CHI_CONFIG="$mergedConfig"
 
-    local projectDir=$(dtReadConfig '.projectDir // empty')
-    export CA_PROJECT_DIR=$projectDir
+    local projectDir=$(chiReadConfig '.projectDir // empty')
+    export CHI_PROJECT_DIR=$projectDir
 }
 
-function autoinitDT() {
-    if [[ ! -z "$CA_FAIL_ON_ERROR" ]]; then
+function autoinitChi() {
+    if [[ ! -z "$CHI_FAIL_ON_ERROR" ]]; then
         set -e
     fi
 
@@ -89,48 +89,46 @@ function autoinitDT() {
     fi
     set -o pipefail
 
-    [[ "$CA_DT_AUTOINIT_DISABLED" = "true" ]] || initDT
+    [[ "$CHI_AUTOINIT_DISABLED" = "true" ]] || chiShell
 }
 
-alias dtShell=initDT
-function initDT() {
-    export CA_DT_HELPERS_PATH=$CA_DT_DIR/shell/helpers
+function chiShell() {
+    export CHI_HELPERS_PATH=$CHI_DIR/shell/helpers
 
     # load init scripts
-    dtLoadDir $CA_DT_DIR/shell/helpers/init/**/*.sh
+    chiLoadDir $CHI_DIR/shell/helpers/init/**/*.sh
 
     initJq
-    dtLoadConfig "$1"
-    export CA_DP_DIR=$CA_PROJECT_DIR/dataeng-pipeline
+    chiLoadConfig "$1"
 
     # set -x
     if [[ -z "$IS_DOCKER" ]]; then
-        dtToolCheckVersions
-        dtModuleCheckTools "init" || (dtBail; return 1)
+        chiToolCheckVersions
+        chiModuleCheckTools "init" || (chiBail; return 1)
     fi
     # set +x
 
     # load helpers
-    dtLoadDir $CA_DT_HELPERS_PATH/*.sh
-    dtModuleLoadNested
+    chiLoadDir $CHI_HELPERS_PATH/*.sh
+    chiModuleLoadNested
 
     # zsh completions only loaded on zsh shells
     if [[ -n "$ZSH_VERSION" ]]; then
-        dtLoadDir $CA_DT_HELPERS_PATH/**/*.zsh
+        chiLoadDir $CHI_HELPERS_PATH/**/*.zsh
     fi
 
-    export CA_DT_ENV_INITIALIZED=true
+    export CHI_ENV_INITIALIZED=true
 
-    if [[ -z "$CA_FAIL_ON_ERROR" ]]; then
+    if [[ -z "$CHI_FAIL_ON_ERROR" ]]; then
         set +e
     fi
 
-    dtRunInitCommand
+    chiRunInitCommand
 }
 
-function dtRunInitCommand() {
+function chiRunInitCommand() {
     local initCommand
-    initCommand=$(dtReadModuleConfigField init command)
+    initCommand=$(chiReadModuleConfigField init command)
     if [[ $? -eq 0 ]]; then
         $initCommand
     fi
@@ -139,25 +137,8 @@ function dtRunInitCommand() {
     # [[ -z "$initCommand" ]] && return 0
 }
 
-alias dtReinit=reinitDT
-function reinitDT() {
-    source $CA_DT_DIR/shell/init.sh
+function chiReinit() {
+    source $CHI_DIR/shell/init.sh
 }
 
-function dtShellAuth() {
-    local authConfig=$(jq -nc --arg profile "$1" '{
-        modules: {
-            "aws-auth": { automaticAuth: true },
-            init: { command: "initAutoAwsAuth" }
-        }
-    } | (
-        if $profile != "" then
-            (.modules["aws-auth"] += {"defaultProfile": $profile})
-        else .
-        end
-    )')
-    
-    dtShell "$authConfig"
-}
-
-autoinitDT
+autoinitChi
