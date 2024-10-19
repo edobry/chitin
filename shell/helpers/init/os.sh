@@ -1,5 +1,13 @@
-# checking if we're in macOS or linux
-if [[ `uname` == 'Darwin' ]]; then
+function isMacOS() {
+    [[ $(uname) == 'Darwin' ]]
+}
+
+if isMacOS; then
+    alias flushDNS='sudo killall -HUP mDNSResponder'
+
+    ITERM_PATH=$HOME/.iterm2_shell_integration.zsh
+    test -s $ITERM_PATH && source $ITERM_PATH || true
+
     function toClip() {
         pbcopy
     }
@@ -8,6 +16,10 @@ if [[ `uname` == 'Darwin' ]]; then
         open $1
     }
 
+    function checkCpuLimit() {
+        pmset -g therm | grep 'CPU_Speed_Limit' | awk '{ print $3 }'
+    }
+    
     function base64Encode() {
         base64
     }
@@ -19,7 +31,17 @@ if [[ `uname` == 'Darwin' ]]; then
     function netcatTimeout() {
         nc -G "$1" "$2" "$3"
     }
+
+    function netGetCurrentWifiName() {
+        /Sy*/L*/Priv*/Apple8*/V*/C*/R*/airport -I | awk '/ SSID:/ {print $2}'
+    }
+
+    function netGetCurrentWifiPassword() {
+        security find-generic-password -wa $(netGetCurrentWifiName)
+    }
 else
+    alias bat='batcat'
+
     function toClip() {
         xclip -selection clipboard
     }

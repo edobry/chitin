@@ -1,5 +1,4 @@
 {
-    // you probably dont want to touch any of this
     "tools": {
         "jq": {
             "version": "1.6",
@@ -9,35 +8,14 @@
             "version": "4.11.2",
             "command": "yq --version 2>&1 | awk '{ print $4 }' | sed 's/v//'"
         },
-        "aws": {
-            "version": "2.0.57",
-            "command": "aws --version | awk '{ print $1 }' | sed 's/aws-cli\\///'"
-        },
-        "kubectl": {
-            "version": "1.22",
-            "command": "kubectl version --client=true  -o=json | jq -r '.clientVersion.gitVersion' | sed 's/v//'"
-        },
         "pcregrep": {
             "version": "8.45",
             "command": "pcregrep --version | cut -d ' ' -f 3"
-        },
-        "node": {
-            "version": "19.4.0",
-            "command": "node -v | sed 's/v//'"
         }
     },
-    "modules": {
+    "chainDeps": {
         "init": {
             "dependencies": ["jq"]
-        },
-        "aws": {
-            "dependencies": ["aws", "pcregrep"]
-        },
-        "k8s": {
-            "dependencies": ["aws", "kubectl"]
-        },
-        "node": {
-            "dependencies": ["node"]
         }
     }
 }

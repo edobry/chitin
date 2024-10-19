@@ -71,37 +71,37 @@ function chiReadConfigFile() {
     jsonReadFile $(chiGetConfigLocation)/config.json $@
 }
 
-function chiReadModuleConfig() {
-    requireArg "a module name" "$1" || return 1
+function chiReadChainConfig() {
+    requireArg "a chain name" "$1" || return 1
 
-    local moduleName="$1"
+    local chainName="$1"
     shift
     local fieldPath="$1"
     [[ -z $fieldPath ]] || shift
 
-    local config=$(chiReadConfig ".modules[\$modName]$fieldPath" --arg modName $moduleName $@)
+    local config=$(chiReadConfig ".chains[\$chainName]$fieldPath" --arg chainName $chainName $@)
     if [[ "$config" == 'null' ]]; then
-        chiLog "'$moduleName' config section not initialized!"
+        chiLog "'$chainName' config section not initialized!"
         return 1
     fi
 
     echo $config
 }
 
-function chiModuleCheckBoolean() {
-    requireArg "a module name or config" "$1" || return 1
+function chiChainCheckBoolean() {
+    requireArg "a chain name or config" "$1" || return 1
     requireArg "a field name" "$2" || return 1
 
-    local config=$([[ "$3" == "loaded" ]] && echo "$1" || chiReadModuleConfig "$1")
+    local config=$([[ "$3" == "loaded" ]] && echo "$1" || chiReadChainConfig "$1")
     jsonCheckBool "$2" "$config"
 }
 
-function chiModuleCheckEnabled() {
-    requireArg "a module name or config" "$1" || return 1
+function chiChainCheckEnabled() {
+    requireArg "a chain name or config" "$1" || return 1
 
-    local config=$([[ "$2" == "loaded" ]] && echo "$1" || chiReadModuleConfig "$1")
+    local config=$([[ "$2" == "loaded" ]] && echo "$1" || chiReadChainConfig "$1")
 
-    chiModuleCheckBoolean "$config" enabled "$2"
+    chiChainCheckBoolean "$config" enabled "$2"
 }
 
 function chiToolCheckValid() {
@@ -115,29 +115,29 @@ function chiToolShowStatus() {
     jsonRead "$CHI_TOOL_STATUS" 'to_entries[] | "\(.key) - installed: \(.value.installed), valid: \(.value.validVersion)"'
 }
 
-function chiModuleCheckTools() {
-    requireArg "a module name" "$1" || return 1
+function chiChainCheckTools() {
+    requireArg "a chain name" "$1" || return 1
 
     isSet "$IS_DOCKER" && return 0
 
-    local moduleDepConfig
-    moduleDepConfig=$(jsonRead "$CHI_DEPS" '.modules[$x] // empty' --arg x "$1")
+    local chainDepConfig
+    chainDepConfig=$(jsonRead "$CHI_DEPS" '.chainDeps[$x] // empty' --arg x "$1")
     if [[ $? -ne 0 ]]; then
-        chiLog "No dependency configuration for module $1 found!"
+        chiLog "No dependency configuration for chain $1 found!"
         return 1
     fi
 
-    jsonRead "$moduleDepConfig" '.dependencies[]' |\
+    jsonRead "$chainDepConfig" '.dependencies[]' |\
     while read -r dep; do
         if ! chiToolCheckValid "$dep"; then
-            chiLog "module $1 will not load, as tool dependency $dep is unmet!"
+            chiLog "chain $1 will not load, as tool dependency $dep is unmet!"
             return 1
         fi
     done
 }
 
-function chiModuleShouldLoad() {
-    requireArg "a module name" "$1" || return 1
+function chiChainShouldLoad() {
+    requireArg "a chain name" "$1" || return 1
 
     local name=$1
     shift
@@ -148,23 +148,23 @@ function chiModuleShouldLoad() {
         shift
     fi
 
-    local moduleConfig
-    moduleConfig=$(chiReadModuleConfig ${1:-$name})
-    local moduleConfigLoadReturn=$?
+    local chainConfig
+    chainConfig=$(chiReadChainConfig ${1:-$name})
+    local chainConfigLoadReturn=$?
     
-    isSet "$returnConfig" && echo "$moduleConfig"
+    isSet "$returnConfig" && echo "$chainConfig"
 
-    [[ $moduleConfigLoadReturn -eq 0 ]] || return 1
-    chiModuleCheckEnabled "$moduleConfig" loaded || return 1
-    chiModuleCheckTools "$name" || return 1
+    [[ $chainConfigLoadReturn -eq 0 ]] || return 1
+    chiChainCheckEnabled "$chainConfig" loaded || return 1
+    chiChainCheckTools "$name" || return 1
 }
 
-function chiReadModuleConfigField() {
-    requireArg "a module name" "$1" || return 1
+function chiReadChainConfigField() {
+    requireArg "a chain name" "$1" || return 1
     requireArg "a field name" "$2" || return 1
 
     local config
-    config=$(chiReadModuleConfig "$1")
+    config=$(chiReadChainConfig "$1")
     if [[ $? -ne 0 ]]; then
         echo "$config"
         return 1
@@ -211,21 +211,21 @@ function chiToolCheckVersions() {
     export CHI_TOOL_STATUS=$(jq -sc 'add' <(for x in "${toolStatus[@]}" ; do echo "$x" ; done))
 }
 
-function chiModuleLoadNested() {
-    for module in $(find $CHI_HELPERS_PATH -maxdepth 1 -type d -not -path $CHI_HELPERS_PATH); do
-        chiModuleLoad "$module"
+function chiChainLoadNested() {
+    for chain in $(find $1 -maxdepth 1 -type d -not -path $1); do
+        chiChainLoad "$chain"
     done
 }
 
-function chiModuleLoad() {
-    requireArg "a module name" "$1" || return 1
+function chiChainLoad() {
+    requireArg "a chain name" "$1" || return 1
 
-    local moduleName=$(basename "$1")
-    local moduleInitScriptPath="$1/$moduleName-init.sh"
-    if [[ -f $moduleInitScriptPath ]]; then
-        source $moduleInitScriptPath
+    local chainName=$(basename "$1")
+    local chainInitScriptPath="$1/$chainName-init.sh"
+    if [[ -f $chainInitScriptPath ]]; then
+        source $chainInitScriptPath
         [[ $? -eq 0 ]] || return 0
     fi
 
-    chiLoadDir $(find "$1" -type f -name '*.sh' -not -path $moduleInitScriptPath)
+    chiLoadDir $(find "$1" -type f -name '*.sh' -not -path $chainInitScriptPath)
 }

@@ -1,3 +1,10 @@
+# checks if a command exists
+# args: command
+function checkCommand() {
+    command -v "$1" >/dev/null 2>&1
+}
+
+
 notSet () [[ -z $1 ]]
 isSet () [[ ! -z $1 ]]
 isTrue () [[ "$1" = true ]]

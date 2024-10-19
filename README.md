@@ -1,26 +1,40 @@
 # chitin
 
-a modular and extensible shell framework
+a modular and extensible shell framework inspired by the natural composition of [chitin](https://en.wikipedia.org/wiki/Chitin) — the material forming the shells of many organisms
 
-## Prerequisites
+## Structure
 
-Make sure the following programs are installed on your computer (not every helper requires each one, but you may want to install them all to save time):
+The framework's taxonomy mirrors how chitin builds shells:
+
+- `helpers`: Individual shell functions
+- `chains`: Collections of helpers focused on specific domains. Chains are composed of interlinked chitin molecules.
+- `fibers`: Top-level modules grouped by domain. Fibers provide structure by linking chains together.
+
+```
+chitin-core
+├── chitin-dev [fiber]
+│   ├── docker [chain]
+│   │   ├── build_image() [helper]
+│   │   ├── run_container() [helper]
+│   ├── git [chain]
+│       ├── clone_repo() [helper]
+│       ├── commit_changes() [helper]
+├── chitin-cloud [fiber]
+    ├── aws [chain]
+    │   ├── launch_instance() [helper]
+    │   ├── list_buckets() [helper]
+    ├── kubernetes [chain]
+        ├── deploy_pod() [helper]
+        ├── scale_deployment() [helper]
+```
+
+## Dependencies
 
 Required:
 
 - `jq v1.6` [link](https://github.com/stedolan/jq)
-- `nodejs v19.4.0`
-
-Optionally required:
-
 - `yq v4.11.2` [link](https://github.com/mikefarah/yq)
   - make sure you install from `brew` and not `pip`
-- `aws v2.0.57`
-- `terraform`
-- `docker`
-- `kubectl/kubectx`
-- `helm`
-- `tsc` [link](https://www.npmjs.com/package/typescript)
 
 MacOS only:
 
@@ -33,27 +47,21 @@ Linux only:
 
 ## Setup
 
-1. Install the prerequisites for the module(s) you want to use (see docs below)
+1. Install the dependencies
 2. Clone this repository to your `project dir` (the directory where you usually run `git clone`)
 3. Add the following line to your profile (ie `.zshrc` or `.bashrc`), substituting `<project dir>`:
 
    `source <project dir>/chitin/shell/init.sh`
 
-4. Start a new shell session, and follow the instructions to modify the config file at `~/.config/chitin/config.json5` (or equivalent).
+4. Start a new shell session, and follow the instructions to configure `chitin` by running `chiModifyConfig`
 
-> Note: if you would prefer to not automatically load these modules (for performance reasons), set CHI_AUTOINIT_DISABLED=true, and use the command `chiShell` when you want to use them
+> Note: if you would prefer to not automatically load fibers (such as for performance reasons), set `CHI_AUTOINIT_DISABLED=true`, and use the command `chiShell` when you want to load them on-demand
 
-## Modules
-
-### SSH
-
-Functions:
-
-- `sshTunnel`: sets up an SSH tunnel to forward from a local port
+## Chains
 
 ### Secret
 
-This module provides a configurable secrets-management interface for other modules to use; it was designed with the [`pass` command](https://www.passwordstore.org/) in mind, but can be used with others, given a compatible CLI.
+This chain provides a configurable secrets-management interface for other chains to use; it was designed with the [`pass` command](https://www.passwordstore.org/) in mind, but can be used with others, given a compatible CLI.
 
 #### Configuration
 
@@ -61,7 +69,7 @@ Add a section to your chiConfig with the `command` to use:
 
 ```json
 {
-  "modules": {
+  "chains": {
     "chiSecret": {
       "command": "pass"
     }
@@ -73,18 +81,8 @@ Functions:
 
 - `chiSecretGet`: retrieves a secret with the given name from the secret store
 
-### Network
-
-Functions:
-
-- `checksumUrl`: downloads a file from a url and checksums it
-
-## Contributing
-
-See `CONTRIBUTING.md` for more details about how to contribute.
-
 ## Used By
 
-This project is used in the following places:
+This project is used by:
 
 - [konfigure](https://github.com/edobry/konfigure/blob/main/src/shell.ts), as an environmental dependency

@@ -42,7 +42,7 @@ function initJq() {
 }
 
 function chiLoadConfig() {
-    # load meta module
+    # load meta chain
     source $CHI_DIR/shell/helpers/meta.sh
 
     local configLocation=$(chiGetConfigLocation)
@@ -104,13 +104,27 @@ function chiShell() {
     # set -x
     if [[ -z "$IS_DOCKER" ]]; then
         chiToolCheckVersions
-        chiModuleCheckTools "init" || (chiBail; return 1)
+        chiChainCheckTools "init" || (chiBail; return 1)
     fi
     # set +x
 
     # load helpers
     chiLoadDir $CHI_HELPERS_PATH/*.sh
-    chiModuleLoadNested
+    chiChainLoadNested $CHI_HELPERS_PATH
+
+    # load dotfiles
+    if [[ ! -z "$CHI_DOTFILES_DIR" ]]; then
+        chiLoadDir $CHI_DOTFILES_DIR/helpers/*.sh
+        chiChainLoadNested $CHI_DOTFILES_DIR/helpers
+
+        if [[ -n "$ZSH_VERSION" ]]; then
+          chiLoadDir $CHI_DOTFILES_DIR/**/*.zsh
+        fi
+    fi
+
+    # TODO: load external fibers
+    # chiLoadDir $CHI_PROJECT_DIR/helpers/*.sh
+    # chiChainLoadNested $CHI_PROJECT_DIR/helpers
 
     # zsh completions only loaded on zsh shells
     if [[ -n "$ZSH_VERSION" ]]; then
@@ -128,7 +142,7 @@ function chiShell() {
 
 function chiRunInitCommand() {
     local initCommand
-    initCommand=$(chiReadModuleConfigField init command)
+    initCommand=$(chiReadChainConfigField init command)
     if [[ $? -eq 0 ]]; then
         $initCommand
     fi
