@@ -180,7 +180,7 @@ function chiModifyConfig() {
 }
 
 function chiToolCheckVersions() {
-    local json5DepFilePath="$CHI_DIR/shell/dependencies.json5"
+    local json5DepFilePath="$CHI_DIR/dependencies.json5"
 
     local depFilePath
     depFilePath=$(json5Convert "$json5DepFilePath")

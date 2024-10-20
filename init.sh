@@ -38,12 +38,12 @@ function initJq() {
     fi
 
     # bring in jq chains
-    source $CHI_DIR/shell/chains/json.sh
+    source $CHI_DIR/chains/json.sh
 }
 
 function chiLoadConfig() {
     # load meta chain
-    source $CHI_DIR/shell/chains/meta.sh
+    source $CHI_DIR/chains/meta.sh
 
     local configLocation=$(chiGetConfigLocation)
 
@@ -53,7 +53,7 @@ function chiLoadConfig() {
     if [[ ! -f $json5ConfigFilePath ]]; then
         chiLog "initializing config file at '$json5ConfigFilePath'"
         mkdir -p $configLocation
-        cp $CHI_DIR/shell/$json5ConfigFileName $json5ConfigFilePath
+        cp $CHI_DIR/$json5ConfigFileName $json5ConfigFilePath
         chiLog "please complete the initialization by running chiModifyConfig"
     fi
 
@@ -94,7 +94,7 @@ function autoinitChi() {
 
 function chiShell() {
     # load init scripts
-    chiLoadDir $CHI_DIR/shell/chains/init/**/*.sh
+    chiLoadDir $CHI_DIR/chains/init/**/*.sh
 
     initJq
     chiLoadConfig "$1"
@@ -107,8 +107,8 @@ function chiShell() {
     # set +x
 
     # load chains
-    chiLoadDir $CHI_DIR/shell/chains/*.sh
-    chiChainLoadNested $CHI_DIR/shell/chains
+    chiLoadDir $CHI_DIR/chains/*.sh
+    chiChainLoadNested $CHI_DIR/chains
 
     # load dotfiles
     if [[ ! -z "$CHI_DOTFILES_DIR" ]]; then
@@ -146,7 +146,7 @@ function chiRunInitCommand() {
 }
 
 function chiReinit() {
-    source $CHI_DIR/shell/init.sh
+    source $CHI_DIR/init.sh
 }
 
 autoinitChi

@@ -51,7 +51,7 @@ Linux only:
 2. Clone this repository to your `project dir` (the directory where you usually run `git clone`)
 3. Add the following line to your profile (ie `.zshrc` or `.bashrc`), substituting `<project dir>`:
 
-   `source <project dir>/chitin/shell/init.sh`
+   `source <project dir>/chitin/init.sh`
 
 4. Start a new shell session, and follow the instructions to configure `chitin` by running `chiModifyConfig`
 
