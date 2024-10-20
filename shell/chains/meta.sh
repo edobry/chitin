@@ -212,7 +212,15 @@ function chiToolCheckVersions() {
 }
 
 function chiChainLoadNested() {
+    requireArg "a directory name" "$1" || return 1
+
     for chain in $(find $1 -maxdepth 1 -type d -not -path $1); do
+        chiChainLoad "$chain"
+    done
+}
+
+function chiFiberLoadExternal() {
+    for fiber in $(find $CHI_PROJECT_DIR -maxdepth 1 -type d -not -path $CHI_PROJECT_DIR -name "chitin-*"); do
         chiChainLoad "$chain"
     done
 }

@@ -37,13 +37,13 @@ function initJq() {
         chiBail "jq not installed!" && return 1
     fi
 
-    # bring in jq helpers
-    source $CHI_DIR/shell/helpers/json.sh
+    # bring in jq chains
+    source $CHI_DIR/shell/chains/json.sh
 }
 
 function chiLoadConfig() {
     # load meta chain
-    source $CHI_DIR/shell/helpers/meta.sh
+    source $CHI_DIR/shell/chains/meta.sh
 
     local configLocation=$(chiGetConfigLocation)
 
@@ -93,10 +93,8 @@ function autoinitChi() {
 }
 
 function chiShell() {
-    export CHI_HELPERS_PATH=$CHI_DIR/shell/helpers
-
     # load init scripts
-    chiLoadDir $CHI_DIR/shell/helpers/init/**/*.sh
+    chiLoadDir $CHI_DIR/shell/chains/init/**/*.sh
 
     initJq
     chiLoadConfig "$1"
@@ -108,28 +106,24 @@ function chiShell() {
     fi
     # set +x
 
-    # load helpers
-    chiLoadDir $CHI_HELPERS_PATH/*.sh
-    chiChainLoadNested $CHI_HELPERS_PATH
+    # load chains
+    chiLoadDir $CHI_DIR/shell/chains/*.sh
+    chiChainLoadNested $CHI_DIR/shell/chains
 
     # load dotfiles
     if [[ ! -z "$CHI_DOTFILES_DIR" ]]; then
-        chiLoadDir $CHI_DOTFILES_DIR/helpers/*.sh
-        chiChainLoadNested $CHI_DOTFILES_DIR/helpers
+        chiLoadDir $CHI_DOTFILES_DIR/chains/*.sh
+        chiChainLoadNested $CHI_DOTFILES_DIR/chains
 
+        # zsh helpers only loaded on zsh shells
         if [[ -n "$ZSH_VERSION" ]]; then
           chiLoadDir $CHI_DOTFILES_DIR/**/*.zsh
         fi
     fi
 
     # TODO: load external fibers
-    # chiLoadDir $CHI_PROJECT_DIR/helpers/*.sh
-    # chiChainLoadNested $CHI_PROJECT_DIR/helpers
-
-    # zsh completions only loaded on zsh shells
-    if [[ -n "$ZSH_VERSION" ]]; then
-        chiLoadDir $CHI_HELPERS_PATH/**/*.zsh
-    fi
+    # chiLoadDir $CHI_PROJECT_DIR/chains/*.sh
+    # chiChainLoadNested $CHI_PROJECT_DIR/chains
 
     export CHI_ENV_INITIALIZED=true
 
