@@ -12,7 +12,7 @@ if [[ -z "$IS_DOCKER" ]]; then
         SCRIPT_PATH="$SOURCE_DIR/init.sh"
     fi
 
-    export CHI_DIR="$(dirname $(dirname $SCRIPT_PATH))"
+    export CHI_DIR="$(dirname $SCRIPT_PATH)"
 fi
 
 function chiLog() {
@@ -101,29 +101,23 @@ function chiShell() {
 
     # set -x
     if [[ -z "$IS_DOCKER" ]]; then
-        chiToolCheckVersions
-        chiChainCheckTools "init" || (chiBail; return 1)
+        chiFiberReadDependencies $CHI_DIR core
+        chiFiberCheckDependencies $CHI_DIR core
+        chiChainCheckTools core init || (chiBail; return 1)
     fi
     # set +x
+    # set -x
 
     # load chains
-    chiLoadDir $CHI_DIR/chains/*.sh
-    chiChainLoadNested $CHI_DIR/chains
+    chiFiberLoad $CHI_DIR
 
     # load dotfiles
     if [[ ! -z "$CHI_DOTFILES_DIR" ]]; then
-        chiLoadDir $CHI_DOTFILES_DIR/chains/*.sh
-        chiChainLoadNested $CHI_DOTFILES_DIR/chains
-
-        # zsh helpers only loaded on zsh shells
-        if [[ -n "$ZSH_VERSION" ]]; then
-          chiLoadDir $CHI_DOTFILES_DIR/**/*.zsh
-        fi
+        chiFiberLoad $CHI_DOTFILES_DIR dotfiles
     fi
 
     # TODO: load external fibers
-    # chiLoadDir $CHI_PROJECT_DIR/chains/*.sh
-    # chiChainLoadNested $CHI_PROJECT_DIR/chains
+    chiFiberLoadExternal
 
     export CHI_ENV_INITIALIZED=true
 

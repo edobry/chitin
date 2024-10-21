@@ -116,30 +116,34 @@ function chiToolShowStatus() {
 }
 
 function chiChainCheckTools() {
-    requireArg "a chain name" "$1" || return 1
+    requireArg "a fiber name" "$1" || return 1
+    requireArg "a chain name" "$2" || return 1
 
     isSet "$IS_DOCKER" && return 0
 
+    local deps=$(chiFiberGetDependenciesVarValue $1)
+
     local chainDepConfig
-    chainDepConfig=$(jsonRead "$CHI_DEPS" '.chainDeps[$x] // empty' --arg x "$1")
-    if [[ $? -ne 0 ]]; then
-        chiLog "No dependency configuration for chain $1 found!"
-        return 1
-    fi
+    chainDepConfig=$(jsonRead "$deps" '.chainDeps[$x] // empty' --arg x "$2")
+    [[ $? -eq 0 ]] && return 0
+    echo "$chainDepConfig"
 
     jsonRead "$chainDepConfig" '.dependencies[]' |\
     while read -r dep; do
         if ! chiToolCheckValid "$dep"; then
-            chiLog "chain $1 will not load, as tool dependency $dep is unmet!"
+            chiLog "chain $1:$2 will not load, as tool dependency $dep is unmet!"
             return 1
         fi
     done
 }
 
 function chiChainShouldLoad() {
-    requireArg "a chain name" "$1" || return 1
+    requireArg "a fiber name" "$1" || return 1
+    requireArg "a chain name" "$2" || return 1
 
-    local name=$1
+    local fiberName=$1
+    local chainName=$2
+    shift
     shift
 
     local returnConfig
@@ -149,14 +153,14 @@ function chiChainShouldLoad() {
     fi
 
     local chainConfig
-    chainConfig=$(chiReadChainConfig ${1:-$name})
+    chainConfig=$(chiReadChainConfig ${2:-$chainName})
     local chainConfigLoadReturn=$?
     
     isSet "$returnConfig" && echo "$chainConfig"
 
     [[ $chainConfigLoadReturn -eq 0 ]] || return 1
     chiChainCheckEnabled "$chainConfig" loaded || return 1
-    chiChainCheckTools "$name" || return 1
+    chiChainCheckTools "$fiberName" "$chainName" || return 1
 }
 
 function chiReadChainConfigField() {
@@ -179,15 +183,52 @@ function chiModifyConfig() {
     chiReinit
 }
 
-function chiToolCheckVersions() {
-    local json5DepFilePath="$CHI_DIR/dependencies.json5"
+function chiFiberReadDependencies() {
+    requireDirectoryArg "fiber directory" "$1" || return 1
+    requireArg "a fiber name" "$2" || return 1
+
+    local json5DepFilePath="$1/dependencies.json5"
+    checkFileExists $json5DepFilePath >/dev/null || return 0
 
     local depFilePath
     depFilePath=$(json5Convert "$json5DepFilePath")
     [[ $? -eq 0 ]] || return 1
-    local toolStatus=()
 
-    export CHI_DEPS=$(jsonReadFile "$depFilePath")
+    export "$(chiFiberMakeDependenciesVarName $2)=$(jsonReadFile $depFilePath)"
+}
+
+function chiFiberMakeDependenciesVarName() {
+    requireArg "a fiber name" "$1" || return 1
+
+    local fiberName=${1#chitin-}
+    echo "CHI_DEPS_$fiberName"
+}
+
+function chiFiberGetDependenciesVarValue() {
+    requireArg "a fiber name" "$1" || return 1
+
+    echo $(chiReadDynamicVariable $(chiFiberMakeDependenciesVarName $1))
+}
+
+function chiReadDynamicVariable() {
+    requireArg "a variable name" "$1" || return 1
+
+    if [[ -z "$ZSH_VERSION" ]]; then
+        echo "${!1}"
+    else
+        echo "${(P)1}"
+    fi
+}
+
+function chiFiberCheckDependencies() {
+    requireDirectoryArg "fiber directory" "$1" || return 1
+    requireArg "a fiber name" "$2" || return 1
+
+    local fiberName=${2#chitin-}
+    local deps=$(chiFiberGetDependenciesVarValue $fiberName)
+    [[ -z "$deps" ]] && return 0
+
+    local toolStatus=()
     
     while read -r dep; do
         local depName=$(jsonRead "$dep" '.key')
@@ -206,23 +247,83 @@ function chiToolCheckVersions() {
                 toolStatus+=("$(jq -nc --arg depName "$depName" '{ ($depName): { installed: true, validVersion: false } }')")
             fi
         fi
-    done < <(jsonRead "$CHI_DEPS" '.tools|to_entries[]')
+    done < <(jsonRead "$deps" '.tools|to_entries[]')
 
-    export CHI_TOOL_STATUS=$(jq -sc 'add' <(for x in "${toolStatus[@]}" ; do echo "$x" ; done))
+    # echo "${toolStatus[@]}"
+    local fiberToolStatus=$(jq -sc 'add' <(for x in "${toolStatus[@]}" ; do echo "$x" ; done))
+    export "CHI_TOOL_STATUS_${fiberName}=$fiberToolStatus"
 }
 
 function chiChainLoadNested() {
-    requireArg "a directory name" "$1" || return 1
+    requireDirectoryArg "chain directory" "$1" || return 1
 
     for chain in $(find $1 -maxdepth 1 -type d -not -path $1); do
         chiChainLoad "$chain"
     done
 }
 
-function chiFiberLoadExternal() {
-    for fiber in $(find $CHI_PROJECT_DIR -maxdepth 1 -type d -not -path $CHI_PROJECT_DIR -name "chitin-*"); do
-        chiChainLoad "$chain"
+function chiFiberLoad() {
+    requireDirectoryArg "fiber directory" "$1" || return 1
+
+    local fiberName=${2:-${$(basename $1)#chitin-}}
+
+    # if already loaded, return
+    if [[ -n $(chiReadDynamicVariable "CHI_FIBER_LOADED_$fiberName") ]]; then
+        # echo "fiber $fiberName already loaded!"
+        return 0
+    fi
+
+    chiFiberReadDependencies $1 $fiberName
+    local deps=$(chiFiberGetDependenciesVarValue $fiberName)
+    # echo $deps
+
+    # if not all fiber dependencies have been loaded, retry
+    echo "$deps" | jq -r '(.fiberDeps // [])[]' | while IFS= read -r fiberDep; do
+        [[ -z $(chiReadDynamicVariable "CHI_FIBER_LOADED_$fiberDep") ]] && return 1
     done
+
+    chiFiberCheckDependencies $1 $fiberName
+
+    chiLoadDir $1/chains/*.sh
+    chiChainLoadNested $1/chains
+
+    # zsh helpers only loaded on zsh shells
+    if [[ -n "$ZSH_VERSION" ]]; then
+        chiLoadDir $1/**/*.zsh(N)
+    fi
+
+    export "CHI_FIBER_LOADED_$fiberName=true"
+}
+
+function chiFiberLoadExternal() {
+    IFS=$'\n' fibers=($(find $CHI_PROJECT_DIR -maxdepth 1 -type d -not -path $CHI_PROJECT_DIR -name "chitin-*"))
+
+    # echo "${fibers[@]}"
+
+    chiFiberLoadExternalLoop "${fibers[@]}"
+}
+
+function chiFiberLoadExternalLoop() {
+    requireArg "at least one fiber" "$1" || return 1
+
+    local fibers=("$@")
+    local retryList=()
+
+    for fiber in "${fibers[@]}"; do
+        # echo "loading fiber: $fiber"
+        if ! chiFiberLoad "$fiber"; then
+        # echo "loading fiber failed, retrying"
+            retryList+=("$fiber")
+        else
+            # echo "fiber loaded: $fiber"
+        fi
+    done
+
+    # if not all fibers loaded, retry
+    if [[ ${#retryList[@]} -gt 0 ]]; then
+        # echo "retrying: ${retryList[@]}"
+        chiFiberLoadExternalLoop "${retryList[@]}"
+    fi
 }
 
 function chiChainLoad() {
