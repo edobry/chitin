@@ -340,3 +340,12 @@ function chiChainLoad() {
 
     chiLoadDir $(find "$1" -type f -name '*.sh' -not -path $chainInitScriptPath)
 }
+
+function chiRegisterCompletion() {
+    requireArg "\$0" "$1" || return 1
+
+    checkCommand compdef && return 0
+
+    export fpath=($(dirname "$1") $fpath)
+    return 1
+}
