@@ -296,11 +296,13 @@ function chiFiberLoad() {
 }
 
 function chiFiberLoadExternal() {
-    IFS=$'\n' fibers=($(find $CHI_PROJECT_DIR -maxdepth 1 -type d -not -path $CHI_PROJECT_DIR -name "chitin-*"))
+    IFS=$'\n' fibers=($(find $CHI_PROJECT_DIR -maxdepth 1 -type d -not -path $CHI_PROJECT_DIR -name 'chitin-*'))
 
     # echo "${fibers[@]}"
 
-    chiFiberLoadExternalLoop "${fibers[@]}"
+    if [[ ${#fibers[@]} -gt 0 ]]; then
+        chiFiberLoadExternalLoop "${fibers[@]}"
+    fi
 }
 
 function chiFiberLoadExternalLoop() {

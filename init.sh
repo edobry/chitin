@@ -123,7 +123,6 @@ function chiShell() {
         chiFiberLoad $CHI_DOTFILES_DIR dotfiles
     fi
 
-    # TODO: load external fibers
     chiFiberLoadExternal
 
     export CHI_ENV_INITIALIZED=true
