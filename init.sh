@@ -93,6 +93,13 @@ function autoinitChi() {
 }
 
 function chiShell() {
+    # reset envvars if reloading, besides $CHI_DIR
+    if [[ ! -z "$CHI_ENV_INITIALIZED" ]]; then
+        local chiDir=$CHI_DIR
+        unset $(env | grep "^CHI_" | sed 's/=.*//')
+        export CHI_DIR=$chiDir
+    fi
+
     # load init scripts
     chiLoadDir $CHI_DIR/chains/init/**/*.sh
 
