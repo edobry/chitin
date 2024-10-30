@@ -72,6 +72,9 @@ function chiLoadConfig() {
 
     export CHI_CONFIG="$mergedConfig"
 
+    local dotfilesDir=$(chiReadConfig '.dotfilesDir // empty')
+    export CHI_DOTFILES_DIR=$dotfilesDir
+
     local projectDir=$(chiReadConfig '.projectDir // empty')
     export CHI_PROJECT_DIR=$projectDir
 }

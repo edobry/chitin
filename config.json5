@@ -1,4 +1,6 @@
 {
+    // directory where you store your dotfiles (absolute path)
+    "dotfilesDir": "",
     // directory you clone git repositories to (absolute path)
     "projectDir": "",
     "chains": {}
