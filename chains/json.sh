@@ -130,3 +130,9 @@ function jsonCheckBool() {
 function yamlToJson() {
     yq e - -j
 }
+
+function batYaml() {
+    requireArg "a yaml file" "$1" || return 1
+
+    bat --language yaml --
+}
