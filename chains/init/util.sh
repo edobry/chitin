@@ -241,3 +241,13 @@ function chiColor() {
 
     echo -n "${1}$2${CHI_COLOR_STOP}"
 }
+
+function chiReadDynamicVariable() {
+    requireArg "a variable name" "$1" || return 1
+
+    if [[ -z "$ZSH_VERSION" ]]; then
+        echo "${!1}"
+    else
+        echo "${(P)1}"
+    fi
+}
