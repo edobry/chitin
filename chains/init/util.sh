@@ -222,3 +222,22 @@ function deleteFiles() {
 
     find . -type f -name "$1" -prune -print -exec rm -rf {} \;
 }
+
+function chiShowColors() {
+    for i in $(seq 0 $(($(tput colors) - 1))); do
+        printf "$(tput setaf $i)Color code $i$(tput sgr0)\n"
+    done
+}
+
+function chiColorInit() {
+    export CHI_COLOR_RED=$(tput setaf 1)
+    export CHI_COLOR_GREEN=$(tput setaf 2)
+    export CHI_COLOR_STOP=$(tput sgr0)
+}
+
+function chiColor() {
+    requireArg "a known color name" "$1" || return 1
+    requireArg "a message" "$2" || return 1
+
+    echo -n "${1}$2${CHI_COLOR_STOP}"
+}
