@@ -145,10 +145,16 @@ function jsonToYamlConvert() {
 
     checkExtension "$jsonFilePath" "json" || return 1
 
-    local yamlFilePath="${jsonFilePath%yaml}json"
+    local yamlFilePath="${jsonFilePath%json}yaml"
     jsonWriteToYamlFile "$(cat $jsonFilePath)" $yamlFilePath
 
     echo $yamlFilePath
+}
+
+function fileGetExtension() {
+    requireArg "a file path" "$1" || return 1
+
+    echo "${1##*.}"
 }
 
 function checkExtension() {
@@ -158,7 +164,7 @@ function checkExtension() {
     local filePath="$1"
     local extension="$2"
 
-    if [[ "${filePath##*.}" != "$extension" ]]; then
+    if [[ "$(fileGetExtension $filePath)" != "$extension" ]]; then
         chiBail "extension must be '.$extension'!"
         return 1
     fi

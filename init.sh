@@ -43,41 +43,6 @@ function initJq() {
     source $CHI_DIR/chains/json.sh
 }
 
-function chiLoadConfig() {
-    local configLocation=$(chiGetConfigLocation)
-
-    local json5ConfigFileName="config.json5"
-    local json5ConfigFilePath="$configLocation/$json5ConfigFileName"
-
-    if [[ ! -f $json5ConfigFilePath ]]; then
-        chiLog "initializing config file at '$json5ConfigFilePath'"
-        mkdir -p $configLocation
-        cp $CHI_DIR/$json5ConfigFileName $json5ConfigFilePath
-        chiLog "please complete the initialization by running chiModifyConfig"
-    fi
-
-    local configFile
-    configFile=$(json5Convert $json5ConfigFilePath)
-    [[ $? -eq 0 ]] || return 1
-
-    local configFileContents=$(chiReadConfigFile)
-    local inlineConfig=$([[ -z "$1" ]] && echo '{}' || echo "$1")
-
-    # echo "file config: $configFileContents"
-    # echo "inline config: $inlineConfig"
-
-    local mergedConfig=$(jsonMergeDeep "$configFileContents" "$inlineConfig")
-    # echo "merged config: $mergedConfig"
-
-    export CHI_CONFIG="$mergedConfig"
-
-    local dotfilesDir=$(chiReadConfig '.dotfilesDir // empty')
-    export CHI_DOTFILES_DIR=$dotfilesDir
-
-    local projectDir=$(chiReadConfig '.projectDir // empty')
-    export CHI_PROJECT_DIR=$projectDir
-}
-
 function autoinitChi() {
     if [[ ! -z "$CHI_FAIL_ON_ERROR" ]]; then
         set -e
@@ -110,7 +75,7 @@ function chiShell() {
     # load meta chain
     chiLoadDir $CHI_DIR/chains/meta/**/*.sh
 
-    chiLoadConfig "$1"
+    chiConfigLoad "$1"
     chiColorInit
 
     if [[ -z "$IS_DOCKER" ]]; then

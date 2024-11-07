@@ -2,22 +2,11 @@ function chiDependenciesRead() {
     requireDirectoryArg "a directory" "$1" || return 1
     requireArg "a module name" "$2" || return 1
 
-    # echo "dir: $1"
-
-    local json5DepFilePath="$1/dependencies.json5"
-    local yamlDepFilePath="$1/dependencies.yaml"
-    local depFilePath
-    if checkFileExists $json5DepFilePath >/dev/null; then
-        depFilePath=$(json5Convert "$json5DepFilePath")
-    elif checkFileExists $yamlDepFilePath >/dev/null; then
-        depFilePath=$(yamlConvert "$yamlDepFilePath")
-    else
-        return 1
-    fi
-
+    local fileContents
+    fileContents=$(chiConfigConvertAndReadFile "$1" "dependencies")
     [[ $? -eq 0 ]] || return 1
 
-    chiDependenciesSetVariableValue "$2" "$(jsonReadFile $depFilePath)"
+    chiDependenciesSetVariableValue "$2" "$fileContents"
 }
 
 export CHI_DEPS_VARIABLE_PREFIX="CHI_DEPS"
@@ -62,7 +51,7 @@ function chiDependenciesCheckToolInstalled() {
 
     local depName=$(jsonRead "$dep" '.key')
 
-    echo "checking $depName..."
+    # echo "checking $depName..."
 
     # check order:
     #

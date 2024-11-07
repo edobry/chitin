@@ -53,7 +53,7 @@ Linux only:
 
    `source <project dir>/chitin/init.sh`
 
-4. Start a new shell session, and follow the instructions to configure `chitin` by running `chiModifyConfig`
+4. Start a new shell session, and follow the instructions to configure `chitin` by running `chiConfigModify`
 
 > Note: if you would prefer to not automatically load fibers (such as for performance reasons), set `CHI_AUTOINIT_DISABLED=true`, and use the command `chiShell` when you want to load them on-demand
 
