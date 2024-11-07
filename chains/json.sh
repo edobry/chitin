@@ -22,23 +22,12 @@ function validateJsonFile() {
     validateJson "$(jsonReadFile "$1")"
 }
 
-function validateJsonFields() {
+function jsonValidateFields() {
     requireJsonArg "to validate" "$1" || return 1
-    requireArg "(a) field(s) to validate" "$2" || return 1
+    local json="$1"; shift
 
-    local json="$1"
-    shift
-
-    local requiredFields="$*"
-
-    local fields=".$1"
-    shift
-    for i in "$@"; do
-        fields="$fields, .$i"
-    done
-
-    if ! jsonRead "$json" "$fields" -e >/dev/null; then
-        echo "One of the required fields '$requiredFields' is not present!"
+    if ! jsonRead "$json" $* -e >/dev/null; then
+        echo "One of the required fields '$*' is not present!"
         return 1
     fi
 }
@@ -53,9 +42,7 @@ function requireJsonArg() {
 # args: json file path, jq path to read (optional)
 function jsonReadFile() {
     requireFileArg "JSON file" "$1" || return 1
-
-    local jsonFile="$1"
-    shift
+    local jsonFile="$1"; shift
 
     cat "$jsonFile" | jq -cr "$@"
 }
@@ -68,10 +55,33 @@ function jsonRead() {
 
     local jsonString=$1
     local jqPath="$2"
-    shift && shift
+    shift; shift
 
-    jq -cr "$@" "$jqPath" <<< $jsonString
+    jq -cr "$@" "$jqPath" <<< "$jsonString"
 }
+
+function jsonReadPath() {
+    requireArg "a JSON string" "$1" || return 1
+    local json="$1"; shift
+
+    requireArg "a JSON path" "$1" || return 1
+
+    local output
+    output=$(echo "$json" | jq -rc 'getpath($ARGS.positional)' --args $*)
+    local jqExit=$?
+
+    if [[ $jqExit -ne 0 ]]; then
+        # jq encountered a runtime error
+        return $jqExit
+    elif [[ "$output" == "null" ]] || [[ -z "$output" ]]; then
+        return 1
+    else
+        # Output exists; print it and return with code 0
+        echo "$output"
+        return 0
+    fi
+}
+
 
 # merges two JSON objects together
 # args: N>2 minified json strings
@@ -102,22 +112,56 @@ function json5Convert() {
     requireArg "a JSON5 filepath" "$1" || return 1
 
     local json5filePath="$1"
+    checkExtension "$json5filePath" "json5" || return 1
 
-    if [[ "${json5filePath: -1}" != '5' ]]; then
-        chiBail "extension must be '.json5'!"
-        return 1
-    fi
-
-    local jsonfilePath="${json5filePath%?}"
+    local jsonFilePath="${json5filePath%json5}json"
 
     # if we have json5 use it to spit out json, otherwise, poor-mans
     if ! checkCommand json5; then
-        sed '/\/\/ /d' $json5filePath > $jsonfilePath
+        sed '/\/\/ /d' $json5filePath > $jsonFilePath
     else
         json5 -c $json5filePath
     fi
 
-    echo $jsonfilePath
+    echo $jsonFilePath
+}
+
+function yamlConvert() {
+    requireArg "a YAML filepath" "$1" || return 1
+
+    local yamlFilePath="$1"
+    checkExtension "$yamlFilePath" "yaml" || return 1
+
+    local jsonFilePath="${yamlFilePath%yaml}json"
+    cat $yamlFilePath | yamlToJson > $jsonFilePath
+
+    echo $jsonFilePath
+}
+
+function jsonToYamlConvert() {
+    requireArg "a JSON filepath" "$1" || return 1
+
+    local jsonFilePath="$1"
+
+    checkExtension "$jsonFilePath" "json" || return 1
+
+    local yamlFilePath="${jsonFilePath%yaml}json"
+    jsonWriteToYamlFile "$(cat $jsonFilePath)" $yamlFilePath
+
+    echo $yamlFilePath
+}
+
+function checkExtension() {
+    requireArg "a file path" "$1" || return 1
+    requireArg "an extension" "$2" || return 1
+
+    local filePath="$1"
+    local extension="$2"
+
+    if [[ "${filePath##*.}" != "$extension" ]]; then
+        chiBail "extension must be '.$extension'!"
+        return 1
+    fi
 }
 
 function jsonCheckBool() {
@@ -128,11 +172,42 @@ function jsonCheckBool() {
 }
 
 function yamlToJson() {
-    yq e - -j
+    yq e - -o=json
 }
 
 function batYaml() {
-    requireArg "a yaml file" "$1" || return 1
-
     bat --language yaml --
+}
+
+function jsonReadBoolPath() {
+    requireArg "a JSON string" "$1" || return 1
+    local json="$1"; shift
+
+    requireArg "a JSON path" "$1" || return 1
+
+    local output
+    output=$(jsonReadPath "$json" $*)
+
+    if [[ "$?" -ne 0 ]]; then
+        echo "the path does not exist!" >&2
+        return 1
+    elif [[ "$output" =~ ^(true|false)$ ]]; then
+        echo "$output"
+    else
+        echo "the path does not contain a boolean value!" >&2
+        return 1
+    fi
+}
+
+function jsonCheckBoolPath() {
+    requireArg "a JSON string" "$1" || return 1
+    local json="$1"; shift
+
+    requireArg "a JSON path" "$1" || return 1
+
+    local value
+    value=$(jsonReadBoolPath "$json" $* 2>/dev/null)
+    [[ $? -eq 0 ]] || return 1
+
+    [[ "$value" == "true" ]]
 }
