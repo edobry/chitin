@@ -16,7 +16,9 @@ if [[ -z "$IS_DOCKER" ]]; then
 fi
 
 function chiLog() {
-    echo "chitin - $1"
+    requireArg "a message" "$1" || return 1
+
+    echo "chitin${2:+:}${2} - $1"
 }
 
 function chiBail() {
