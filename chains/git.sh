@@ -53,7 +53,7 @@ function gitSparseCheckoutPaths() {
     local remoteRepo="$1"
     local repoName="$2"
     local ref="$3"
-    shift && shift && shift
+    shift; shift; shift
     local filepaths=$*
 
     # check if repo already initialized

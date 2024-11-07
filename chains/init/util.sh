@@ -135,7 +135,7 @@ function requireArgOptions() {
     local argValue="$2"
 
     # skip the first 2 arguments
-    shift && shift
+    shift; shift
     # and transform to a space-delimited list
     local options=$(echo "$*" | tr '\n' ' ' | sort)
 
