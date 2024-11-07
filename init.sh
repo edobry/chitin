@@ -44,9 +44,6 @@ function initJq() {
 }
 
 function chiLoadConfig() {
-    # load meta chain
-    source $CHI_DIR/chains/meta.sh
-
     local configLocation=$(chiGetConfigLocation)
 
     local json5ConfigFileName="config.json5"
@@ -109,25 +106,26 @@ function chiShell() {
     chiLoadDir $CHI_DIR/chains/init/**/*.sh
 
     initJq
-    chiLoadConfig "$1"
 
-    # set -x
+    # load meta chain
+    chiLoadDir $CHI_DIR/chains/meta/**/*.sh
+
+    chiLoadConfig "$1"
+    chiColorInit
+
     if [[ -z "$IS_DOCKER" ]]; then
-        chiFiberReadDependencies $CHI_DIR core
-        chiFiberCheckDependencies $CHI_DIR core
-        chiChainCheckTools core init || (chiBail; return 1)
+        chiDependenciesRead "$CHI_DIR" "core"
+        chiDependenciesCheckTools "core"
+        chiDependenciesCheckTools "core:init" || (chiBail; return 1)
     fi
-    # set +x
-    # set -x
 
     # load chains
-    chiFiberLoad $CHI_DIR
+    chiFiberLoad "$CHI_DIR"
 
     # load dotfiles
     if [[ ! -z "$CHI_DOTFILES_DIR" ]]; then
-        chiFiberLoad $CHI_DOTFILES_DIR dotfiles
+        chiFiberLoad "$CHI_DOTFILES_DIR" dotfiles
     fi
-
     chiFiberLoadExternal
 
     export CHI_ENV_INITIALIZED=true
