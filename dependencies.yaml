@@ -5,6 +5,10 @@ tools:
   yq:
     version: "4.11.2"
     command: yq --version 2>&1 | awk '{ print $4 }' | sed 's/v//'
+  json5:
+    brew: {}
 chainToolDeps:
   init:
     - jq
+    - yq
+    - json5
