@@ -30,7 +30,7 @@ function chiModuleDependenciesGetRequiredTools() {
     requireArg "a module name" "$1" || return 1
     requireArg "a tool type" "$2" || return 1
 
-    chiDependenciesToolsGetRequired $(chiDependenciesGetVariableValue "$1") "$2"
+    chiDependenciesToolsGetRequired $(chiConfigGetVariableValue "$1") "$2"
 }
 
 function chiFiberLoad() {
@@ -45,8 +45,8 @@ function chiFiberLoad() {
         return 0
     fi
 
-    chiDependenciesRead "$1" "$fiberName"
-    local deps=$(chiDependenciesGetVariableValue "$fiberName")
+    chiModuleConfigRead "$1" "$fiberName"
+    local deps=$(chiConfigGetVariableValue "$fiberName")
 
     # if not all fiber dependencies have been loaded, retry
     echo "$deps" | jq -r '(.fiberDeps // [])[]' | \
@@ -128,17 +128,22 @@ function chiChainLoad() {
         return 0
     fi
 
-    if ! chiDependenciesRead "$2" "$moduleName"; then
-        # chiLog "deps file not found! reading 'chainToolDeps' from fiber" "$moduleName"
-        local chainToolDeps=$(chiDependenciesReadVariablePath "$1" chainToolDeps "$chainName")
+    # if the chain doesnt have its own config file, look for a chainConfig in the fiber config
+    if ! chiModuleConfigRead "$2" "$moduleName"; then
+        local chainConfig=$(chiModuleConfigReadVariablePath "$1" chainConfig "$chainName")
 
-        # echo "chainToolDeps: $chainToolDeps"
-        
-        if [[ -n "$chainToolDeps" ]]; then
-            local generatedDeps=$(jq -nc --argjson chainToolDeps "$chainToolDeps" '{ toolDeps: $chainToolDeps }')
-            # echo "generated deps: $generatedDeps"
-            chiDependenciesSetVariableValue "$moduleName" "$generatedDeps"
+        if [[ -n "$chainConfig" ]]; then
+            # local inheritedConfig=$(jq -nc --argjson chainConfig "$chainConfig" '{ toolDeps: $chainToolDeps }')
+            chConfigSetVariableValue "$moduleName" "$chainConfig"
         fi
+    fi
+
+    local enabledValue
+    enabledValue=$(chiModuleConfigReadVariablePath "$moduleName" enabled)
+
+    if [[ $? -eq 0 ]] && [[ "$enabledValue" == "false" ]]; then
+        # chiLog "chain disabled, not loading!" "$moduleName"
+        return 1
     fi
 
     chiDependenciesCheckTools "$moduleName"
@@ -182,42 +187,6 @@ function chiChainShouldLoad() {
     chiChainCheckEnabled "$chainConfig" loaded || return 1
     chiFiberDepdenciesChainCheckTools "$fiberName" "$chainName" || return 1
 }
-
-# function chiFiberDependenciesToolCheckValid() {
-#     requireArg "a tool name" "$1" || return 1
-
-#     chiDependenciesGetToolStatus "$1" | jq -e '.installed and .validVersion' >/dev/null || return 1
-# }
-
-# function chiFiberDepdenciesChainCheckTools() {
-#     requireArg "a fiber name" "$1" || return 1
-#     requireArg "a chain name" "$2" || return 1
-
-#     isSet "$IS_DOCKER" && return 0
-
-#     local deps=$(chiFiberDependenciesGetVarValue $1)
-
-#     local chainToolDeps
-#     chainToolDeps=$(jsonRead "$deps" '.chainToolDeps[$x] // empty' --arg x "$2")
-#     [[ $? -eq 0 ]] && return 0
-#     # echo "$chainToolDeps"
-
-#     local depsMet=0
-
-#     jsonRead "$chainToolDeps" '.dependencies[]' |\
-#     while read -r dep; do
-#         if ! chiFiberDependenciesToolCheckValid "$dep"; then
-#             chiLog "$1:$2 - tool dependency $dep is unmet!"
-#             depsMet=1
-#         fi
-#     done
-
-#     if [[ $depsMet -ne 0 ]]; then
-#         echo "chain $1:$2 will not load"
-#     fi
-    
-#     return $depsMet
-# }
 
 function chiDotfilesDependenciesCheckTools() {
     chiDependenciesCheckTools "$CHI_DOTFILES_DIR" dotfiles

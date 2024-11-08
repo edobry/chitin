@@ -2,7 +2,7 @@ function chiDependenciesInstallTools() {
     requireDirectoryArg "module directory" "$1" || return 1
     requireArg "a module name" "$2" || return 1
 
-    chiDependenciesRead "$1" "$2"
+    chiModuleConfigRead "$1" "$2"
 
     chiToolsInstallBrew "$2"
     chiToolsInstallGit "$2"

@@ -120,7 +120,7 @@ function json5Convert() {
     if ! checkCommand json5; then
         sed '/\/\/ /d' $json5filePath > $jsonFilePath
     else
-        cat "$json5filePath" > json5 > "$jsonFilePath"
+        cat "$json5filePath" | json5 | jq -c > "$jsonFilePath"
     fi
 
     echo $jsonFilePath
@@ -133,7 +133,7 @@ function yamlConvert() {
     checkExtension "$yamlFilePath" "yaml" || return 1
 
     local jsonFilePath="$(tempFile).json"
-    cat $yamlFilePath | yamlToJson > $jsonFilePath
+    cat $yamlFilePath | yamlToJson | jq -c > $jsonFilePath
 
     echo $jsonFilePath
 }

@@ -74,12 +74,11 @@ function chiShell() {
 
     # load meta chain
     chiLoadDir $CHI_DIR/chains/meta/**/*.sh
-
     chiConfigLoad "$1"
     chiColorInit
 
     if [[ -z "$IS_DOCKER" ]]; then
-        chiDependenciesRead "$CHI_DIR" "core"
+        chiModuleConfigRead "$CHI_DIR" "core"
         chiDependenciesCheckTools "core"
         chiDependenciesCheckTools "core:init" || (chiBail; return 1)
     fi
@@ -91,6 +90,7 @@ function chiShell() {
     if [[ ! -z "$CHI_DOTFILES_DIR" ]]; then
         chiFiberLoad "$CHI_DOTFILES_DIR" dotfiles
     fi
+    
     chiFiberLoadExternal
 
     export CHI_ENV_INITIALIZED=true

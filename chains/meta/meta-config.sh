@@ -146,3 +146,36 @@ function chiReadChainConfigField() {
 
     jsonRead "$config" ".$2 // empty"
 }
+
+function chiModuleConfigRead() {
+    requireDirectoryArg "a directory" "$1" || return 1
+    requireArg "a module name" "$2" || return 1
+
+    local fileContents
+    fileContents=$(chiConfigConvertAndReadFile "$1" "config")
+    [[ $? -eq 0 ]] || return 1
+
+    chiConfigSetVariableValue "$2" "$fileContents"
+}
+
+export CHI_CONFIG_VARIABLE_PREFIX="CHI_CONFIG"
+
+function chiConfigGetVariableValue() {
+    requireArg "a module name" "$1" || return 1
+
+    chiModuleGetDynamicVariable "$CHI_CONFIG_VARIABLE_PREFIX" "$1"
+}
+
+function chiModuleConfigReadVariablePath() {
+    requireArg "a module name" "$1" || return 1
+    local moduleName="$1"; shift;
+
+    jsonReadPath "$(chiConfigGetVariableValue "$moduleName")" $*
+}
+
+function chiConfigSetVariableValue() {
+    requireArg "a module name" "$1" || return 1
+    requireArg "a config JSON string" "$2" || return 1
+
+    chiModuleSetDynamicVariable "$CHI_CONFIG_VARIABLE_PREFIX" "$1" "$2"
+}

@@ -1,36 +1,3 @@
-function chiDependenciesRead() {
-    requireDirectoryArg "a directory" "$1" || return 1
-    requireArg "a module name" "$2" || return 1
-
-    local fileContents
-    fileContents=$(chiConfigConvertAndReadFile "$1" "dependencies")
-    [[ $? -eq 0 ]] || return 1
-
-    chiDependenciesSetVariableValue "$2" "$fileContents"
-}
-
-export CHI_DEPS_VARIABLE_PREFIX="CHI_DEPS"
-
-function chiDependenciesGetVariableValue() {
-    requireArg "a module name" "$1" || return 1
-
-    chiModuleGetDynamicVariable "$CHI_DEPS_VARIABLE_PREFIX" "$1"
-}
-
-function chiDependenciesReadVariablePath() {
-    requireArg "a module name" "$1" || return 1
-    local moduleName="$1"; shift;
-
-    jsonReadPath "$(chiDependenciesGetVariableValue "$moduleName")" $*
-}
-
-function chiDependenciesSetVariableValue() {
-    requireArg "a module name" "$1" || return 1
-    requireArg "a dependencies JSON string" "$2" || return 1
-
-    chiModuleSetDynamicVariable "$CHI_DEPS_VARIABLE_PREFIX" "$1" "$2"
-}
-
 function chiDependenciesGetToolStatus() {
     requireArg "a tool name" "$1" || return 1
     
@@ -115,14 +82,14 @@ function chiDependenciesCheckTools() {
     requireArg "a module name" "$1" || return 1
 
     local moduleName="$1"
-    local deps=$(chiDependenciesGetVariableValue "$moduleName")
+    local deps=$(chiConfigGetVariableValue "$moduleName")
 
     [[ -z "$deps" ]] && return 0
 
     local depsList=$(jsonRead "$deps" '(.tools // []) | to_entries[]')
     [[ -z "$depsList" ]] && return 0
 
-    local toolStatus=()
+    local toolStatus=('{}')
     while read -r dep; do
         # echo "dep: $dep"
         local depName=$(jsonRead "$dep" '.key')
@@ -132,7 +99,9 @@ function chiDependenciesCheckTools() {
         local installed="false"
         local validVersion="false"
 
-        if ! chiDependenciesCheckToolInstalled "$moduleName" "$dep" && ! jsonCheckBoolPath "$dep" value optional; then
+        jsonCheckBoolPath "$dep" value optional &>/dev/null && continue
+
+        if ! chiDependenciesCheckToolInstalled "$moduleName" "$dep"; then
             chiLog "'$depName' not installed!" "$moduleName"
         elif [[ -z "$versionCommand" ]]; then
             installed="true"
@@ -153,7 +122,7 @@ function chiDependenciesCheckTools() {
             fi
         fi
 
-        toolStatus+=("$(chiMakeToolStatus $depName $installed $validVersion)")
+        toolStatus+=("$(chiDependenciesMakeToolStatus $depName $installed $validVersion)")
     done < <(echo "$depsList")
 
     local moduleToolStatus=$(jsonMerge $toolStatus '{}')
@@ -163,18 +132,22 @@ function chiDependenciesCheckTools() {
     export CHI_TOOL_STATUS="$globalToolStatus"
 }
 
-function chiMakeToolStatus() {
+function chiDependenciesMakeToolStatus() {
     requireArg "a tool name" "$1" || return 1
     requireArg "installed" "$2" || return 1
     requireArg "validVersion" "$3" || return 1
 
-    jq -nc --arg depName "$1" --argjson installed "$2" --argjson validVersion "$3" '{ ($depName): { installed: $installed, validVersion: $validVersion } }'
+    jq -nc --arg depName "$1" --argjson installed "$2" --argjson validVersion "$3" \
+        '{ ($depName): {
+            installed: $installed,
+            validVersion: $validVersion
+        } }'
 }
 
 function chiDependenciesCheckToolsMet() {
     requireArg "a module name" "$1" || return 1
 
-    local deps=$(chiDependenciesGetVariableValue "$1")
+    local deps=$(chiConfigGetVariableValue "$1")
 
     [[ -z "$deps" ]] && return 0
 
@@ -209,7 +182,7 @@ function chiDependenciesCheckToolsMet() {
 }
 
 function chiDependenciesToolsGetRequired() {
-    requireArg "a dependencies JSON string" "$1" || return 1
+    requireArg "a config JSON string" "$1" || return 1
     requireArg "a tool type" "$2" || return 1
 
     echo "$1" | jq -c --arg type "$2" '.tools | to_entries[] |
