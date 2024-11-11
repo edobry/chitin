@@ -263,3 +263,9 @@ function chiReadDynamicVariable() {
         echo "${(P)1}"
     fi
 }
+
+function expandHome() {
+    requireArg "a path" "$1" || return 1
+    
+    [[ "$1" == ~* ]] && echo "${HOME}${1:1}" || echo "$1"
+}

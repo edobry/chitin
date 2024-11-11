@@ -80,19 +80,21 @@ function chiConfigUserLoad() {
     [[ $? -eq 0 ]] || return 1
 
     local inlineConfig="${1:-{}}"
-
-    # echo "file config: $configFile"
-    # echo "inline config: $inlineConfig"
     local mergedConfig=$(jsonMergeDeep "$configFile" "$inlineConfig")
-    # echo "merged config: $mergedConfig"
-
     export CHI_CONFIG_USER="$mergedConfig"
 
-    local dotfilesDir=$(chiConfigUserRead '.dotfilesDir // empty')
-    export CHI_DOTFILES_DIR="$dotfilesDir"
-
     local projectDir=$(chiConfigUserRead '.projectDir // empty')
-    export CHI_PROJECT_DIR="$projectDir"
+    if [[ -z "$projectDir" ]]; then
+        chiLog "projectDir not set!" "meta:config"
+        return 1
+    fi
+
+    export CHI_PROJECT_DIR="$(expandHome "$projectDir")"
+
+    local dotfilesDir=$(chiConfigUserRead '.dotfilesDir // empty')
+    if [[ ! -z "$dotfilesDir" ]]; then
+        export CHI_DOTFILES_DIR="$(expandHome "$dotfilesDir")"
+    fi
 }
 
 function chiConfigUserModify() {
