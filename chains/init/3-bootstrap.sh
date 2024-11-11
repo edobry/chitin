@@ -1,3 +1,5 @@
+checkCommand brew && eval "$(/opt/homebrew/bin/brew shellenv)"
+
 function chiInitBootstrapDeps() {
     # we need jq to bootstrap
     if ! checkCommand jq; then

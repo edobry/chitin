@@ -5,9 +5,6 @@ function isMacOS() {
 if isMacOS; then
     alias flushDNS='sudo killall -HUP mDNSResponder'
 
-    ITERM_PATH=$HOME/.iterm2_shell_integration.zsh
-    test -s $ITERM_PATH && source $ITERM_PATH || true
-
     function toClip() {
         pbcopy
     }
