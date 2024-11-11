@@ -130,7 +130,6 @@ function chiDependenciesCheckModuleToolsMet() {
 
     local installedTools=()
     local brewToolsToInstall=()
-    local gitToolsToInstall=()
 
     for tool in "${toolsToInstall[@]}"; do
         local toolConfig=$(chiToolsGetConfig "$tool")
@@ -145,7 +144,13 @@ function chiDependenciesCheckModuleToolsMet() {
         if jsonReadPath "$toolConfig" brew &>/dev/null; then
             brewToolsToInstall+=("$toolEntry")
         elif jsonReadPath "$toolConfig" git &>/dev/null; then
-            gitToolsToInstall+=("$toolEntry")
+            chiToolsInstallGit "$moduleName" "$tool" "$toolConfig"
+        elif jsonReadPath "$toolConfig" command &>/dev/null; then
+            chiToolsInstallCommand "$moduleName" "$tool" "$toolConfig"
+        elif jsonReadPath "$toolConfig" script &>/dev/null; then
+            chiToolsInstallScript "$moduleName" "$tool" "$toolConfig"
+        elif jsonReadPath "$toolConfig" artifact &>/dev/null; then
+            chiToolsInstallArtifact "$moduleName" "$tool" "$toolConfig"
         else
             chiLog "no install method found for '$tool'!" "$moduleName"
         fi
@@ -158,15 +163,10 @@ function chiDependenciesCheckModuleToolsMet() {
         chiToolsInstallBrew "$moduleName" "${brewToolsToInstall[@]}"
     fi
 
-    if [[ "${#gitToolsToInstall[@]}" -gt 0 ]]; then
-        chiToolsInstallGit "$moduleName" "${gitToolsToInstall[@]}"
-    fi
-
     # echo "installedTools: $installedTools"
 
     # check again after installing
     chiDependenciesCheckModuleTools "$moduleName" "${installedTools[@]}"
-    # echo "checking again"
     chiDependenciesCheckModuleToolsMet "$moduleName"
 }
 

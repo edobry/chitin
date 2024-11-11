@@ -56,8 +56,13 @@ function chiToolsCheckInstalled() {
     brewConfig=$(jsonReadPath "$tool" value brew 2>/dev/null)
     [[ $? -eq 0 ]] && isBrew=true
 
+    local isArtifact=false
+    local artifactConfig
+    artifactConfig=$(jsonReadPath "$tool" value artifact 2>/dev/null)
+    [[ $? -eq 0 ]] && isArtifact=true
+
     if $isBrew; then
-        # echo "in isBrew"
+        # echo "in isBrew" >&2
         if [[ -z "$brewConfig" ]]; then
             chiLog "expected brew config not found for '$toolName'!" "$moduleName"
             return 1
@@ -68,13 +73,21 @@ function chiToolsCheckInstalled() {
             return $(brewCheckCask "$toolName")
         fi
 
-        # echo "checkBrew: $checkBrew"
+        # echo "checkBrew: $checkBrew" >&2
 
         if $checkBrew; then
             # echo "running brew check formula"
             return $(brewCheckFormula "$toolName")
         fi
-        # echo "brew done"
+        # echo "brew done" >&2
+    elif $isArtifact; then
+        # echo "in isArtifact" >&2
+        if [[ -z "$artifactConfig" ]]; then
+            chiLog "expected artifact config not found for '$toolName'!" "$moduleName"
+            return 1
+        fi
+
+        [[ -f $(chiToolsArtifactMakeTargetPath "$artifactConfig") ]] && return 0 || return 1
     fi
 
     checkCommand "$toolName"
@@ -151,26 +164,16 @@ function chiToolsGenerateBrewfile() {
 }
 
 function chiToolsInstallGit() {
-    requireArg "a tool config JSON string" "$1" || return 1
+    requireArg "a module name" "$1" || return 1
+    requireArg "a tool name" "$2" || return 1
+    requireArg "a tool config JSON string" "$3" || return 1
 
-    for tool in "$@"; do
-        # echo "tool: $tool"
-        local depName=$(jsonRead "$tool" '.key')
-        local url=$(jsonRead "$tool" '.value.git.url // empty')
-        local target=$(jsonRead "$tool" '.value.git.target // empty')
+    local toolName="$2"
+    local url=$(jsonRead "$3" '.git.url // empty')
+    local target=$(jsonRead "$3" '.git.target // empty')
 
-        chiToolsInstallGitTool "$depName" "$url" "$target"
-    done
-}
-
-function chiToolsInstallGitTool() {
-    requireArg "a tool name" "$1" || return 1
-    requireArg "a git url" "$2" || return 1
-    requireArg "a target directory" "$3" || return 1
-
-    local target="$3"
     if [[ "$target" == "local/share" ]]; then
-        target="${XDG_DATA_HOME:-${HOME}/.local/share}/$1/$1.git"
+        target="${XDG_DATA_HOME:-${HOME}/.local/share}/$toolName/$toolName.git"
     fi
 
     [[ -d "$target" ]] && return 0
@@ -178,8 +181,74 @@ function chiToolsInstallGitTool() {
     GREEN=$(tput setaf 2)
     NC=$(tput sgr0)
 
-    echo -e "${GREEN}==>${NC} Cloning $1 from $2 to $target...\n"
+    chiLog "${GREEN}==>${NC} Cloning '$toolName' from '$url' to '$target'...\n" "$1"
     
-    mkdir -p $target
-    git clone "$2" "$target"
+    mkdir -p "$target"
+    git clone "$3" "$target"
+}
+
+function chiToolsInstallCommand() {
+    requireArg "a module name" "$1" || return 1
+    requireArg "a tool name" "$2" || return 1
+    requireArg "a tool config JSON string" "$3" || return 1
+
+    local installCommand=$(jsonReadPath "$3" installCommand)
+    [[ $? -eq 0 ]] || return 1
+
+    GREEN=$(tput setaf 2)
+    NC=$(tput sgr0)
+
+    chiLog "${GREEN}==>${NC} Installing '$2' with command '$installCommand'...\n" "$1"
+    
+    eval "$installCommand"
+}
+
+function chiToolsInstallScript() {
+    requireArg "a module name" "$1" || return 1
+    requireArg "a tool name" "$2" || return 1
+    requireArg "a tool config JSON string" "$3" || return 1
+
+    local installScript=$(jsonReadPath "$3" script)
+    [[ $? -eq 0 ]] || return 1
+
+    GREEN=$(tput setaf 2)
+    NC=$(tput sgr0)
+
+    chiLog "${GREEN}==>${NC} Installing '$1' from script at '$2'...\n" "$1"
+    
+    /bin/bash -c "$(curl -fsSL "$script")"
+}
+
+function chiToolsInstallArtifact() {
+    requireArg "a module name" "$1" || return 1
+    requireArg "a tool name" "$2" || return 1
+    requireArg "a tool config JSON string" "$3" || return 1
+
+    local artifactConfig=$(jsonReadPath "$3" artifact 2>/dev/null)
+
+    local url=$(jsonReadPath "$artifactConfig" url)
+    [[ $? -eq 0 ]] || return 1
+    
+    local installPath=$(chiToolsArtifactMakeTargetPath "$artifactConfig")
+    [[ $? -eq 0 ]] || return 1
+    [[ -f "$installPath" ]] && return 0
+
+    GREEN=$(tput setaf 2)
+    NC=$(tput sgr0)
+
+    chiLog "${GREEN}==>${NC} Installing '$2' from '$url' to '$installPath'...\n" "$1"
+
+    curl -fLo "$installPath" "$url"
+}
+
+function chiToolsArtifactMakeTargetPath() {
+    requireArg "a tool config JSON string" "$1" || return 1
+
+    local url=$(jsonReadPath "$1" url)
+    local target=$(expandHome $(jsonReadPath "$1" target))
+    [[ $? -eq 0 ]] || return 1
+    
+    jsonReadBoolPath "$1" appendFilename &>/dev/null \
+        && echo "$target/$(basename "$url")" \
+        || echo "$target"
 }

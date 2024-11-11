@@ -1,5 +1,10 @@
 installToolDeps: true
 tools:
+  xcode-dev-tools:
+    checkCommand: xcode-select -p
+    command: xcode-select --install
+  brew:
+    script: https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh
   jq:
     version: "1.6"
     versionCommand: jq --version | awk -F '-' '{ print $2 }'
@@ -13,6 +18,8 @@ tools:
   json5:
     brew: {}
 toolDeps:
+  - xcode-dev-tools
+  - brew
   - jq
   - yq
   - json5
