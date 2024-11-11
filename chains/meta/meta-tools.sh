@@ -211,12 +211,19 @@ function chiToolsInstallScript() {
     local installScript=$(jsonReadPath "$3" script)
     [[ $? -eq 0 ]] || return 1
 
+    local postInstall=$(jsonReadPath "$3" postInstall)
+
     GREEN=$(tput setaf 2)
     NC=$(tput sgr0)
 
     chiLog "${GREEN}==>${NC} Installing '$2' from script at '$installScript'...\n" "$1"
     
     /bin/bash -c "$(curl -fsSL "$installScript")"
+    
+    if [[ -n "$postInstall" ]]; then
+        chiLog "running post-install script..." "$1"
+        eval "$postInstall"
+    fi
 }
 
 function chiToolsInstallArtifact() {

@@ -5,6 +5,7 @@ tools:
     command: xcode-select --install
   brew:
     script: https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh
+    postInstall: eval "$(/opt/homebrew/bin/brew shellenv)"
   jq:
     version: "1.6"
     versionCommand: jq --version | awk -F '-' '{ print $2 }'
