@@ -214,9 +214,9 @@ function chiToolsInstallScript() {
     GREEN=$(tput setaf 2)
     NC=$(tput sgr0)
 
-    chiLog "${GREEN}==>${NC} Installing '$1' from script at '$2'...\n" "$1"
+    chiLog "${GREEN}==>${NC} Installing '$2' from script at '$installScript'...\n" "$1"
     
-    /bin/bash -c "$(curl -fsSL "$script")"
+    /bin/bash -c "$(curl -fsSL "$installScript")"
 }
 
 function chiToolsInstallArtifact() {
