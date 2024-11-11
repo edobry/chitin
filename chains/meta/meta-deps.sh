@@ -43,7 +43,7 @@ function chiDependenciesCheckTool() {
 
     if \
         ! jsonCheckBoolPath "$tool" value optional &>/dev/null &&
-        chiToolsCheckInstalled "$moduleName" "$tool" \
+        chiToolsCheckInstalled "$moduleName" "$toolName" "$(jsonReadPath "$tool" value)" \
     ; then
         if [[ -z "$versionCommand" ]]; then
             installed="true"

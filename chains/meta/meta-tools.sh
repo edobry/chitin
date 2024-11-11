@@ -18,12 +18,14 @@ function chiToolsShowStatus() {
 
 function chiToolsCheckInstalled() {
     requireArg "a module name" "$1" || return 1
-    requireArg "a tool config JSON string" "$2" || return 1
+    local moduleName="$1"; shift
 
-    local moduleName="$1"
-    local tool="$2"
+    requireArg "a tool name" "$1" || return 1
+    local toolName="$1"; shift
 
-    local toolName=$(jsonRead "$tool" '.key')
+    local tool="$1"
+    [[ -z "$tool" ]] && tool=$(chiToolsGetConfig "$toolName")
+    [[ -z "$tool" ]] && return 1
 
     # check order:
     #
@@ -34,11 +36,11 @@ function chiToolsCheckInstalled() {
     # else, use `checkCommand` with the tool name
     
     local checkCommandValue
-    checkCommandValue=$(jsonReadPath "$tool" value checkCommand 2>/dev/null)
+    checkCommandValue=$(jsonReadPath "$tool" checkCommand 2>/dev/null)
     local checkCommandExit=$?
     
     local checkBrew
-    jsonCheckBoolPath "$tool" value checkBrew &>/dev/null && checkBrew=true || checkBrew=false
+    jsonCheckBoolPath "$tool" checkBrew &>/dev/null && checkBrew=true || checkBrew=false
 
     if [[ -n "$checkCommandValue" ]]; then
         if $checkBrew; then
@@ -53,12 +55,12 @@ function chiToolsCheckInstalled() {
 
     local isBrew=false
     local brewConfig
-    brewConfig=$(jsonReadPath "$tool" value brew 2>/dev/null)
+    brewConfig=$(jsonReadPath "$tool" brew 2>/dev/null)
     [[ $? -eq 0 ]] && isBrew=true
 
     local isArtifact=false
     local artifactConfig
-    artifactConfig=$(jsonReadPath "$tool" value artifact 2>/dev/null)
+    artifactConfig=$(jsonReadPath "$tool" artifact 2>/dev/null)
     [[ $? -eq 0 ]] && isArtifact=true
 
     if $isBrew; then
