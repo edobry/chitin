@@ -34,9 +34,9 @@ function chiToolsRemoveDirFromPath() {
 export CHI_INIT_TEMP_DIR="/tmp/chitin-install"
 
 function chiToolsInstallJqTemporary() {
-    local jqVersion="1.6"
-    local jqUrl="https://github.com/stedolan/jq/releases/download/jq-$jqVersion/jq-macos-arm64"
-
+    local jqVersion="1.7.1"
+    local jqUrl="https://github.com/jqlang/jq/releases/download/jq-$jqVersion/jq-macos-arm64"
+    
     chiToolsInstallTemporary "$jqUrl" "jq"
 }
 
