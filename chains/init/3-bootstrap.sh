@@ -31,11 +31,11 @@ function chiToolsRemoveDirFromPath() {
     export PATH=$(echo "$PATH" | splitOnChar ':' | grep -v "$1" | newlinesToChar ':')
 }
 
-export CHITIN_INIT_TEMP_DIR="/tmp/chitin-install"
+export CHI_INIT_TEMP_DIR="/tmp/chitin-install"
 
 function chiToolsInstallJqTemporary() {
     local jqVersion="1.6"
-    local jqUrl="https://github.com/stedolan/jq/releases/download/jq-$jqVersion/jq-osx-arm64"
+    local jqUrl="https://github.com/stedolan/jq/releases/download/jq-$jqVersion/jq-macos-arm64"
 
     chiToolsInstallTemporary "$jqUrl" "jq"
 }
@@ -53,9 +53,9 @@ function chiToolsInstallTemporary() {
 
     chiLog "installing '$2' temporarily" "init:bootstrap"
 
-    mkdir -p "$CHITIN_INIT_TEMP_DIR"
+    mkdir -p "$CHI_INIT_TEMP_DIR"
 
-    chiToolsInstallFromUrl "$CHITIN_INIT_TEMP_DIR" "$1" "$2"
+    chiToolsInstallFromUrl "$CHI_INIT_TEMP_DIR" "$1" "$2"
 }
 
 function chiToolsInstallFromUrl() {
