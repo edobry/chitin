@@ -35,14 +35,14 @@ export CHITIN_INIT_TEMP_DIR="/tmp/chitin-install"
 
 function chiToolsInstallJqTemporary() {
     local jqVersion="1.6"
-    local jqUrl="https://github.com/stedolan/jq/releases/download/jq-$jqVersion/jq-osx-amd64"
+    local jqUrl="https://github.com/stedolan/jq/releases/download/jq-$jqVersion/jq-osx-arm64"
 
     chiToolsInstallTemporary "$jqUrl" "jq"
 }
 
 function chiToolsInstallYqTemporary() {
     local yqVersion="4.44.3"
-    local yqUrl="https://github.com/mikefarah/yq/releases/download/v$yqVersion/yq_darwin_amd64"
+    local yqUrl="https://github.com/mikefarah/yq/releases/download/v$yqVersion/yq_darwin_arm64"
 
     chiToolsInstallTemporary "$yqUrl" "yq"
 }
