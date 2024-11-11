@@ -2,7 +2,7 @@ function chiModuleGetDynamicVariable() {
     requireArg "a variable prefix" "$1" || return 1
     requireArg "a module name" "$2" || return 1
     
-    echo $(chiReadDynamicVariable $(chiModuleMakeDynamicVariableName "$1" "$2"))
+    echo $(chiReadDynamicVariable "$(chiModuleMakeDynamicVariableName "$1" "$2")")
 }
 
 function chiModuleSetDynamicVariable() {
@@ -55,8 +55,9 @@ function chiFiberLoad() {
         [[ -z $(chiModuleGetDynamicVariable "$fiberLoadedVariablePrefix" "$fiberDep") ]] && return 1
     done
 
-    chiDependenciesCheckTools "$fiberName"
-    if ! chiDependenciesCheckToolsMet "$fiberName"; then
+
+    chiDependenciesCheckModuleTools "$fiberName"
+    if ! chiDependenciesCheckModuleToolsMet "$fiberName"; then
         chiLog "tool dependencies unmet, not loading!" "$fiberName"
         return 1
     fi
@@ -128,13 +129,12 @@ function chiChainLoad() {
         return 0
     fi
 
-    # if the chain doesnt have its own config file, look for a chainConfig in the fiber config
+    # if the chain doesnt have its own config file, look for a `chainConfig` in the fiber config
     if ! chiModuleConfigRead "$2" "$moduleName"; then
         local chainConfig=$(chiModuleConfigReadVariablePath "$1" chainConfig "$chainName")
 
         if [[ -n "$chainConfig" ]]; then
-            # local inheritedConfig=$(jq -nc --argjson chainConfig "$chainConfig" '{ toolDeps: $chainToolDeps }')
-            chConfigSetVariableValue "$moduleName" "$chainConfig"
+            chiConfigSetVariableValue "$moduleName" "$chainConfig"
         fi
     fi
 
@@ -146,8 +146,8 @@ function chiChainLoad() {
         return 1
     fi
 
-    chiDependenciesCheckTools "$moduleName"
-    if ! chiDependenciesCheckToolsMet "$moduleName"; then
+    chiDependenciesCheckModuleTools "$moduleName"
+    if ! chiDependenciesCheckModuleToolsMet "$moduleName"; then
         chiLog "missing tool dependencies, not loading!" "$moduleName"
         return 1
     fi
@@ -178,7 +178,7 @@ function chiChainShouldLoad() {
     fi
 
     local chainConfig
-    chainConfig=$(chiReadChainConfig ${2:-$chainName})
+    chainConfig=$(chiConfigChainRead ${2:-$chainName})
     local chainConfigLoadReturn=$?
     
     isSet "$returnConfig" && echo "$chainConfig"
@@ -189,5 +189,5 @@ function chiChainShouldLoad() {
 }
 
 function chiDotfilesDependenciesCheckTools() {
-    chiDependenciesCheckTools "$CHI_DOTFILES_DIR" dotfiles
+    chiDependenciesCheckModuleTools "$CHI_DOTFILES_DIR" dotfiles
 }

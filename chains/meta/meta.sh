@@ -43,10 +43,10 @@ function chiShowEnvvars() {
 function chiDebug() {
     chiLog "configuration"
     chiLog "version: $(chiGetVersion)"
-    chiConfigShow
+    chiConfigUserShow
 
     chiLog "tool status:"
-    chiDependenciesShowToolStatus
+    chiToolsShowStatus
 
     chiLog "envvars:"
     chiShowEnvvars

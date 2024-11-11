@@ -33,16 +33,6 @@ function chiLoadDir() {
     done
 }
 
-function initJq() {
-    # we need at least jq to bootstrap
-    if ! checkCommand jq; then
-        chiBail "jq not installed!" && return 1
-    fi
-
-    # bring in jq chains
-    source $CHI_DIR/chains/json.sh
-}
-
 function autoinitChi() {
     if [[ ! -z "$CHI_FAIL_ON_ERROR" ]]; then
         set -e
@@ -70,17 +60,16 @@ function chiShell() {
     # load init scripts
     chiLoadDir $CHI_DIR/chains/init/**/*.sh
 
-    initJq
+    chiInitBootstrapDeps
 
     # load meta chain
     chiLoadDir $CHI_DIR/chains/meta/**/*.sh
-    chiConfigLoad "$1"
+    chiConfigUserLoad "$1"
     chiColorInit
 
     if [[ -z "$IS_DOCKER" ]]; then
         chiModuleConfigRead "$CHI_DIR" "core"
-        chiDependenciesCheckTools "core"
-        chiDependenciesCheckTools "core:init" || (chiBail; return 1)
+        chiDependenciesCheckModuleTools "core"
     fi
 
     # load chains
@@ -92,7 +81,7 @@ function chiShell() {
     fi
     
     chiFiberLoadExternal
-
+    
     export CHI_ENV_INITIALIZED=true
 
     if [[ -z "$CHI_FAIL_ON_ERROR" ]]; then
@@ -100,11 +89,18 @@ function chiShell() {
     fi
 
     chiRunInitCommand
+
+    if [[ -d "$CHITIN_INIT_TEMP_DIR" ]]; then
+        chiLog "cleaning up bootstrap deps" "init"
+        
+        chiToolsRemoveDirFromPath "$CHITIN_INIT_TEMP_DIR"
+        rm -rf "$CHITIN_INIT_TEMP_DIR"
+    fi
 }
 
 function chiRunInitCommand() {
     local initCommand
-    initCommand=$(chiReadChainConfigField init command)
+    initCommand=$(chiConfigChainReadField init command)
     if [[ $? -eq 0 ]]; then
         $initCommand
     fi

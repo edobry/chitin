@@ -46,12 +46,24 @@ function replaceNewlines() {
     tr '\n' ' ' | sed -e 's/  *$//'
 }
 
+function newlinesToChar() {
+    requireArg "a character" "$1" || return 1
+
+    paste -sd "$1" -
+}
+
 function newlinesToCommas() {
-    replaceNewlines | sed 's/ /,/g'
+    newlinesToChar ','
+}
+
+function splitOnChar() {
+    requireArg "a character" "$1" || return 1
+
+    tr "$1" '\n'
 }
 
 function splitOnSpaces() {
-    tr ' ' '\n'
+    splitOnChar ' '
 }
 
 function sedStripRef() {

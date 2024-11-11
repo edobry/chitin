@@ -1,14 +1,18 @@
+installToolDeps: true
 tools:
   jq:
     version: "1.6"
     command: jq --version | awk -F '-' '{ print $2 }'
+    checkBrew: true
+    brew: {}
   yq:
-    version: "4.11.2"
+    version: "4.44.3"
     command: yq --version 2>&1 | awk '{ print $4 }' | sed 's/v//'
+    checkBrew: true
+    brew: {}
   json5:
     brew: {}
-chainToolDeps:
-  init:
-    - jq
-    - yq
-    - json5
+toolDeps:
+  - jq
+  - yq
+  - json5
