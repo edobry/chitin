@@ -72,7 +72,7 @@ function chiConfigUserLoad() {
         cp $CHI_DIR/$configFileFullName $configFilePath
 
         chiLog "initialized config file at '$configFilePath'" "init"
-        chiLog "please complete setup by running `chiConfigUserModify`" "init"
+        chiLog 'please complete setup by running `chiConfigUserModify`' "init"
     fi
 
     local configFile
