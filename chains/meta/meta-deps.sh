@@ -52,8 +52,6 @@ function chiDependenciesCheckTool() {
             chiLog "expected version not set for $toolName!" "$moduleName" >&2
             installed="true"
         else
-            # echo "checking version for $toolName"
-            # echo "version command: $versionCommand"
             local currentVersion=$(eval "$versionCommand")
             
             if checkVersionAndFail "$toolName" "$expectedVersion" "$currentVersion"; then
