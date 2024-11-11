@@ -6,6 +6,10 @@ function chiGit() {
     git -C "$CHI_DIR" $*
 }
 
+function chiGitStatus() {
+    chiGit status
+}
+
 function chiGitPull() {
     chiGit pull
 }
