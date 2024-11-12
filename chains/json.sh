@@ -98,7 +98,7 @@ function jsonMergeDeep() {
     requireArg "a JSON string" "$1" || return 1
     requireArg "another JSON string" "$2" || return 1
 
-    jq -sc 'reduce .[] as $item ({}; . * $item)' <<< $@
+    jq -sc 'reduce .[] as $item ({}; . * $item)' <<< "$@"
 }
 
 function jsonWriteToYamlFile() {

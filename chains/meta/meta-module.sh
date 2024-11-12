@@ -33,46 +33,6 @@ function chiModuleDependenciesGetRequiredTools() {
     chiDependenciesToolsGetRequired $(chiConfigGetVariableValue "$1") "$2"
 }
 
-function chiFiberLoad() {
-    requireDirectoryArg "fiber directory" "$1" || return 1
-
-    local fiberName=${2:-${$(basename "$1")#chitin-}}
-    local fiberLoadedVariablePrefix="CHI_FIBER_LOADED"
-
-    # if already loaded, return
-    if [[ -n $(chiModuleGetDynamicVariable "$fiberLoadedVariablePrefix" "$fiberName") ]]; then
-        # echo "fiber "$fiberName" already loaded!"
-        return 0
-    fi
-
-    chiModuleConfigRead "$1" "$fiberName"
-    local deps=$(chiConfigGetVariableValue "$fiberName")
-
-    # if not all fiber dependencies have been loaded, retry
-    echo "$deps" | jq -r '(.fiberDeps // [])[]' | \
-    while IFS= read -r fiberDep; do
-        # chiLog "checking fiber dep '$fiberDep'" "$fiberName"
-        [[ -z $(chiModuleGetDynamicVariable "$fiberLoadedVariablePrefix" "$fiberDep") ]] && return 1
-    done
-
-
-    chiDependenciesCheckModuleTools "$fiberName"
-    if ! chiDependenciesCheckModuleToolsMet "$fiberName"; then
-        chiLog "tool dependencies unmet, not loading!" "$fiberName"
-        return 1
-    fi
-
-    chiLoadDir "$1"/chains/*.sh
-    chiChainLoadNested "$fiberName" "$1"/chains
-
-    # zsh helpers only loaded on zsh shells
-    if [[ -n "$ZSH_VERSION" ]]; then
-        chiLoadDir "$1"/**/*.zsh(N)
-    fi
-
-    chiModuleSetDynamicVariable "$fiberLoadedVariablePrefix" "$fiberName" true
-}
-
 function chiFiberLoadExternal() {
     IFS=$'\n' fibers=($(find "$CHI_PROJECT_DIR" -maxdepth 1 -type d -not -path "$CHI_PROJECT_DIR" -name 'chitin-*'))
 
@@ -106,6 +66,54 @@ function chiFiberLoadExternalLoop() {
     fi
 }
 
+export CHI_FIBER_PREFIX="CHI_FIBER"
+export CHI_FIBER_PATH_PREFIX="${CHI_FIBER_PREFIX}_PATH"
+
+function chiFiberLoad() {
+    requireDirectoryArg "fiber directory" "$1" || return 1
+
+    local fiberName=${2:-${$(basename "$1")#chitin-}}
+    local fiberLoadedPrefix="${CHI_FIBER_PREFIX}_LOADED"
+
+    # if already loaded, return
+    [[ -n $(chiModuleGetDynamicVariable "$fiberLoadedPrefix" "$fiberName") ]] && return 0
+
+    chiModuleConfigReadAndSet "$1" "$fiberName"
+    local config=$(chiConfigGetVariableValue "$fiberName")
+
+    # if not all fiber dependencies have been loaded, retry
+    while IFS= read -r fiberDep; do
+        [[ -z $(chiModuleGetDynamicVariable "$fiberLoadedPrefix" "$fiberDep") ]] && return 1
+    done <<< "$(jsonRead "$config" '(.fiberDeps // [])[]')"
+
+    # read chain configs
+    while IFS= read -r chainConfig; do
+        [[ -z "$chainConfig" ]] && continue
+
+        local chainName=$(jsonReadPath "$chainConfig" key)
+        local chainConfigValue=$(jsonReadPath "$chainConfig" value)
+
+        chiConfigSetVariableValue "$fiberName:$chainName" "$chainConfigValue"
+    done <<< "$(jsonRead "$config" '(.chainConfig // []) | to_entries[]')"
+
+    chiDependenciesCheckModuleTools "$fiberName"
+    if ! chiDependenciesCheckModuleToolsMet "$fiberName"; then
+        chiLog "tool dependencies unmet, not loading!" "$fiberName"
+        return 1
+    fi
+
+    chiLoadDir "$1"/chains/*.sh
+    chiChainLoadNested "$fiberName" "$1"/chains
+
+    # zsh helpers only loaded on zsh shells
+    if [[ -n "$ZSH_VERSION" ]]; then
+        chiLoadDir "$1"/**/*.zsh(N)
+    fi
+    
+    chiModuleSetDynamicVariable "$CHI_FIBER_PATH_PREFIX" "$fiberName" "$1"
+    chiModuleSetDynamicVariable "$fiberLoadedPrefix" "$fiberName" true
+}
+
 function chiChainLoadNested() {
     requireArg "a fiber name" "$1" || return 1
     requireDirectoryArg "chain directory" "$2" || return 1
@@ -121,23 +129,19 @@ function chiChainLoad() {
 
     local chainName=$(basename "$2")
     local moduleName="$1:$chainName"
-    local chainLoadedVariablePrefix="CHI_FIBER_CHAIN_LOADED"
+    local chainLoadedVariablePrefix="${CHI_FIBER_PREFIX}_CHAIN_LOADED"
 
     # if already loaded, return
-    if [[ -n $(chiModuleGetDynamicVariable "$chainLoadedVariablePrefix" "$moduleName") ]]; then
-        # echo "chain $2 already loaded!"
-        return 0
-    fi
+    [[ -n $(chiModuleGetDynamicVariable "$chainLoadedVariablePrefix" "$moduleName") ]] && return 0
 
-    # if the chain doesnt have its own config file, look for a `chainConfig` in the fiber config
-    if ! chiModuleConfigRead "$2" "$moduleName"; then
-        local chainConfig=$(chiModuleConfigReadVariablePath "$1" chainConfig "$chainName")
+    local chainConfig=$(chiModuleConfigRead "$2" "$moduleName")
 
-        if [[ -n "$chainConfig" ]]; then
-            chiConfigSetVariableValue "$moduleName" "$chainConfig"
-        fi
-    fi
+    # merge inherited config with own
+    local inheritedConfig="$(chiConfigGetVariableValue "$moduleName")"
+    local mergedConfig=$(jsonMergeDeep "${chainConfig:-"{}"}" "${inheritedConfig:-"{}"}")
+    chiConfigSetVariableValue "$moduleName" "$mergedConfig"
 
+    # only load if not disabled
     local enabledValue
     enabledValue=$(chiModuleConfigReadVariablePath "$moduleName" enabled)
 
@@ -160,6 +164,7 @@ function chiChainLoad() {
 
     chiLoadDir $(find "$2" -type f -name '*.sh' -not -path "$chainInitScriptPath")
 
+    chiModuleSetDynamicVariable "$CHI_FIBER_PATH_PREFIX" "$moduleName" "$2"
     chiModuleSetDynamicVariable "$chainLoadedVariablePrefix" "$moduleName" true
 }
 
@@ -180,11 +185,15 @@ function chiChainShouldLoad() {
     local chainConfig
     chainConfig=$(chiConfigChainRead ${2:-$chainName})
     local chainConfigLoadReturn=$?
+
+    # merge inherited config with own
+    local inheritedConfig="$(chiConfigGetVariableValue "$fiberName:$chainName")"
+    local mergedConfig=$(jsonMergeDeep "$chainConfig" "$inheritedConfig")
     
-    isSet "$returnConfig" && echo "$chainConfig"
+    isSet "$returnConfig" && echo "$mergedConfig"
 
     [[ $chainConfigLoadReturn -eq 0 ]] || return 1
-    chiChainCheckEnabled "$chainConfig" loaded || return 1
+    chiChainCheckEnabled "$mergedConfig" loaded || return 1
     chiFiberDepdenciesChainCheckTools "$fiberName" "$chainName" || return 1
 }
 

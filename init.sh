@@ -68,7 +68,7 @@ function chiShell() {
     chiColorInit
 
     if [[ -z "$IS_DOCKER" ]]; then
-        chiModuleConfigRead "$CHI_DIR" "core"
+        chiModuleConfigReadAndSet "$CHI_DIR" "core"
         chiDependenciesCheckModuleTools "core"
     fi
 
@@ -109,8 +109,6 @@ function chiRunInitCommand() {
     # [[ -z "$initCommand" ]] && return 0
 }
 
-function chiReinit() {
-    source $CHI_DIR/init.sh
-}
+alias chiReinit=chiShell
 
 autoinitChi
