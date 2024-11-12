@@ -186,7 +186,7 @@ function chiToolsInstallGit() {
     chiLog "${GREEN}==>${NC} Cloning '$toolName' from '$url' to '$target'...\n" "$1"
     
     mkdir -p "$target"
-    git clone "$3" "$target"
+    git clone "$url" "$target"
 }
 
 function chiToolsInstallCommand() {
