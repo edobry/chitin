@@ -269,3 +269,13 @@ function expandHome() {
     
     [[ "$1" == ~* ]] && echo "${HOME}${1:1}" || echo "$1"
 }
+
+function expandPath() {
+    requireArg "a path" "$1" || return 1
+
+    local path="$1"
+
+    [[ "$path" == local/share/* ]] && path="${XDG_DATA_HOME:-${HOME}/.local/share/$(1:local/share/)}"
+    
+    expandHome "$path"
+}

@@ -37,20 +37,40 @@ function chiToolsCheckInstalled() {
     
     local checkCommandValue
     checkCommandValue=$(jsonReadPath "$tool" checkCommand 2>/dev/null)
-    local checkCommandExit=$?
     
     local checkBrew
     jsonCheckBoolPath "$tool" checkBrew &>/dev/null && checkBrew=true || checkBrew=false
+    
+
+    local checkPathValue
+    checkPathValue=$(jsonReadPath "$tool" checkPath 2>/dev/null)
+
+    local checkPath
+    jsonCheckBoolPath "$tool" checkPath &>/dev/null && checkPath=true || checkPath=false
 
     if [[ -n "$checkCommandValue" ]]; then
         if $checkBrew; then
             chiLog "both 'checkCommand' and 'checkBrew' set for '$toolName'!" "$moduleName"
             return 1
         fi
+
+        if $checkPath; then
+            chiLog "both 'checkCommand' and 'checkPath' set for '$toolName'!" "$moduleName"
+            return 1
+        fi
         
         return $(checkCommand $([[ "$checkCommandValue" == "true" ]] \
             && echo "$toolName" \
             || echo "$checkCommandValue"))
+    elif [[ -n "$checkPathValue" ]]; then
+        if $checkBrew; then
+            chiLog "both 'checkPath' and 'checkBrew' set for '$toolName'!" "$moduleName"
+            return 1
+        fi
+
+        checkPathValue=$(expandPath "$checkPathValue")
+
+        [[ -f "$checkPathValue" ]] && return 0 || return 1
     fi
 
     local isBrew=false
@@ -82,6 +102,9 @@ function chiToolsCheckInstalled() {
             return $(brewCheckFormula "$toolName")
         fi
         # echo "brew done" >&2
+    elif $checkBrew; then
+        chiLog "'checkBrew' set for non-brew tool '$toolName'!" "$moduleName"
+        return 1
     elif $isArtifact; then
         # echo "in isArtifact" >&2
         if [[ -z "$artifactConfig" ]]; then
@@ -172,11 +195,7 @@ function chiToolsInstallGit() {
 
     local toolName="$2"
     local url=$(jsonRead "$3" '.git.url // empty')
-    local target=$(jsonRead "$3" '.git.target // empty')
-
-    if [[ "$target" == "local/share" ]]; then
-        target="${XDG_DATA_HOME:-${HOME}/.local/share}/$toolName/$toolName.git"
-    fi
+    local target=$(expandPath $(jsonRead "$3" '.git.target // empty'))
 
     [[ -d "$target" ]] && return 0
 
