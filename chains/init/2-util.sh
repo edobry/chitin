@@ -1,9 +1,10 @@
 # checks if a command exists
 # args: command
 function checkCommand() {
+    requireArg "a command" "$1" || return 1
+
     command -v "$1" >/dev/null 2>&1
 }
-
 
 notSet () [[ -z $1 ]]
 isSet () [[ ! -z $1 ]]
@@ -213,14 +214,6 @@ function checkMajorVersion() {
     [[ $(getMajorVersionComponent $currentVersion) -eq \
           $(getMajorVersionComponent $expectedVersion)
     ]]
-}
-
-# checks if a command exists
-# args: command
-function checkCommand() {
-    requireArg "a command" "$1" || return 1
-
-    command -v "$1" >/dev/null 2>&1
 }
 
 function findFile() {
