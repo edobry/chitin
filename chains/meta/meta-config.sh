@@ -89,11 +89,11 @@ function chiConfigUserLoad() {
         return 1
     fi
 
-    export CHI_PROJECT_DIR="$(expandHome "$projectDir")"
+    export CHI_PROJECT_DIR="$(expandPath "$projectDir")"
 
     local dotfilesDir=$(chiConfigUserRead '.dotfilesDir // empty')
     if [[ ! -z "$dotfilesDir" ]]; then
-        export CHI_DOTFILES_DIR="$(expandHome "$dotfilesDir")"
+        export CHI_DOTFILES_DIR="$(expandPath "$dotfilesDir")"
     fi
 }
 
