@@ -1,4 +1,5 @@
-checkCommand brew && eval "$(/opt/homebrew/bin/brew shellenv)"
+BREWPATH="/opt/homebrew/bin/brew"
+[[ -f "$BREWPATH" ]] && eval "$($BREWPATH shellenv)"
 
 function chiInitBootstrapDeps() {
     # we need jq to bootstrap
