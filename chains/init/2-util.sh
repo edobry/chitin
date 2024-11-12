@@ -264,18 +264,30 @@ function chiReadDynamicVariable() {
     fi
 }
 
+function expandPathSegment() {
+    requireArg "a path segment" "$1" || return 1
+    requireArg "a path expansion" "$2" || return 1
+    requireArg "a path" "$3" || return 1
+
+    local pathSegment="$1"
+    local pathExpansion="$2"
+    local path="$3"
+
+    [[ "$path" == ${pathSegment}* ]] && path="${pathExpansion}${path#${pathSegment}}"
+    
+    echo "$path"
+}
+
 function expandHome() {
     requireArg "a path" "$1" || return 1
     
-    [[ "$1" == ~* ]] && echo "${HOME}${1:1}" || echo "$1"
+    expandPathSegment "~" "$HOME" "$1"
 }
 
 function expandPath() {
     requireArg "a path" "$1" || return 1
 
-    local path="$1"
+    local localShare="local/share"
 
-    [[ "$path" == local/share/* ]] && path="${XDG_DATA_HOME:-${HOME}/.local/share/$(1:local/share/)}"
-    
-    expandHome "$path"
+    expandHome $(expandPathSegment "$localShare" "${XDG_DATA_HOME:-${HOME}}/.${localShare}" "$1")
 }

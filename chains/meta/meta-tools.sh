@@ -68,9 +68,15 @@ function chiToolsCheckInstalled() {
             return 1
         fi
 
-        checkPathValue=$(expandPath "$checkPathValue")
+        local gitConfig=$(jsonReadPath "$tool" git 2>/dev/null)
+        if [[ -z "$gitConfig" ]]; then
+            chiLog "expected git config not found for '$toolName'!" "$moduleName"
+            return 1
+        fi
 
-        [[ -f "$checkPathValue" ]] && return 0 || return 1
+        local target=$(jsonReadPath "$gitConfig" target 2>/dev/null)
+
+        [[ -f "$(expandPath "$target/$checkPathValue")" ]] && return 0 || return 1
     fi
 
     local isBrew=false
