@@ -7,6 +7,7 @@ function chiConfigUserCd() {
 }
 
 export CHI_CONFIG_USER_FILE_NAME="userConfig"
+export CHI_CONFIG_FIBER_FILE_NAME="config"
 
 function chiConfigUserShow() {
     cat $(chiConfigUserGetLocation)/$CHI_CONFIG_USER_FILE_NAME.yaml | prettyYaml
@@ -97,10 +98,23 @@ function chiConfigUserLoad() {
     fi
 }
 
-function chiConfigUserModify() {
-    ${EDITOR:-nano} "$(chiConfigFindFilePath "$(chiConfigUserGetLocation)" "$CHI_CONFIG_USER_FILE_NAME")"
-    chiLog "config updated, reinitializing..." "meta:config"
+function chiConfigModify() {
+    requireArg "a config path" "$1" || return 1
+    requireArg "a config file name" "$2" || return 1
+
+    ${EDITOR:-nano} "$(chiConfigFindFilePath "$1" "$2")"
+    chiLog "updated, reinitializing..." "meta:config"
     chiReinit
+}
+
+function chiConfigUserModify() {
+    chiConfigModify "$(chiConfigUserGetLocation)" "$CHI_CONFIG_USER_FILE_NAME"
+}
+
+function chiConfigFiberModify() {
+    requireArg "a fiber name" "$1" || return 1
+
+    chiConfigModify "$(chiModuleGetDynamicVariable "$CHI_FIBER_PATH_PREFIX" "$1")" "$CHI_CONFIG_FIBER_FILE_NAME"
 }
 
 function chiConfigChainRead() {
@@ -159,6 +173,16 @@ function chiModuleConfigRead() {
     [[ $? -eq 0 ]] || return 1
 
     [[ "$fileContents" == "null" ]] && return 0
+    echo "$fileContents"
+}
+
+function chiModuleConfigReadAndSet() {
+    requireDirectoryArg "a directory" "$1" || return 1
+    requireArg "a module name" "$2" || return 1
+
+    local fileContents=$(chiModuleConfigRead "$1" "$2")
+    # echo "$fileContents"
+    [[ -z "$fileContents" ]] && return 1
 
     chiConfigSetVariableValue "$2" "$fileContents"
 }
