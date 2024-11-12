@@ -1,7 +1,7 @@
 installToolDeps: true
 tools:
   xcode-dev-tools:
-    checkCommand: xcode-select -p
+    checkEval: xcode-select -p
     command: xcode-select --install
   brew:
     script: https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh

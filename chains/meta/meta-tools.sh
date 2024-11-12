@@ -41,9 +41,11 @@ function chiToolsCheckInstalled() {
     local checkBrew
     jsonCheckBoolPath "$tool" checkBrew &>/dev/null && checkBrew=true || checkBrew=false
     
-
     local checkPathValue
     checkPathValue=$(jsonReadPath "$tool" checkPath 2>/dev/null)
+    
+    local checkEvalValue
+    checkEvalValue=$(jsonReadPath "$tool" checkEval 2>/dev/null)
 
     local checkPath
     jsonCheckBoolPath "$tool" checkPath &>/dev/null && checkPath=true || checkPath=false
@@ -58,6 +60,16 @@ function chiToolsCheckInstalled() {
             chiLog "both 'checkCommand' and 'checkPath' set for '$toolName'!" "$moduleName"
             return 1
         fi
+
+        if [[ -n "$checkPathValue" ]]; then
+            chiLog "both 'checkCommand' and 'checkPath' set for '$toolName'!" "$moduleName"
+            return 1
+        fi
+
+        if [[ -n "$checkEvalValue" ]]; then
+            chiLog "both 'checkCommand' and 'checkEval' set for '$toolName'!" "$moduleName"
+            return 1
+        fi
         
         return $(checkCommand $([[ "$checkCommandValue" == "true" ]] \
             && echo "$toolName" \
@@ -65,6 +77,11 @@ function chiToolsCheckInstalled() {
     elif [[ -n "$checkPathValue" ]]; then
         if $checkBrew; then
             chiLog "both 'checkPath' and 'checkBrew' set for '$toolName'!" "$moduleName"
+            return 1
+        fi
+
+        if [[ -n "$checkEvalValue" ]]; then
+            chiLog "both 'checkCommand' and 'checkEval' set for '$toolName'!" "$moduleName"
             return 1
         fi
 
@@ -77,6 +94,14 @@ function chiToolsCheckInstalled() {
         local target=$(jsonReadPath "$gitConfig" target 2>/dev/null)
 
         [[ -f "$(expandPath "$target/$checkPathValue")" ]] && return 0 || return 1
+    elif [[ -n "$checkEvalValue" ]]; then
+        if $checkBrew; then
+            chiLog "both 'checkEval' and 'checkBrew' set for '$toolName'!" "$moduleName"
+            return 1
+        fi
+
+        eval "$checkEvalValue" &>/dev/null
+        return $?
     fi
 
     local isBrew=false
@@ -136,15 +161,15 @@ function chiToolsMakeStatus() {
         } }'
 }
 
-function chiDependenciesInstallTools() {
-    requireDirectoryArg "module directory" "$1" || return 1
-    requireArg "a module name" "$2" || return 1
+# function chiDependenciesInstallTools() {
+#     requireDirectoryArg "module directory" "$1" || return 1
+#     requireArg "a module name" "$2" || return 1
 
-    chiModuleConfigRead "$1" "$2"
+#     chiModuleConfigRead "$1" "$2"
 
-    chiToolsInstallBrew "$2"
-    chiToolsInstallGit "$2"
-}
+#     chiToolsInstallBrew "$2"
+#     chiToolsInstallGit "$2"
+# }
 
 function chiToolsInstallBrew() {
     requireArg "a module name" "$1" || return 1
