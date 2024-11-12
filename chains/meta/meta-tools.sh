@@ -194,7 +194,7 @@ function chiToolsInstallCommand() {
     requireArg "a tool name" "$2" || return 1
     requireArg "a tool config JSON string" "$3" || return 1
 
-    local installCommand=$(jsonReadPath "$3" installCommand)
+    local installCommand=$(jsonReadPath "$3" command)
     [[ $? -eq 0 ]] || return 1
 
     GREEN=$(tput setaf 2)
