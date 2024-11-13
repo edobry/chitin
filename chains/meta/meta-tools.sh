@@ -5,22 +5,36 @@ function chiToolsGetConfig() {
     echo "$CHI_TOOLS" | jq -ce --arg tool "$1" '.[$tool] // empty'
 }
 
-function chiToolCheckStatus() {
-    requireArg "a tool config JSON string" "$1" || return 1
+function chiToolsCheckStatuses() {
+    requireArg "at least one tool name" "$1" || return 1
 
-    local tool="$1"
-    local toolName=$(jsonRead "$tool" '.key')
-    local moduleName=$(jsonRead "$tool" '.value.meta.definedIn // empty')
+    local toolStatus=('{}')
+    for tool in $@; do
+        # echo "tool: $tool"
+        toolStatus+=("$(chiToolsCheckStatus "$tool")")
+    done
+
+    chiToolsUpdateStatus "${toolStatus[@]}"
+}
+
+function chiToolsCheckStatus() {
+    requireArg "a tool name" "$1" || return 1
+
+    local toolName="$1"
+    local toolConfig="$(chiToolsGetConfig "$toolName")"
+    [[ -z "$toolConfig" ]] && return 1
+
+    local moduleName=$(jsonRead "$toolConfig" '.meta.definedIn // empty')
     
-    local expectedVersion=$(jsonRead "$tool" '.value.version // empty')
-    local versionCommand=$(jsonRead "$tool" '.value.versionCommand // empty')
+    local expectedVersion=$(jsonRead "$toolConfig" '.version // empty')
+    local versionCommand=$(jsonRead "$toolConfig" '.versionCommand // empty')
 
     local installed="false"
     local validVersion="false"
 
     if \
-        ! jsonCheckBoolPath "$tool" value optional &>/dev/null &&
-        chiToolsCheckInstalled "$toolName" "$(jsonReadPath "$tool" value)" \
+        ! jsonCheckBoolPath "$toolConfig" optional &>/dev/null &&
+        chiToolsCheckInstalled "$toolName" "$toolConfig" \
     ; then
         if [[ -z "$versionCommand" ]]; then
             installed="true"

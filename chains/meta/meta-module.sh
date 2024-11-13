@@ -200,6 +200,6 @@ function chiChainShouldLoad() {
     chiFiberDepdenciesChainCheckTools "$fiberName" "$chainName" || return 1
 }
 
-function chiDotfilesDependenciesCheckToolStatus() {
-    chiModuleCheckToolStatus "$CHI_DOTFILES_DIR" dotfiles
+function chiDotfilesCheckToolStatus() {
+    chiModuleCheckToolStatus dotfiles
 }

@@ -16,29 +16,11 @@ function chiModuleLoadToolConfigs() {
 
 function chiModuleCheckToolStatus() {
     requireArg "a module name" "$1" || return 1
-    local moduleName="$1"; shift
 
-    local config=$(chiConfigGetVariableValue "$moduleName")
-    [[ -z "$config" ]] && return 1
+    local moduleTools="$(chiModuleConfigReadVariablePath "$1" tools | jq -r 'keys[]')"
+    [[ -z "$moduleTools" ]] && return 0
 
-    local toolsFilterList=$([[ "$#" -gt 0 ]] \
-        && echo "$(printf '%s\n' "$@" | jq -R . | jq -cs .)" \
-        || echo "[]")
-  
-    local tools=$(jsonRead "$config" '.tools | 
-        if ($toolsFilterList | length) == 0 then . else
-            with_entries(select(.key | IN($toolsFilterList[])))
-        end' --argjson toolsFilterList "$toolsFilterList")
-
-    [[ -z "$tools" ]] || [[ "$tools" == 'null' ]] || [[ "$tools" == '{}' ]] && return 0
-
-    local toolStatus=('{}')
-    while IFS= read -r tool; do
-        # echo "tool: $tool"
-        toolStatus+=("$(chiToolCheckStatus "$tool")")
-    done <<< "$(jsonRead "$tools" 'to_entries[]')"
-
-    chiToolsUpdateStatus "${toolStatus[@]}"
+    chiToolsCheckStatuses $moduleTools
 }
 
 function chiModuleCheckToolDepsMet() {
@@ -114,15 +96,15 @@ function chiModuleCheckToolDepsMet() {
     fi
 
     # check again after installing
-    chiModuleCheckToolStatusAndDepsMet "$moduleName" "${installedTools[@]}"
+    chiToolsCheckStatuses "${installedTools[@]}"
+    chiModuleCheckToolDepsMet "$moduleName"
 }
 
 function chiModuleCheckToolStatusAndDepsMet() {
     requireArg "a module name" "$1" || return 1
-    local moduleName="$1"; shift
 
-    chiModuleCheckToolStatus "$moduleName" "$@"
-    chiModuleCheckToolDepsMet "$moduleName"
+    chiModuleCheckToolStatus "$1" 
+    chiModuleCheckToolDepsMet "$1"
 }
 
 function chiModulesGetRequiredTools() {
