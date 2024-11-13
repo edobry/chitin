@@ -5,15 +5,42 @@ function chiToolsGetConfig() {
     echo "$CHI_TOOLS" | jq -ce --arg tool "$1" '.[$tool] // empty'
 }
 
-function chiToolsGetStatus() {
-    requireArg "a tool name" "$1" || return 1
-    
-    [[ -z "$CHI_TOOL_STATUS" ]] && return 1
-    echo "$CHI_TOOL_STATUS" | jq -ce --arg tool "$1" '.[$tool] // empty'
-}
+function chiToolCheckStatus() {
+    requireArg "a tool config JSON string" "$1" || return 1
 
-function chiToolsShowStatus() {
-    jsonRead "$CHI_TOOL_STATUS" 'to_entries[] | "\(.key) - installed: \(.value.installed), valid: \(.value.validVersion)"'
+    local tool="$1"
+    local toolName=$(jsonRead "$tool" '.key')
+    local moduleName=$(jsonRead "$tool" '.value.meta.definedIn // empty')
+    
+    local expectedVersion=$(jsonRead "$tool" '.value.version // empty')
+    local versionCommand=$(jsonRead "$tool" '.value.versionCommand // empty')
+
+    local installed="false"
+    local validVersion="false"
+
+    if \
+        ! jsonCheckBoolPath "$tool" value optional &>/dev/null &&
+        chiToolsCheckInstalled "$toolName" "$(jsonReadPath "$tool" value)" \
+    ; then
+        if [[ -z "$versionCommand" ]]; then
+            installed="true"
+            validVersion="true"
+        elif [[ -z "$expectedVersion" ]]; then
+            chiLog "expected version not set for $toolName!" "$moduleName" >&2
+            installed="true"
+        else
+            local currentVersion=$(eval "$versionCommand")
+            
+            if checkVersionAndFail "$toolName" "$expectedVersion" "$currentVersion"; then
+                installed="true"
+                validVersion="true"
+            else
+                installed="true"
+            fi
+        fi
+    fi
+
+    chiToolsMakeStatus "$toolName" "$installed" "$validVersion"
 }
 
 function chiToolsUpdateStatus() {
@@ -24,6 +51,17 @@ function chiToolsUpdateStatus() {
     local globalToolStatus=$(jsonMerge "${CHI_TOOL_STATUS:-"{}"}" "$updatedToolStatus" "{}")
 
     export CHI_TOOL_STATUS="$globalToolStatus"
+}
+
+function chiToolsGetStatus() {
+    requireArg "a tool name" "$1" || return 1
+    
+    [[ -z "$CHI_TOOL_STATUS" ]] && return 1
+    echo "$CHI_TOOL_STATUS" | jq -ce --arg tool "$1" '.[$tool] // empty'
+}
+
+function chiToolsShowStatus() {
+    jsonRead "$CHI_TOOL_STATUS" 'to_entries[] | "\(.key) - installed: \(.value.installed), valid: \(.value.validVersion)"'
 }
 
 function chiToolsCheckInstalled() {

@@ -35,49 +35,10 @@ function chiDependenciesCheckModuleToolStatus() {
     local toolStatus=('{}')
     while IFS= read -r tool; do
         # echo "tool: $tool"
-        toolStatus+=("$(chiDependenciesCheckToolStatus "$moduleName" "$tool")")
+        toolStatus+=("$(chiToolCheckStatus "$tool")")
     done <<< "$(jsonRead "$tools" 'to_entries[]')"
 
     chiToolsUpdateStatus "${toolStatus[@]}"
-}
-
-function chiDependenciesCheckToolStatus() {
-    requireArg "a module name" "$1" || return 1
-    requireArg "a tool config JSON string" "$2" || return 1
-
-    local moduleName="$1"
-    local tool="$2"
-
-    local toolName=$(jsonRead "$tool" '.key')
-    local expectedVersion=$(jsonRead "$tool" '.value.version // empty')
-    local versionCommand=$(jsonRead "$tool" '.value.versionCommand // empty')
-
-    local installed="false"
-    local validVersion="false"
-
-    if \
-        ! jsonCheckBoolPath "$tool" value optional &>/dev/null &&
-        chiToolsCheckInstalled "$toolName" "$(jsonReadPath "$tool" value)" \
-    ; then
-        if [[ -z "$versionCommand" ]]; then
-            installed="true"
-            validVersion="true"
-        elif [[ -z "$expectedVersion" ]]; then
-            chiLog "expected version not set for $toolName!" "$moduleName" >&2
-            installed="true"
-        else
-            local currentVersion=$(eval "$versionCommand")
-            
-            if checkVersionAndFail "$toolName" "$expectedVersion" "$currentVersion"; then
-                installed="true"
-                validVersion="true"
-            else
-                installed="true"
-            fi
-        fi
-    fi
-
-    chiToolsMakeStatus "$toolName" "$installed" "$validVersion"
 }
 
 function chiDependenciesCheckModuleToolDepsMet() {
