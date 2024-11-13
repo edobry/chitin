@@ -57,7 +57,7 @@ function chiShell() {
         export CHI_DIR=$chiDir
     fi
 
-    # load init scripts
+    # load init chain
     chiLoadDir $CHI_DIR/chains/init/**/*.sh
 
     chiInitBootstrapDeps
@@ -67,17 +67,11 @@ function chiShell() {
     chiConfigUserLoad "$1"
     chiColorInit
 
-    if [[ -z "$IS_DOCKER" ]]; then
-        chiModuleConfigReadAndSet "$CHI_DIR" "core"
-        chiModuleLoadToolConfigs "core"
-        chiModuleCheckToolStatus "core"
-    fi
-
-    # load chains
-    chiFiberLoad "$CHI_DIR"
+    # load core chains
+    chiFiberLoad "$CHI_DIR" "core" "$([[ -n "$IS_DOCKER" ]] && echo "nocheck")"
 
     # load dotfiles
-    if [[ ! -z "$CHI_DOTFILES_DIR" ]]; then
+    if [[ -n "$CHI_DOTFILES_DIR" ]]; then
         chiFiberLoad "$CHI_DOTFILES_DIR" dotfiles
     fi
     
@@ -101,7 +95,7 @@ function chiShell() {
 
 function chiRunInitCommand() {
     local initCommand
-    initCommand=$(chiConfigChainReadField init command)
+    initCommand=$(chiConfigChainReadField core:init command)
     if [[ $? -eq 0 ]]; then
         $initCommand
     fi

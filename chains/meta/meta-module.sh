@@ -97,10 +97,13 @@ function chiFiberLoad() {
     done <<< "$(jsonRead "$config" '(.chainConfig // []) | to_entries[]')"
 
     chiModuleLoadToolConfigs "$fiberName"
-    chiModuleCheckToolStatus "$fiberName"
-    if ! chiModuleCheckToolDepsMet "$fiberName"; then
-        chiLog "tool dependencies unmet, not loading!" "$fiberName"
-        return 1
+
+    if [[ "$3" != "nocheck" ]]; then
+        chiModuleCheckToolStatus "$fiberName"
+        if ! chiModuleCheckToolDepsMet "$fiberName"; then
+            chiLog "tool dependencies unmet, not loading!" "$fiberName"
+            return 1
+        fi
     fi
 
     chiLoadDir "$1"/chains/*.sh
