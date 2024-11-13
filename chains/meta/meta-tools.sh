@@ -35,8 +35,7 @@ function chiToolsCheckInstalled() {
     #   if checkBrew is set, use `brewCheck`
     # else, use `checkCommand` with the tool name
     
-    local checkCommandValue
-    checkCommandValue=$(jsonReadPath "$tool" checkCommand 2>/dev/null)
+    local checkCommandValue=$(jsonReadPath "$tool" checkCommand 2>/dev/null)
     
     local checkBrew
     jsonCheckBoolPath "$tool" checkBrew &>/dev/null && checkBrew=true || checkBrew=false
@@ -283,30 +282,62 @@ function chiToolsInstallArtifact() {
     requireArg "a tool name" "$2" || return 1
     requireArg "a tool config JSON string" "$3" || return 1
 
+    local toolName="$2"
     local artifactConfig=$(jsonReadPath "$3" artifact 2>/dev/null)
 
     local url=$(jsonReadPath "$artifactConfig" url)
     [[ $? -eq 0 ]] || return 1
-    
-    local installPath=$(chiToolsArtifactMakeTargetPath "$artifactConfig")
+    url=$(chiToolsUrlExpand "$3" "$url")
     [[ $? -eq 0 ]] || return 1
-    [[ -f "$installPath" ]] && return 0
+    
+    local installDir=$(chiToolsArtifactMakeTargetDir "$artifactConfig")
+    [[ $? -eq 0 ]] || return 1
+    [[ -f "$installDir" ]] && return 0
+
+    local fileName
+    jsonReadBoolPath "$1" appendFilename &>/dev/null \
+        && fileName="$(basename "$url")"
+
+    local installPath="$installDir${fileName:+/}$fileName"
 
     GREEN=$(tput setaf 2)
     NC=$(tput sgr0)
 
-    chiLog "${GREEN}==>${NC} Installing '$2' from '$url' to '$installPath'...\n" "$1"
+    chiLog "${GREEN}==>${NC} Installing '$toolName' from '$url' to '$installPath'..." "$1"
 
-    curl -fLo "$installPath" "$url"
+    $(jsonReadBoolPath "$artifactConfig" isExec &>/dev/null \
+        && echo chiToolsInstallExecutableFromUrl \
+        || echo chiToolsInstallFromUrl) "$toolName" "$url" "$installPath" "$fileName" # > /dev/null
+}
+
+function chiToolsUrlExpand() {
+    requireArg "a tool config JSON string" "$1" || return 1
+    requireArg "a URL to expand" "$2" || return 1
+
+    local version=$(jsonReadPath "$1" version)
+    if [[ -z "$version" ]]; then
+        chiLog "no version found in tool config!" "$moduleName" >&2
+        return 1
+    fi
+
+    chiUrlExpand "$version" "$2"
+}
+
+function chiToolsArtifactMakeTargetDir() {
+    requireArg "a tool artifact config JSON string" "$1" || return 1
+
+    local target=$(jsonReadPath "$1" target)
+    [[ -z "$target" ]] \
+        && echo "$CHI_TOOLS_BIN" \
+        || echo $(expandPath "$target")
 }
 
 function chiToolsArtifactMakeTargetPath() {
-    requireArg "a tool config JSON string" "$1" || return 1
+    requireArg "a tool artifact config JSON string" "$1" || return 1
 
     local url=$(jsonReadPath "$1" url)
-    local target=$(expandHome $(jsonReadPath "$1" target))
-    [[ $? -eq 0 ]] || return 1
-    
+    local target=$(chiToolsArtifactMakeTargetDir "$1")
+
     jsonReadBoolPath "$1" appendFilename &>/dev/null \
         && echo "$target/$(basename "$url")" \
         || echo "$target"

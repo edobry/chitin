@@ -1,17 +1,21 @@
 BREWPATH="/opt/homebrew/bin/brew"
 [[ -f "$BREWPATH" ]] && eval "$($BREWPATH shellenv)"
 
+function chiInitBootstrapModule() {
+    echo "init:bootstrap"
+}
+
 function chiInitBootstrapDeps() {
     # we need jq to bootstrap
     if ! checkCommand jq; then
-        chiLog "dep 'jq' missing!" "init:bootstrap"
+        chiLog "dep 'jq' missing!" "$(chiInitBootstrapModule)"
 
         chiToolsInstallJqTemporary
     fi
     
     # we need yq to bootstrap
     if ! checkCommand yq; then
-        chiLog "dep 'yq' missing!" "init:bootstrap"
+        chiLog "dep 'yq' missing!" "$(chiInitBootstrapModule)"
 
         chiToolsInstallYqTemporary
     fi
@@ -21,62 +25,90 @@ function chiInitBootstrapDeps() {
 }
 
 function chiToolsAddDirToPath() {
-    requireDirectoryArg "temporary directory" "$1" || return 1
+    requireDirectoryArg "directory" "$1" || return 1
 
     export PATH="$1:$PATH"
 }
 
 function chiToolsRemoveDirFromPath() {
-    requireDirectoryArg "temporary directory" "$1" || return 1
+    requireDirectoryArg "directory" "$1" || return 1
 
     export PATH=$(echo "$PATH" | splitOnChar ':' | grep -v "$1" | newlinesToChar ':')
 }
+
+export CHI_TOOLS_BIN="$(expandPath "localshare/chitin/bin")"
+mkdir -p "$CHI_TOOLS_BIN"
+chiToolsAddDirToPath "$CHI_TOOLS_BIN"
 
 export CHI_INIT_TEMP_DIR="/tmp/chitin-install"
 
 function chiToolsInstallJqTemporary() {
     local jqVersion="1.7.1"
-    local jqUrl="https://github.com/jqlang/jq/releases/download/jq-$jqVersion/jq-macos-arm64"
+    local jqUrl="https://github.com/jqlang/jq/releases/download/jq-{{version}}/jq-macos-arm64"
     
-    chiToolsInstallTemporary "$jqUrl" "jq"
+    chiToolsInstallTemporary "jq" "$jqVersion" "$jqUrl"
 }
 
 function chiToolsInstallYqTemporary() {
     local yqVersion="4.44.3"
-    local yqUrl="https://github.com/mikefarah/yq/releases/download/v$yqVersion/yq_darwin_arm64"
+    local yqUrl="https://github.com/mikefarah/yq/releases/download/v{{version}}/yq_darwin_arm64"
 
-    chiToolsInstallTemporary "$yqUrl" "yq"
+    chiToolsInstallTemporary "yq" "$yqVersion" "$yqUrl"
 }
 
 function chiToolsInstallTemporary() {
-    requireArg "a url" "$1" || return 1
-    requireArg "a tool name" "$2" || return 1
+    requireArg "a tool name" "$1" || return 1
+    requireArg "a version" "$2" || return 1
+    requireArg "a url" "$3" || return 1
 
-    chiLog "installing '$2' temporarily" "init:bootstrap"
+    local toolName="$1"
+    local version="$2"
+    local url=$(chiUrlExpand "$2" "$3") 
 
-    mkdir -p "$CHI_INIT_TEMP_DIR"
-
-    chiToolsInstallFromUrl "$CHI_INIT_TEMP_DIR" "$1" "$2"
+    chiLog "installing '$toolName' temporarily..." "$(chiInitBootstrapModule)"
+    chiToolsInstallExecutableFromUrl "$toolName" "$url" "$CHI_INIT_TEMP_DIR"
+    
+    chiToolsAddDirToPath "$CHI_INIT_TEMP_DIR"
+    if ! checkCommand "$toolName"; then
+        chiBail "something went wrong installing '$toolName'" "$(chiInitBootstrapModule)"
+        return 1
+    fi
 }
 
 function chiToolsInstallFromUrl() {
-    requireDirectoryArg "an installation" "$1" || return 1
+    requireArg "a tool name" "$1" || return 1
     requireArg "an artifact url" "$2" || return 1
-    requireArg "a tool name" "$3" || return 1
 
-    local installDir="$1"
+    local toolName="$1"
     local url="$2"
-    local name="$3"
+    local installDir="$3"
+    local fileName="${4:-$toolName}"
 
-    local installPath="$installDir/$name"
+    mkdir -p "$installDir"
+    local installPath="$installDir/$fileName"
 
-    curl -sL "$url" -o "$installPath"
-    chmod +x "$installPath"
+    if [[ $(fileGetExtension "$url") == "zip" ]]; then
+        local tempDir=$(tempFile)
+        mkdir -p "$tempDir"
 
-    chiToolsAddDirToPath "$installDir"
+        local archiveName=$(basename "$url")
+        curl -sLo "$tempDir/$archiveName" "$url"
 
-    if ! checkCommand "$name"; then
-        chiBail "something went wrong installing '$name'!" "init"
-        return 1
+        local archiveDir="$tempDir/${archiveName%.zip}"
+        unzip -q "$tempDir/$archiveName" -d "$archiveDir"
+
+        mv "$archiveDir/$toolName" "$installPath"
+    else
+        curl -sLo "$installPath" "$url"
     fi
+
+    echo "$installPath"
+}
+
+function chiToolsInstallExecutableFromUrl() {
+    requireArg "a tool name" "$1" || return 1
+    requireArg "an artifact url" "$2" || return 1
+
+    local installPath=$(chiToolsInstallFromUrl "$@")
+    chmod +x "$installPath"
 }
