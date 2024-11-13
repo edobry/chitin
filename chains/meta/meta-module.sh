@@ -99,9 +99,8 @@ function chiFiberLoad() {
     chiModuleLoadToolConfigs "$fiberName"
 
     if [[ "$3" != "nocheck" ]]; then
-        chiModuleCheckToolStatus "$fiberName"
-        if ! chiModuleCheckToolDepsMet "$fiberName"; then
-            chiLog "tool dependencies unmet, not loading!" "$fiberName"
+        if ! chiModuleCheckToolStatusAndDepsMet "$fiberName"; then
+            chiLog "missing tool dependencies, not loading!" "$fiberName"
             return 1
         fi
     fi
@@ -155,8 +154,7 @@ function chiChainLoad() {
     fi
 
     chiModuleLoadToolConfigs "$moduleName"
-    chiModuleCheckToolStatus "$moduleName"
-    if ! chiModuleCheckToolDepsMet "$moduleName"; then
+    if ! chiModuleCheckToolStatusAndDepsMet "$moduleName"; then
         chiLog "missing tool dependencies, not loading!" "$moduleName"
         return 1
     fi

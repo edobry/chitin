@@ -114,7 +114,14 @@ function chiModuleCheckToolDepsMet() {
     fi
 
     # check again after installing
-    chiModuleCheckToolStatus "$moduleName" "${installedTools[@]}"
+    chiModuleCheckToolStatusAndDepsMet "$moduleName" "${installedTools[@]}"
+}
+
+function chiModuleCheckToolStatusAndDepsMet() {
+    requireArg "a module name" "$1" || return 1
+    local moduleName="$1"; shift
+
+    chiModuleCheckToolStatus "$moduleName" "$@"
     chiModuleCheckToolDepsMet "$moduleName"
 }
 
