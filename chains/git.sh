@@ -155,3 +155,17 @@ function gitCommitPublish() {
     git commit -m "[publish]" --allow-empty
     git push
 }
+
+function gitGenerateKey() {
+    requireArg "an email" "$1" || return 1
+
+    local sshDir="$HOME/.ssh"
+    mkdir -p "$sshDir"
+
+    local keyPath="$sshDir/id_github"
+
+    ssh-keygen -t ed25519 -C "$1" -f "$keyPath" >&2
+    ssh-add --apple-use-keychain "$keyPath" >&2
+
+    echo "$keyPath"
+}
