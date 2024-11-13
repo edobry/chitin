@@ -257,6 +257,10 @@ function chiReadDynamicVariable() {
     fi
 }
 
+function xdgHome() {
+    echo "${XDG_DATA_HOME:-${HOME}}"
+}
+
 function expandPathSegment() {
     requireArg "a path segment" "$1" || return 1
     requireArg "a path expansion" "$2" || return 1
@@ -264,23 +268,61 @@ function expandPathSegment() {
 
     local pathSegment="$1"
     local pathExpansion="$2"
-    local path="$3"
+    # TODO: build something that detects `local path` and ERRORS
+    local pathToExpand="$3"
+    local pathRegex="${4:-^${pathSegment}*}"
 
-    [[ "$path" == ${pathSegment}* ]] && path="${pathExpansion}${path#${pathSegment}}"
-    
-    echo "$path"
+    echo "$pathToExpand" | sed -e "s/${pathRegex}/$(echo "$pathExpansion" | escapeSlashes)/g"
 }
 
-function expandHome() {
-    requireArg "a path" "$1" || return 1
+function expandPathSegmentStart() {
+    requireArg "a path segment" "$1" || return 1
+    requireArg "a path expansion" "$2" || return 1
+    requireArg "a path" "$3" || return 1
     
-    expandPathSegment "~" "$HOME" "$1"
+    expandPathSegment "$1" "$2" "$3" "^${1}"
 }
 
 function expandPath() {
     requireArg "a path" "$1" || return 1
 
-    local localShare="local/share"
+    local localShare="localshare"
+    expandHome "$(expandPathSegmentStart "$localShare" "$(xdgHome)/.local/share" "$1")"
 
-    expandHome $(expandPathSegment "$localShare" "${XDG_DATA_HOME:-${HOME}}/.${localShare}" "$1")
+    # expandHome $(expandPathSegment "$localShare" "${XDG_DATA_HOME:-${HOME}}/.${localShare}" "$1")
+}
+
+function expandHome() {
+    requireArg "a path" "$1" || return 1
+    
+    expandPathSegmentStart "~" "$HOME" "$1"
+}
+
+function chiUrlExpand() {
+    requireArg "a version" "$1" || return 1
+    requireArg "a URL to expand" "$2" || return 1
+
+    local version="$1"
+
+    local versionSegment="{{version}}"
+    expandPathSegment "$versionSegment" "$version" "$2" "$versionSegment"
+}
+
+function fileGetExtension() {
+    requireArg "a file path" "$1" || return 1
+
+    echo "${1##*.}"
+}
+
+function checkExtension() {
+    requireArg "a file path" "$1" || return 1
+    requireArg "an extension" "$2" || return 1
+
+    local filePath="$1"
+    local extension="$2"
+
+    if [[ "$(fileGetExtension $filePath)" != "$extension" ]]; then
+        chiBail "extension must be '.$extension'!"
+        return 1
+    fi
 }

@@ -51,7 +51,7 @@ The framework can be configured at three levels: `user`, `fiber`, and `chain`.
 `*Dir` fields support path expansions:
 
 - `~`: -> `$HOME`
-- `local/share` -> `$HOME/.local/share`
+- `localshare` -> `$HOME/.local/share`
 
 ### User Configuration
 

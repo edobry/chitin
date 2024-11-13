@@ -151,25 +151,6 @@ function jsonToYamlConvert() {
     echo $yamlFilePath
 }
 
-function fileGetExtension() {
-    requireArg "a file path" "$1" || return 1
-
-    echo "${1##*.}"
-}
-
-function checkExtension() {
-    requireArg "a file path" "$1" || return 1
-    requireArg "an extension" "$2" || return 1
-
-    local filePath="$1"
-    local extension="$2"
-
-    if [[ "$(fileGetExtension $filePath)" != "$extension" ]]; then
-        chiBail "extension must be '.$extension'!"
-        return 1
-    fi
-}
-
 function jsonCheckBool() {
     requireArg "a field name" "$1" || return 1
     requireArg "a JSON string" "$2" || return 1
