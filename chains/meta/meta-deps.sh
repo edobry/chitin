@@ -14,7 +14,7 @@ function chiModuleLoadToolConfigs() {
     export CHI_TOOLS="$(jsonMerge "${CHI_TOOLS:-"{}"}" "$moduleTools")"
 }
 
-function chiDependenciesCheckModuleToolStatus() {
+function chiModuleCheckToolStatus() {
     requireArg "a module name" "$1" || return 1
     local moduleName="$1"; shift
 
@@ -41,7 +41,7 @@ function chiDependenciesCheckModuleToolStatus() {
     chiToolsUpdateStatus "${toolStatus[@]}"
 }
 
-function chiDependenciesCheckModuleToolDepsMet() {
+function chiModuleCheckToolDepsMet() {
     requireArg "a module name" "$1" || return 1
 
     local moduleName="$1"
@@ -114,11 +114,11 @@ function chiDependenciesCheckModuleToolDepsMet() {
     fi
 
     # check again after installing
-    chiDependenciesCheckModuleToolStatus "$moduleName" "${installedTools[@]}"
-    chiDependenciesCheckModuleToolDepsMet "$moduleName"
+    chiModuleCheckToolStatus "$moduleName" "${installedTools[@]}"
+    chiModuleCheckToolDepsMet "$moduleName"
 }
 
-function chiDependenciesToolsGetRequired() {
+function chiModulesGetRequiredTools() {
     requireArg "a config JSON string" "$1" || return 1
     requireArg "a tool type" "$2" || return 1
 

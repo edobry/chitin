@@ -30,7 +30,7 @@ function chiModuleDependenciesGetRequiredTools() {
     requireArg "a module name" "$1" || return 1
     requireArg "a tool type" "$2" || return 1
 
-    chiDependenciesToolsGetRequired $(chiConfigGetVariableValue "$1") "$2"
+    chiModulesGetRequiredTools $(chiConfigGetVariableValue "$1") "$2"
 }
 
 function chiFiberLoadExternal() {
@@ -97,8 +97,8 @@ function chiFiberLoad() {
     done <<< "$(jsonRead "$config" '(.chainConfig // []) | to_entries[]')"
 
     chiModuleLoadToolConfigs "$fiberName"
-    chiDependenciesCheckModuleToolStatus "$fiberName"
-    if ! chiDependenciesCheckModuleToolDepsMet "$fiberName"; then
+    chiModuleCheckToolStatus "$fiberName"
+    if ! chiModuleCheckToolDepsMet "$fiberName"; then
         chiLog "tool dependencies unmet, not loading!" "$fiberName"
         return 1
     fi
@@ -152,8 +152,8 @@ function chiChainLoad() {
     fi
 
     chiModuleLoadToolConfigs "$moduleName"
-    chiDependenciesCheckModuleToolStatus "$moduleName"
-    if ! chiDependenciesCheckModuleToolDepsMet "$moduleName"; then
+    chiModuleCheckToolStatus "$moduleName"
+    if ! chiModuleCheckToolDepsMet "$moduleName"; then
         chiLog "missing tool dependencies, not loading!" "$moduleName"
         return 1
     fi
@@ -200,5 +200,5 @@ function chiChainShouldLoad() {
 }
 
 function chiDotfilesDependenciesCheckToolStatus() {
-    chiDependenciesCheckModuleToolStatus "$CHI_DOTFILES_DIR" dotfiles
+    chiModuleCheckToolStatus "$CHI_DOTFILES_DIR" dotfiles
 }
