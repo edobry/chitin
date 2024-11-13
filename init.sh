@@ -69,7 +69,7 @@ function chiShell() {
 
     if [[ -z "$IS_DOCKER" ]]; then
         chiModuleConfigReadAndSet "$CHI_DIR" "core"
-        chiDependenciesCheckModuleTools "core"
+        chiDependenciesCheckModuleToolStatus "core"
     fi
 
     # load chains

@@ -16,6 +16,16 @@ function chiToolsShowStatus() {
     jsonRead "$CHI_TOOL_STATUS" 'to_entries[] | "\(.key) - installed: \(.value.installed), valid: \(.value.validVersion)"'
 }
 
+function chiToolsUpdateStatus() {
+    requireArg "at least one tool status JSON string" "$1" || return 1
+    local toolStatus=("$@")
+
+    local updatedToolStatus=$(jsonMerge $toolStatus '{}')
+    local globalToolStatus=$(jsonMerge "${CHI_TOOL_STATUS:-"{}"}" "$updatedToolStatus" "{}")
+
+    export CHI_TOOL_STATUS="$globalToolStatus"
+}
+
 function chiToolsCheckInstalled() {
     requireArg "a module name" "$1" || return 1
     local moduleName="$1"; shift

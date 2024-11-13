@@ -1,4 +1,4 @@
-function chiDependenciesCheckModuleTools() {
+function chiDependenciesCheckModuleToolStatus() {
     requireArg "a module name" "$1" || return 1
     local moduleName="$1"; shift
 
@@ -21,13 +21,13 @@ function chiDependenciesCheckModuleTools() {
     local toolStatus=('{}')
     while IFS= read -r tool; do
         # echo "tool: $tool"
-        toolStatus+=("$(chiDependenciesCheckTool "$moduleName" "$tool")")
+        toolStatus+=("$(chiDependenciesCheckToolStatus "$moduleName" "$tool")")
     done <<< "$(jsonRead "$tools" 'to_entries[]')"
 
-    chiDependenciesUpdateToolStatus "$moduleName" "${toolStatus[@]}"
+    chiToolsUpdateStatus "${toolStatus[@]}"
 }
 
-function chiDependenciesCheckTool() {
+function chiDependenciesCheckToolStatus() {
     requireArg "a module name" "$1" || return 1
     requireArg "a tool config JSON string" "$2" || return 1
 
@@ -66,25 +66,7 @@ function chiDependenciesCheckTool() {
     chiToolsMakeStatus "$toolName" "$installed" "$validVersion"
 }
 
-function chiDependenciesUpdateToolStatus() {
-    requireArg "a module name" "$1" || return 1
-    local moduleName="$1"; shift
-
-    requireArg "at least one tool status JSON string" "$1" || return 1
-    local toolStatus=("$@")
-
-    # echo "update tool status: ${toolStatus[@]}"
-
-    local moduleToolStatus=$(jsonMerge $toolStatus '{}')
-    local globalToolStatus=$(jsonMerge "${CHI_TOOL_STATUS:-"{}"}" "$moduleToolStatus" "{}")
-
-    # echo "moduleToolStatus: $moduleToolStatus"
-
-    chiModuleSetDynamicVariable "CHI_TOOL_STATUS" "$moduleName" "$moduleToolStatus"
-    export CHI_TOOL_STATUS="$globalToolStatus"
-}
-
-function chiDependenciesCheckModuleToolsMet() {
+function chiDependenciesCheckModuleToolDepsMet() {
     requireArg "a module name" "$1" || return 1
 
     local moduleName="$1"
@@ -119,10 +101,6 @@ function chiDependenciesCheckModuleToolsMet() {
         fi
     done < <(echo "$toolDepsList")
 
-    # echo "toolsToInstall: ${toolsToInstall[@]}"
-    # echo "tooldepsMet: $toolDepsMet"
-    # echo "[[ "${#toolsToInstall[@]}" -eq 0 ]]"
-
     [[ "${#toolsToInstall[@]}" -eq 0 ]] && return $toolDepsMet
 
     local installToolDeps=$(chiModuleConfigReadVariablePath "$moduleName" installToolDeps)
@@ -156,18 +134,13 @@ function chiDependenciesCheckModuleToolsMet() {
         fi
     done
 
-    # echo "brewToolsToInstall: ${brewToolsToInstall[@]}"
-    # echo "gitToolsToInstall: ${gitToolsToInstall[@]}"
-
     if [[ "${#brewToolsToInstall[@]}" -gt 0 ]]; then
         chiToolsInstallBrew "$moduleName" "${brewToolsToInstall[@]}"
     fi
 
-    # echo "installedTools: $installedTools"
-
     # check again after installing
-    chiDependenciesCheckModuleTools "$moduleName" "${installedTools[@]}"
-    chiDependenciesCheckModuleToolsMet "$moduleName"
+    chiDependenciesCheckModuleToolStatus "$moduleName" "${installedTools[@]}"
+    chiDependenciesCheckModuleToolDepsMet "$moduleName"
 }
 
 function chiDependenciesToolsGetRequired() {
