@@ -27,15 +27,14 @@ function chiToolsUpdateStatus() {
 }
 
 function chiToolsCheckInstalled() {
-    requireArg "a module name" "$1" || return 1
-    local moduleName="$1"; shift
-
     requireArg "a tool name" "$1" || return 1
     local toolName="$1"; shift
 
     local tool="$1"
     [[ -z "$tool" ]] && tool=$(chiToolsGetConfig "$toolName")
     [[ -z "$tool" ]] && return 1
+
+    local moduleName=$(jsonReadPath "$tool" meta definedIn 2>/dev/null)
 
     # check order:
     #

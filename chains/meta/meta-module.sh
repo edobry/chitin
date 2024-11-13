@@ -96,6 +96,7 @@ function chiFiberLoad() {
         chiConfigSetVariableValue "$fiberName:$chainName" "$chainConfigValue"
     done <<< "$(jsonRead "$config" '(.chainConfig // []) | to_entries[]')"
 
+    chiModuleLoadToolConfigs "$fiberName"
     chiDependenciesCheckModuleToolStatus "$fiberName"
     if ! chiDependenciesCheckModuleToolDepsMet "$fiberName"; then
         chiLog "tool dependencies unmet, not loading!" "$fiberName"
@@ -150,6 +151,7 @@ function chiChainLoad() {
         return 1
     fi
 
+    chiModuleLoadToolConfigs "$moduleName"
     chiDependenciesCheckModuleToolStatus "$moduleName"
     if ! chiDependenciesCheckModuleToolDepsMet "$moduleName"; then
         chiLog "missing tool dependencies, not loading!" "$moduleName"

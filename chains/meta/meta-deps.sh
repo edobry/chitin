@@ -1,3 +1,19 @@
+function chiModuleLoadToolConfigs() {
+    requireArg "a module name" "$1" || return 1
+    local moduleName="$1"; shift
+
+    local config=$(chiConfigGetVariableValue "$moduleName")
+    [[ -z "$config" ]] || [[ "$config" == "{}" ]] && return 1
+  
+    local moduleTools=$(jsonRead "$config" '.tools | to_entries | 
+            map(.value += { meta: { definedIn: $module }}) |
+        from_entries' --arg module "$moduleName")
+
+    [[ -z "$moduleTools" ]] || [[ "$moduleTools" == 'null' ]] || [[ "$moduleTools" == '{}' ]] && return 0
+
+    export CHI_TOOLS="$(jsonMerge "${CHI_TOOLS:-"{}"}" "$moduleTools")"
+}
+
 function chiDependenciesCheckModuleToolStatus() {
     requireArg "a module name" "$1" || return 1
     local moduleName="$1"; shift
@@ -15,8 +31,6 @@ function chiDependenciesCheckModuleToolStatus() {
         end' --argjson toolsFilterList "$toolsFilterList")
 
     [[ -z "$tools" ]] || [[ "$tools" == 'null' ]] || [[ "$tools" == '{}' ]] && return 0
-
-    export CHI_TOOLS="$(jsonMerge "${CHI_TOOLS:-"{}"}" "$tools")"
 
     local toolStatus=('{}')
     while IFS= read -r tool; do
@@ -43,7 +57,7 @@ function chiDependenciesCheckToolStatus() {
 
     if \
         ! jsonCheckBoolPath "$tool" value optional &>/dev/null &&
-        chiToolsCheckInstalled "$moduleName" "$toolName" "$(jsonReadPath "$tool" value)" \
+        chiToolsCheckInstalled "$toolName" "$(jsonReadPath "$tool" value)" \
     ; then
         if [[ -z "$versionCommand" ]]; then
             installed="true"

@@ -53,11 +53,10 @@ function jsonRead() {
     requireArg "a JSON string" "$1" || return 1
     requireArg "a jq path" "$2" || return 1
 
-    local jsonString=$1
-    local jqPath="$2"
-    shift; shift
+    local jsonString="$1"; shift
+    local jqPath="$1"; shift
 
-    jq -cr "$@" "$jqPath" <<< "$jsonString"
+    jq -cr $@ "$jqPath" <<< "$jsonString"
 }
 
 function jsonReadPath() {
