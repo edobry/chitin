@@ -13,8 +13,12 @@ function chiConfigUserShow() {
     cat $(chiConfigUserGetLocation)/$CHI_CONFIG_USER_FILE_NAME.yaml | prettyYaml
 }
 
+function chiConfigUserGet() {
+    chiConfigUserRead '.'
+}
+
 function chiConfigUserRead() {
-    jsonRead "$CHI_CONFIG_USER" "$@"
+    jsonReadPath "$CHI_CONFIG_USER" $@
 }
 
 function chiConfigFindFilePath() {
@@ -68,9 +72,9 @@ function chiConfigUserLoad() {
     local configFileFullName="$CHI_CONFIG_USER_FILE_NAME.yaml"
     local configFilePath="$configLocation/$configFileFullName"
 
-    if [[ ! -f $configFilePath ]]; then
-        mkdir -p $configLocation
-        cp $CHI_DIR/$configFileFullName $configFilePath
+    if [[ ! -f "$configFilePath" ]]; then
+        mkdir -p "$configLocation"
+        cp "$CHI_DIR/$configFileFullName" "$configFilePath"
 
         chiLog "initialized config file at '$configFilePath'" "init"
         chiLog 'please complete setup by running `chiConfigUserModify`' "init"
@@ -80,11 +84,12 @@ function chiConfigUserLoad() {
     configFile=$(chiConfigUserReadFile "$configLocation" "$CHI_CONFIG_USER_FILE_NAME")
     [[ $? -eq 0 ]] || return 1
 
-    local inlineConfig="${1:-{}}"
+    local inlineConfig="${1:-"{}"}"
     local mergedConfig=$(jsonMergeDeep "$configFile" "$inlineConfig")
     export CHI_CONFIG_USER="$mergedConfig"
+    local config="$mergedConfig"
 
-    local projectDir=$(chiConfigUserRead '.projectDir // empty')
+    local projectDir=$(chiConfigUserRead projectDir)
     if [[ -z "$projectDir" ]]; then
         chiLog "projectDir not set!" "meta:config"
         return 1
@@ -107,8 +112,38 @@ function chiConfigModify() {
     chiReinit
 }
 
+function chiConfigSet() {
+    requireArg "a config path" "$1" || return 1
+    requireArg "a config file name" "$2" || return 1
+    requireArg "a config value object" "$3" || return 1
+
+    echo "$3" | prettyYaml > "$(chiConfigFindFilePath "$1" "$2")"
+    chiLog "updated, reinitializing..." "meta:config"
+    chiReinit
+}
+
 function chiConfigUserModify() {
     chiConfigModify "$(chiConfigUserGetLocation)" "$CHI_CONFIG_USER_FILE_NAME"
+}
+
+function chiConfigUserSet() {
+    requireArg "a config value object" "$1" || return 1
+
+    chiConfigSet "$(chiConfigUserGetLocation)" "$CHI_CONFIG_USER_FILE_NAME" "$1"
+}
+
+function chiConfigUserSetField() {
+    requireArg "a field value" "$1" || return 1
+    requireArg "a field path" "$2" || return 1
+
+    local fieldValue="$1"; shift
+    local userConfig=$(chiConfigUserGet)
+
+    local newFieldObj=$(jq -nc --argjson path "$(jsonMakeArray "$*")" --arg value "$fieldValue" '{} | setpath($path; $value)')
+
+    local newConfig="$(jsonMergeDeep "$userConfig" "$newFieldObj")"
+
+    chiConfigUserSet "$newConfig"
 }
 
 function chiConfigFiberModify() {
@@ -120,18 +155,17 @@ function chiConfigFiberModify() {
 function chiConfigChainRead() {
     requireArg "a chain name" "$1" || return 1
 
-    local chainName="$1"
-    shift
+    local chainName="$1"; shift
     local fieldPath="$1"
     [[ -z $fieldPath ]] || shift
 
-    local config=$(chiConfigUserRead ".chains[\$chainName]$fieldPath" --arg chainName $chainName $@)
+    local config=$(chiConfigUserRead chainConfig "$chainName" $fieldPath $@)
     if [[ "$config" == 'null' ]]; then
         chiLog "'$chainName' config section not initialized!" "$chainName"
         return 1
     fi
 
-    echo $config
+    echo "$config"
 }
 
 function chiConfigChainCheckBoolean() {
@@ -154,17 +188,13 @@ function chiConfigChainReadField() {
     requireArg "a chain name" "$1" || return 1
     requireArg "a field name" "$2" || return 1
 
-    local config
-    config=$(chiConfigChainRead "$1")
-    if [[ $? -ne 0 ]]; then
-        echo "$config"
-        return 1
-    fi
+    local config=$(chiConfigChainRead "$1")
+    [[ -z "$config" ]] && return 1
 
-    jsonRead "$config" ".$2 // empty"
+    jsonReadPath "$config" "$2"
 }
 
-function chiModuleConfigRead() {
+function chiModuleConfigReadFromFile() {
     requireDirectoryArg "a directory" "$1" || return 1
     requireArg "a module name" "$2" || return 1
 
@@ -176,15 +206,14 @@ function chiModuleConfigRead() {
     echo "$fileContents"
 }
 
-function chiModuleConfigReadAndSet() {
+function chiModuleConfigMergeFromFile() {
     requireDirectoryArg "a directory" "$1" || return 1
     requireArg "a module name" "$2" || return 1
 
-    local fileContents=$(chiModuleConfigRead "$1" "$2")
-    # echo "$fileContents"
+    local fileContents=$(chiModuleConfigReadFromFile "$1" "$2")
     [[ -z "$fileContents" ]] && return 1
 
-    chiConfigSetVariableValue "$2" "$fileContents"
+    chiConfigMergeVariableValue "$2" "$fileContents"
 }
 
 export CHI_CONFIG_VARIABLE_PREFIX="CHI_CONFIG"
@@ -199,7 +228,10 @@ function chiModuleConfigReadVariablePath() {
     requireArg "a module name" "$1" || return 1
     local moduleName="$1"; shift;
 
-    jsonReadPath "$(chiConfigGetVariableValue "$moduleName")" $*
+    local config="$(chiConfigGetVariableValue "$moduleName")"
+    [[ -z "$config" ]] && return 1
+
+    jsonReadPath "$config" $*
 }
 
 function chiConfigSetVariableValue() {

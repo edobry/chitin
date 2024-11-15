@@ -61,12 +61,12 @@ function jsonRead() {
 
 function jsonReadPath() {
     requireArg "a JSON string" "$1" || return 1
-    local json="$1"; shift
+    local jsonString="$1"; shift
 
     requireArg "a JSON path" "$1" || return 1
 
     local output
-    output=$(echo "$json" | jq -rc 'getpath($ARGS.positional)' --args $*)
+    output=$(jq -cr 'getpath($ARGS.positional)' --args $* <<< "$jsonString")
     local jqExit=$?
 
     if [[ $jqExit -ne 0 ]]; then
@@ -196,4 +196,10 @@ function jsonCheckBoolPath() {
     [[ $? -eq 0 ]] || return 1
 
     [[ "$value" == "true" ]]
+}
+
+function jsonMakeArray() {
+    requireArg "at least one array item" "$1" || return 1
+
+    echo "$(printf '%s\n' "$@" | jq -R . | jq -cs .)" 
 }
