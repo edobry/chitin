@@ -10,14 +10,14 @@ tools:
     version: "1.6"
     versionCommand: jq --version | awk -F '-' '{ print $2 }'
     checkBrew: true
-    brew: {}
+    brew: true
   yq:
     version: "4.44.3"
     versionCommand: yq --version 2>&1 | awk '{ print $4 }' | sed 's/v//'
     checkBrew: true
-    brew: {}
+    brew: true
   json5:
-    brew: {}
+    brew: true
 toolDeps:
   - xcode-dev-tools
   - brew

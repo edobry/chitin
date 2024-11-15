@@ -26,6 +26,7 @@ function chiToolsGenerateBrewfile() {
     requireArg "a tool name" "$1" || return 1
 
     echo $* | jq -r '
+        if .value.brew == true then .value.brew = {} else . end | 
         (
             if .value.brew.tap then
                 "tap \"" + .value.brew.tap + "\"" +
