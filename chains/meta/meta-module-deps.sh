@@ -5,7 +5,7 @@ function chiModuleLoadToolConfigs() {
     local config=$(chiConfigGetVariableValue "$moduleName")
     [[ -z "$config" ]] || [[ "$config" == "{}" ]] && return 1
   
-    local moduleTools=$(jsonRead "$config" '.tools | to_entries | 
+    local moduleTools=$(jsonRead "$config" '(.tools // {}) | to_entries | 
             map(.value += { meta: { definedIn: $module }}) |
         from_entries' --arg module "$moduleName")
 
@@ -20,7 +20,7 @@ function chiModuleCheckToolStatus() {
     local moduleTools="$(chiModuleConfigReadVariablePath "$1" tools | jq -r 'keys[]')"
     [[ -z "$moduleTools" ]] && return 0
 
-    chiToolsCheckStatuses $moduleTools
+    chiToolsCheckAndUpdateStatus $moduleTools
 }
 
 function chiModuleCheckToolDepsMet() {
@@ -38,22 +38,32 @@ function chiModuleCheckToolDepsMet() {
     
     local toolsToInstall=()
     
-    while read -r dep; do
-        # echo "dep: $dep"
+    while read -r toolDep; do
+        # echo "toolDep: $toolDep"
 
-        local depStatus=$(chiToolsGetStatus "$dep")
-        if [[ -z "$depStatus" ]]; then
-            chiLog "no tool status found for '$dep'!" "$moduleName"
-            toolDepsMet=1
-            continue
+        local toolDepStatus=$(chiToolsGetStatus "$toolDep")
+        if [[ -z "$toolDepStatus" ]]; then
+            local toolConfig=$(chiToolsGetConfig "$toolDep")
+            
+            # the tool config might have been defined in a disabled module
+            # TODO: rethink this
+            if [[ -n "$toolConfig" ]]; then
+                # echo "checking status for $toolDep on-demand..." >&2
+                chiToolsCheckAndUpdateStatus "$toolDep"
+                toolDepStatus=$(chiToolsGetStatus "$toolDep")
+            else
+                chiLog "no tool status found for '$toolDep'!" "$moduleName" >&2
+                toolDepsMet=1
+                continue
+            fi
         fi
 
-        if ! jsonCheckBoolPath "$depStatus" installed; then
-            chiLog "$dep not installed!" "$moduleName"
+        if ! jsonCheckBoolPath "$toolDepStatus" installed; then
+            chiLog "$toolDep not installed!" "$moduleName" >&2
 
-            toolsToInstall+=("$dep")
-        elif ! jsonCheckBoolPath "$depStatus" validVersion; then
-            chiLog "$dep version not valid!" "$moduleName"
+            toolsToInstall+=("$toolDep")
+        elif ! jsonCheckBoolPath "$toolDepStatus" validVersion; then
+            chiLog "$toolDep version not valid!" "$moduleName" >&2
             toolDepsMet=1
         fi
     done < <(echo "$toolDepsList")
@@ -69,7 +79,7 @@ function chiModuleCheckToolDepsMet() {
     for tool in "${toolsToInstall[@]}"; do
         local toolConfig=$(chiToolsGetConfig "$tool")
         if [[ -z "$toolConfig" ]]; then
-            chiLog "tool config not found for '$tool'!" "$moduleName"
+            chiLog "tool config not found for '$tool'!" "$moduleName" >&2
             continue
         fi
 
@@ -87,7 +97,7 @@ function chiModuleCheckToolDepsMet() {
         elif jsonReadPath "$toolConfig" artifact &>/dev/null; then
             chiToolsInstallArtifact "$moduleName" "$tool" "$toolConfig"
         else
-            chiLog "no install method found for '$tool'!" "$moduleName"
+            chiLog "no install method found for '$tool'!" "$moduleName" >&2
         fi
     done
 
@@ -96,7 +106,7 @@ function chiModuleCheckToolDepsMet() {
     fi
 
     # check again after installing
-    chiToolsCheckStatuses "${installedTools[@]}"
+    chiToolsCheckAndUpdateStatus "${installedTools[@]}"
     chiModuleCheckToolDepsMet "$moduleName"
 }
 
