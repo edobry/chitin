@@ -28,8 +28,10 @@ function chiBail() {
 }
 
 function chiLoadDir() {
+    local moduleName="$1"; shift
+
     for file in "$@"; do
-        source $file;
+        source "$file"
     done
 }
 
@@ -58,12 +60,12 @@ function chiShell() {
     fi
 
     # load init chain
-    chiLoadDir $CHI_DIR/chains/init/**/*.sh
+    chiLoadDir core:init $CHI_DIR/chains/init/**/*.sh
 
     chiInitBootstrapDeps
 
     # load meta chain
-    chiLoadDir $CHI_DIR/chains/meta/**/*.sh
+    chiLoadDir core:meta $CHI_DIR/chains/meta/**/*.sh
     chiConfigUserLoad "$1"
     chiColorInit
 
