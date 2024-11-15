@@ -66,6 +66,29 @@ function chiFiberLoadExternalLoop() {
     fi
 }
 
+function chiFiberGetPath() {
+    requireArg "a fiber name" "$1" || return 1
+
+    chiModuleGetDynamicVariable "$CHI_FIBER_PATH_PREFIX" "$1"
+}
+
+function chiShellReload() {
+    requireArg "at least one fiber name" "$1" || return 1
+
+    local fibers=("$@")
+    for fiber in "${fibers[@]}"; do
+        local fiberPath="$(chiFiberGetPath "$fiber")"
+        [[ -z "$fiberPath" ]] && continue
+
+        unset "$(chiModuleMakeDynamicVariableName "$CHI_FIBER_LOADED_PREFIX" "$fiber")"
+        for var in $(env | grep "^${CHI_FIBER_CHAIN_LOADED_PREFIX}_${fiber}_" | cut -d= -f1); do
+            unset "$var"
+        done
+        
+        chiFiberLoad "$fiberPath" "$fiber" "nocheck"
+    done
+}
+
 export CHI_FIBER_PREFIX="CHI_FIBER"
 export CHI_FIBER_PATH_PREFIX="${CHI_FIBER_PREFIX}_PATH"
 
