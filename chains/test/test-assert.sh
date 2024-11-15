@@ -24,12 +24,34 @@ function chiTestAssertStdoutIs() {
     fi
 }
 
+function chiTestAssertStdoutCheck() {
+    requireArg "a check" "$1" || return 1
+
+    local stdout=$(chiTestReadStdout)
+
+    if ! eval "$1 '$stdout'"; then
+        chiTestCaseReportIssue "stdout '$stdout' did not pass check '$1'"
+        return 1
+    fi
+}
+
 function chiTestAssertStderrIs() {
     requireArg "an expected value" "$1" || return 1
 
     local stderr=$(chiTestReadStderr)
     if ! [[ "$stderr" == "$1" ]]; then
         chiTestCaseReportIssue "expected stderr to be: '$1', got: '$stderr'"
+        return 1
+    fi
+}
+
+function chiTestAssertStderrCheck() {
+    requireArg "a check" "$1" || return 1
+
+    local stderr=$(chiTestReadStderr)
+
+    if ! eval "$1 '$stderr'"; then
+        chiTestCaseReportIssue "stderr '$stderr' did not pass check '$1'"
         return 1
     fi
 }
