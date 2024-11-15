@@ -164,7 +164,7 @@ function requireArgOptions() {
 # args: name of arg, arg value, validation command, (optional) validation failure prefix
 function requireArgWithCheck() {
     if [[ -z "$2" ]] || ! eval "$3 '$2'"; then
-        echo "Please supply ${4}${1:-a value}!"
+        echo "Please supply ${4}${1:-a value}!" >&2
         return 1
     fi
 }
@@ -193,7 +193,7 @@ function checkVersionAndFail() {
     local majorExpected=$(getMajorVersionComponent $minimumVersion)
 
     if ! checkVersion "$2" "$3"; then
-        chiLog "invalid $1 version: expected $expectedVersion <= X < $(($majorExpected + 1)).0.0; found $currentVersion"
+        chiLog "invalid $1 version: expected $expectedVersion <= X < $(($majorExpected + 1)).0.0; found $currentVersion" >&2
         return 1
     fi
 }
@@ -312,6 +312,12 @@ function fileGetExtension() {
     requireArg "a file path" "$1" || return 1
 
     echo "${1##*.}"
+}
+
+function fileStripExtension() {
+    requireArg "a file path" "$1" || return 1
+
+    echo "${1%.*}"
 }
 
 function checkExtension() {

@@ -19,6 +19,12 @@ function chiModuleNameToVariableName() {
     sed 's/[:\-]/_/g' <<< "$1"
 }
 
+function chiModuleVariableNameToName() {
+    requireArg "a module variable name" "$1" || return 1
+
+    sed 's/_/-/g' <<< "$1"
+}
+
 function chiModuleMakeDynamicVariableName() {
     requireArg "a variable prefix" "$1" || return 1
     requireArg "a module name" "$2" || return 1
@@ -91,6 +97,20 @@ function chiShellReload() {
 
 export CHI_FIBER_PREFIX="CHI_FIBER"
 export CHI_FIBER_PATH_PREFIX="${CHI_FIBER_PREFIX}_PATH"
+export CHI_FIBER_LOADED_PREFIX="${CHI_FIBER_PREFIX}_LOADED"
+export CHI_FIBER_CHAIN_LOADED_PREFIX="${CHI_FIBER_PREFIX}_CHAIN_LOADED"
+
+function chiFiberPathToName() {
+    requireArg "a fiber path" "$1" || return 1
+
+    if [[ "$1" == "$CHI_DIR" ]]; then
+        echo "core"
+    elif [[ "$1" == "$CHI_DOTFILES_DIR" ]]; then
+        echo "dotfiles"
+    else
+        echo "${$(basename "$1")#chitin-}"
+    fi
+}
 
 function chiFiberLoad() {
     requireDirectoryArg "fiber directory" "$1" || return 1
@@ -228,3 +248,25 @@ function chiChainShouldLoad() {
 function chiDotfilesCheckToolStatus() {
     chiModuleCheckToolStatus dotfiles
 }
+
+function chiModuleGetName() {
+    requireArg "a module path" "$1" || return 1
+
+    local modulePath="$1"
+    local moduleDir="$(dirname "$modulePath")"
+    
+    local fiberName="$(chiFiberPathToName "${moduleDir%/chains*}")"
+    local fiberPath="$(chiReadDynamicVariable "$CHI_FIBER_PATH_{$fiberName}")"
+
+    local searchPath=$([[ "$(basename "$moduleDir")" == "chains" ]] && echo "$modulePath" || echo "$moduleDir")
+
+    # check all the $CHI_FIBER_PATH_* vars for one that contains the module path
+    for var in $(env | grep -o "^${CHI_FIBER_PATH_PREFIX}.*=${searchPath}"); do
+        local varName="${var%%=*}"
+        local fiberVariableName="${varName#"${CHI_FIBER_PATH_PREFIX}"_}"
+        local chainVariableName="${fiberVariableName#"${fiberName}_"}"
+        
+        echo "${fiberName}:$(chiModuleVariableNameToName "$chainVariableName")"
+    done
+}
+
