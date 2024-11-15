@@ -216,35 +216,6 @@ function chiChainLoad() {
     chiModuleSetDynamicVariable "$chainLoadedVariablePrefix" "$moduleName" true
 }
 
-function chiChainShouldLoad() {
-    requireArg "a fiber name" "$1" || return 1
-    requireArg "a chain name" "$2" || return 1
-
-    local fiberName=$1
-    local chainName=$2
-    shift; shift
-
-    local returnConfig
-    if [[ "$1" == "return-config" ]]; then
-        returnConfig=true
-        shift
-    fi
-
-    local chainConfig
-    chainConfig=$(chiConfigChainRead ${2:-$chainName})
-    local chainConfigLoadReturn=$?
-
-    # merge inherited config with own
-    local inheritedConfig="$(chiConfigGetVariableValue "$fiberName:$chainName")"
-    local mergedConfig=$(jsonMergeDeep "$chainConfig" "$inheritedConfig")
-    
-    isSet "$returnConfig" && echo "$mergedConfig"
-
-    [[ $chainConfigLoadReturn -eq 0 ]] || return 1
-    chiChainCheckEnabled "$mergedConfig" loaded || return 1
-    chiFiberDepdenciesChainCheckTools "$fiberName" "$chainName" || return 1
-}
-
 function chiDotfilesCheckToolStatus() {
     chiModuleCheckToolStatus dotfiles
 }
