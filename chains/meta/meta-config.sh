@@ -145,14 +145,11 @@ function chiConfigUserSetField() {
     requireArg "a field path" "$2" || return 1
 
     local fieldValue="$1"; shift
-    local userConfig=$(chiConfigUserGet)
-
-    local newFieldObj=$(jq -nc --argjson path "$(jsonMakeArray "$*")" --arg value "$fieldValue" '{} | setpath($path; $value)')
-
-    local newConfig="$(jsonMergeDeep "$userConfig" "$newFieldObj")"
+    local newConfig="$(yamlFileSetField "$(chiConfigUserGetPath)" "$fieldValue" $*)"
 
     chiConfigUserSet "$newConfig"
 }
+
 
 function chiConfigFiberModify() {
     requireArg "a fiber name" "$1" || return 1
