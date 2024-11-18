@@ -135,6 +135,18 @@ function requireFileArg() {
     requireArgWithCheck "$1" "$2" checkFileExists "a path to an existing "
 }
 
+# checks that an argument is supplied and that it points to an existing JSON file, and prints a message if not
+# args: name of arg, arg value
+function requireJsonArg() {
+    requireArgWithCheck "$1" "$2" checkExtensionJson "a path to an existing JSON "
+}
+
+# checks that an argument is supplied and that it points to an existing YAML file, and prints a message if not
+# args: name of arg, arg value
+function requireYamlArg() {
+    requireArgWithCheck "$1" "$2" checkExtensionYaml "a path to an existing YAML "
+}
+
 # checks that an argument is supplied and that points to an existing directory, and prints a message if not
 # args: name of arg, arg value
 function requireDirectoryArg() {
@@ -331,4 +343,16 @@ function checkExtension() {
         chiBail "extension must be '.$extension'!"
         return 1
     fi
+}
+
+function checkExtensionJson() {
+    requireArg "a JSON file path" "$1" || return 1
+
+    checkExtension "$1" "json"
+}
+
+function checkExtensionYaml() {
+    requireArg "a YAML file path" "$1" || return 1
+
+    checkExtension "$1" "yaml"
 }
