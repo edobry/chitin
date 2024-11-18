@@ -126,28 +126,30 @@ function json5Convert() {
 }
 
 function yamlConvert() {
-    requireArg "a YAML filepath" "$1" || return 1
-
-    local yamlFilePath="$1"
-    checkExtension "$yamlFilePath" "yaml" || return 1
+    requireYamlArg "filepath" "$1" || return 1
 
     local jsonFilePath="$(tempFile).json"
-    cat $yamlFilePath | yamlToJson | jq -c > $jsonFilePath
+    yamlFileToJson "$1" > "$jsonFilePath"
 
-    echo $jsonFilePath
+    echo "$jsonFilePath"
+}
+
+function yamlFileToJson() {
+    requireYamlArg "filepath" "$1" || return 1
+
+    local jsonFilePath="$(tempFile).json"
+    cat "$1" | yamlToJson | jq -c
 }
 
 function jsonToYamlConvert() {
-    requireArg "a JSON filepath" "$1" || return 1
+    requireJsonArg "filepath" "$1" || return 1
 
     local jsonFilePath="$1"
 
-    checkExtension "$jsonFilePath" "json" || return 1
-
     local yamlFilePath="${jsonFilePath%json}yaml"
-    jsonWriteToYamlFile "$(cat $jsonFilePath)" $yamlFilePath
+    jsonWriteToYamlFile "$(cat $jsonFilePath)" "$yamlFilePath"
 
-    echo $yamlFilePath
+    echo "$yamlFilePath"
 }
 
 function jsonCheckBool() {
