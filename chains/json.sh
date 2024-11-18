@@ -100,6 +100,29 @@ function jsonMergeDeep() {
     jq -sc 'reduce .[] as $item ({}; . * $item)' <<< "$@"
 }
 
+function jsonMergeArraysDeep() {
+    requireArg "a JSON string" "$1" || return 1
+    requireArg "another JSON string" "$2" || return 1
+
+    jq -n --argjson a "$1" --argjson b "$2" '
+        def deepmerge(a; b):
+            if a == null then b
+            elif b == null then a
+            elif (a | type) == "object" and (b | type) == "object" then
+                reduce ((a | keys) + (b | keys) | unique)[] as $key
+                    ({}; .[$key] = deepmerge(a[$key]; b[$key]))
+            elif (a | type) == "array" and (b | type) == "array" then
+                [range(0; ([a, b] | map(length) | max))] |
+                map( . as $i | deepmerge(
+                    ( $a[$i]? // null ),
+                    ( $b[$i]? // null )
+                ))
+            else b end;
+        deepmerge($a; $b)
+    '
+}
+
+
 function jsonWriteToYamlFile() {
     requireArg "a JSON string" "$1" || return 1
     requireArg "a target file path" "$2" || return 1
@@ -203,5 +226,57 @@ function jsonCheckBoolPath() {
 function jsonMakeArray() {
     requireArg "at least one array item" "$1" || return 1
 
-    echo "$(printf '%s\n' "$@" | jq -R . | jq -cs .)" 
+    printf '%s\n' "$@" | jq -R . | jq -cs '
+        map(if (tonumber? // null) != null then tonumber else . end)'
+}
+
+function yamlFileSetField() {
+    requireYamlArg "file path" "$1" || return 1
+    requireArg "a field value" "$2" || return 1
+    requireArg "a field path" "$3" || return 1
+
+    local file="$1"; shift
+    local fieldValue="$1"; shift
+
+    # echo "file: $file" >&2
+    # echo "fieldValue: $fieldValue" >&2
+
+    # Convert the field path to a JSON array, converting numeric strings to numbers
+    local pathArray="$(jsonMakeArray "$@")"
+
+    # echo "pathArray: $pathArray" >&2
+
+    # Read the YAML file and convert it to JSON
+    local fileContents
+    if ! fileContents=$(yamlFileToJson "$file"); then
+        echo "Error: Failed to read or parse YAML file '$file'" >&2
+        return 1
+    fi
+
+    # echo "fileContents: $fileContents" >&2
+
+    # Determine if fieldValue is a valid JSON literal
+    local valueArg=("--arg$(jq -e . >/dev/null 2>&1 <<<"$fieldValue" && echo "json")" value "$fieldValue")
+
+    # Use jq to set the value at the specified path
+    local newContents="$(jsonRead "$fileContents" \
+        'setpath($path; $value)' \
+        "${valueArg[@]}" \
+        --argjson path "$pathArray" \
+    )"
+    [[ -z "$newContents" ]] && return 1
+
+    # echo "newContents: $newContents" >&2
+
+    # Convert the updated JSON back to YAML and output it
+    echo "$newContents" | prettyYaml
+}
+
+function yamlFileSetFieldWrite() {
+    requireYamlArg "file path" "$1" || return 1
+    requireArg "a field value" "$2" || return 1
+    requireArg "a field path" "$3" || return 1
+
+    yamlFileSetField $* > "$1.new"
+    mv "$1.new" "$1"
 }
