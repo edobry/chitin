@@ -294,6 +294,12 @@ function yamlFileSetFieldWrite() {
     requireArg "a field value" "$2" || return 1
     requireArg "a field path" "$3" || return 1
 
-    yamlFileSetField $* > "$1.new"
-    mv "$1.new" "$1"
+    local newYamlFile="$(tempFile).yaml"
+    yamlFileSetField $* > "$newYamlFile"
+
+    local tmpNew="$1.new"
+    cp "$1" "$1.bak"
+    yq eval-all 'select(fileIndex == 0) * select(fileIndex == 1)' \
+        "$1" "$newYamlFile" > "$tmpNew"
+    mv "$tmpNew" "$1"
 }
