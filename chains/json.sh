@@ -41,10 +41,19 @@ function requireJsonArg() {
 # reads (a value at a certain path from) a JSON File
 # args: json file path, jq path to read (optional)
 function jsonReadFile() {
-    requireFileArg "JSON file" "$1" || return 1
+    requireJsonArg "file path" "$1" || return 1
     local jsonFile="$1"; shift
 
     cat "$jsonFile" | jq -cr "$@"
+}
+
+# reads (a value at a certain path from) a YAML File
+# args: yaml file path, jq path to read (optional)
+function yamlReadFile() {
+    requireYamlArg "file path" "$1" || return 1
+    local filePath="$1"; shift
+
+    yamlFileToJson "$filePath" | jq -cr "$@"
 }
 
 # reads the value at a certain path from a JSON object
@@ -79,6 +88,14 @@ function jsonReadPath() {
         echo "$output"
         return 0
     fi
+}
+
+function jsonReadFilePath() {
+    requireJsonArg "file path" "$1" || return 1
+
+    local filePath="$1"; shift
+
+    jsonReadFile "$filePath" $*
 }
 
 
