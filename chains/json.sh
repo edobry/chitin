@@ -23,7 +23,7 @@ function validateJsonFile() {
 }
 
 function jsonValidateFields() {
-    requireJsonArg "to validate" "$1" || return 1
+    requireArg "to validate" "$1" || return 1
     local json="$1"; shift
 
     if ! jsonRead "$json" $* -e >/dev/null; then
@@ -35,13 +35,13 @@ function jsonValidateFields() {
 # checks that an argument is supplied and that it is numeric, and prints a message if not
 # args: name of arg, arg value
 function requireJsonArg() {
-    requireArgWithCheck "$1" "$2" validateJson "a valid minified JSON string "
+    requireArgWithCheck "$1" "$(echo "$2" | escapeSingleQuotes)" validateJson "a valid minified JSON string "
 }
 
 # reads (a value at a certain path from) a JSON File
 # args: json file path, jq path to read (optional)
 function jsonReadFile() {
-    requireJsonArg "file path" "$1" || return 1
+    requireJsonFileArg "file path" "$1" || return 1
     local jsonFile="$1"; shift
 
     cat "$jsonFile" | jq -cr "$@"
@@ -50,7 +50,7 @@ function jsonReadFile() {
 # reads (a value at a certain path from) a YAML File
 # args: yaml file path, jq path to read (optional)
 function yamlReadFile() {
-    requireYamlArg "file path" "$1" || return 1
+    requireYamlFileArg "file path" "$1" || return 1
     local filePath="$1"; shift
 
     yamlFileToJson "$filePath" | jq -cr "$@"
@@ -59,7 +59,7 @@ function yamlReadFile() {
 # reads the value at a certain path from a JSON object
 # args: minified json string, jq path to read
 function jsonRead() {
-    requireArg "a JSON string" "$1" || return 1
+    requireJsonArg "" "$1" || return 1
     requireArg "a jq path" "$2" || return 1
 
     local jsonString="$1"; shift
@@ -69,7 +69,7 @@ function jsonRead() {
 }
 
 function jsonReadPath() {
-    requireArg "a JSON string" "$1" || return 1
+    requireJsonArg "" "$1" || return 1
     local jsonString="$1"; shift
 
     requireArg "a JSON path" "$1" || return 1
@@ -91,7 +91,7 @@ function jsonReadPath() {
 }
 
 function jsonReadFilePath() {
-    requireJsonArg "file path" "$1" || return 1
+    requireJsonFileArg "file path" "$1" || return 1
 
     local filePath="$1"; shift
 
@@ -102,8 +102,8 @@ function jsonReadFilePath() {
 # merges two JSON objects together
 # args: N>2 minified json strings
 function jsonMerge() {
-    requireArg "a JSON string" "$1" || return 1
-    requireArg "another JSON string" "$2" || return 1
+    requireJsonArg "to merge into" "$1" || return 1
+    requireJsonArg "to merge" "$2" || return 1
 
     jq -sc 'add' <<< $@
 }
@@ -111,15 +111,15 @@ function jsonMerge() {
 # merges two JSON objects together
 # args: N>2 minified json strings
 function jsonMergeDeep() {
-    requireArg "a JSON string" "$1" || return 1
-    requireArg "another JSON string" "$2" || return 1
+    requireJsonArg "to merge into" "$1" || return 1
+    requireJsonArg "to merge" "$2" || return 1
 
     jq -sc 'reduce .[] as $item ({}; . * $item)' <<< "$@"
 }
 
 function jsonMergeArraysDeep() {
-    requireArg "a JSON string" "$1" || return 1
-    requireArg "another JSON string" "$2" || return 1
+    requireJsonArg "to merge into" "$1" || return 1
+    requireJsonArg "to merge" "$2" || return 1
 
     jq -n --argjson a "$1" --argjson b "$2" '
         def deepmerge(a; b):
@@ -141,14 +141,14 @@ function jsonMergeArraysDeep() {
 
 
 function jsonWriteToYamlFile() {
-    requireArg "a JSON string" "$1" || return 1
+    requireJsonArg "a JSON string" "$1" || return 1
     requireArg "a target file path" "$2" || return 1
 
     echo "$1" | prettyYaml > "$2"
 }
 
 function json5Convert() {
-    requireArg "a JSON5 filepath" "$1" || return 1
+    requireFileArg "a JSON5 filepath" "$1" || return 1
 
     local json5filePath="$1"
     checkExtension "$json5filePath" "json5" || return 1
@@ -166,7 +166,7 @@ function json5Convert() {
 }
 
 function yamlConvert() {
-    requireYamlArg "filepath" "$1" || return 1
+    requireYamlFileArg "filepath" "$1" || return 1
 
     local jsonFilePath="$(tempFile).json"
     yamlFileToJson "$1" > "$jsonFilePath"
@@ -175,14 +175,14 @@ function yamlConvert() {
 }
 
 function yamlFileToJson() {
-    requireYamlArg "filepath" "$1" || return 1
+    requireYamlFileArg "filepath" "$1" || return 1
 
     local jsonFilePath="$(tempFile).json"
     cat "$1" | yamlToJson | jq -c
 }
 
 function jsonToYamlConvert() {
-    requireJsonArg "filepath" "$1" || return 1
+    requireJsonFileArg "filepath" "$1" || return 1
 
     local jsonFilePath="$1"
 
@@ -248,7 +248,7 @@ function jsonMakeArray() {
 }
 
 function yamlFileSetField() {
-    requireYamlArg "file path" "$1" || return 1
+    requireYamlFileArg "file path" "$1" || return 1
     requireArg "a field value" "$2" || return 1
     requireArg "a field path" "$3" || return 1
 
@@ -290,7 +290,7 @@ function yamlFileSetField() {
 }
 
 function yamlFileSetFieldWrite() {
-    requireYamlArg "file path" "$1" || return 1
+    requireYamlFileArg "file path" "$1" || return 1
     requireArg "a field value" "$2" || return 1
     requireArg "a field path" "$3" || return 1
 

@@ -30,6 +30,10 @@ function getColumn() {
     awk "{ print \$$1 }"
 }
 
+function escapeSingleQuotes() {
+    sed "s/'/''/g"
+}
+
 function escapeCommas(){
     sed 's/,/\\\,/g'
 }
@@ -136,13 +140,15 @@ function requireFileArg() {
 
 # checks that an argument is supplied and that it points to an existing JSON file, and prints a message if not
 # args: name of arg, arg value
-function requireJsonArg() {
+function requireJsonFileArg() {
+    requireFileArg "$1" "$2"
     requireArgWithCheck "$1" "$2" checkExtensionJson "a path to an existing JSON "
 }
 
 # checks that an argument is supplied and that it points to an existing YAML file, and prints a message if not
 # args: name of arg, arg value
-function requireYamlArg() {
+function requireYamlFileArg() {
+    requireFileArg "$1" "$2"
     requireArgWithCheck "$1" "$2" checkExtensionYaml "a path to an existing YAML "
 }
 

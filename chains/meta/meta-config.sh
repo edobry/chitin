@@ -248,7 +248,7 @@ function chiConfigSetVariableValue() {
 
 function chiConfigMergeVariableValue() {
     requireArg "a module name" "$1" || return 1
-    requireArg "a config JSON string" "$2" || return 1
+    requireJsonArg "containing a config" "$2" || return 1
 
     # echo "merging configs for module $1" >&2
     local currentConfig="$(chiConfigGetVariableValue "$1")"
