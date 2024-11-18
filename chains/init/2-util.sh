@@ -100,11 +100,10 @@ function checkDirectoryExists() {
 # args: search target, args...
 # example: argsContain "some string" $* || exit 1
 function argsContain() {
-    local target="$1"
-    shift
+    local target="$1"; shift
 
-    for i in $( echo $* ); do
-        [[ "$i" == "$target" ]] && return 0
+    for option in "$@"; do
+        [[ "$option" == "$target" ]] && return 0
     done
 
     return 1
@@ -156,18 +155,16 @@ function requireDirectoryArg() {
 # checks that an argument is supplied and that its one of the allowed options, and prints a message listing the available options if not
 # args: name of arg, arg value, list of valid options
 function requireArgOptions() {
-    local argName="$1"
-    local argValue="$2"
+    local argName="$1"; shift
+    local argValue="$2"; shift
 
-    # skip the first 2 arguments
-    shift; shift
-    # and transform to a space-delimited list
+    # transform to a space-delimited list
     local options=$(echo "$*" | tr '\n' ' ' | sort)
 
     if [[ -z "$argValue" ]] || ! eval "argsContain $argValue $options"; then
-        echo "Please supply a valid ${argName:-a value}!"
+        echo "Please supply a valid $argName!"
         echo "It must be one of the following:"
-        echo ${options} | tr " " '\n' | sort
+        echo "$options" | tr " " '\n' | sort
         return 1
     fi
 }
