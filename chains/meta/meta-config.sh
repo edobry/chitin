@@ -1,16 +1,20 @@
-function chiConfigUserGetLocation() {
-    echo "${XDG_CONFIG_HOME:-$HOME/.config}/chitin"
-}
-
-function chiConfigUserCd() {
-    cd $(chiConfigUserGetLocation)
-}
-
 export CHI_CONFIG_USER_FILE_NAME="userConfig"
 export CHI_CONFIG_FIBER_FILE_NAME="config"
 
+function chiConfigUserGetDir() {
+    echo "${XDG_CONFIG_HOME:-$HOME/.config}/chitin"
+}
+
+function chiConfigUserGetPath() {
+    echo "$(chiConfigUserGetDir)/$CHI_CONFIG_USER_FILE_NAME.yaml"
+}
+
+function chiConfigUserCd() {
+    cd $(chiConfigUserGetDir)
+}
+
 function chiConfigUserShow() {
-    cat $(chiConfigUserGetLocation)/$CHI_CONFIG_USER_FILE_NAME.yaml | prettyYaml
+    cat "$(chiConfigUserGetPath)" | prettyYaml
 }
 
 function chiConfigUserGet() {
@@ -35,7 +39,7 @@ function chiConfigFindFilePath() {
 }
 
 function chiConfigUserReadFile() {
-    chiConfigConvertAndReadFile "$(chiConfigUserGetLocation)" "$CHI_CONFIG_USER_FILE_NAME" $@
+    chiConfigConvertAndReadFile "$(chiConfigUserGetDir)" "$CHI_CONFIG_USER_FILE_NAME" $@
 }
 
 function chiConfigConvertAndReadFile() {
@@ -68,7 +72,7 @@ function chiConfigConvertAndReadFile() {
 }
 
 function chiConfigUserLoad() {
-    local configLocation=$(chiConfigUserGetLocation)
+    local configLocation=$(chiConfigUserGetDir)
     local configFileFullName="$CHI_CONFIG_USER_FILE_NAME.yaml"
     local configFilePath="$configLocation/$configFileFullName"
 
@@ -127,13 +131,13 @@ function chiConfigSet() {
 }
 
 function chiConfigUserModify() {
-    chiConfigModify "$(chiConfigUserGetLocation)" "$CHI_CONFIG_USER_FILE_NAME"
+    chiConfigModify "$(chiConfigUserGetDir)" "$CHI_CONFIG_USER_FILE_NAME"
 }
 
 function chiConfigUserSet() {
     requireArg "a config value object" "$1" || return 1
 
-    chiConfigSet "$(chiConfigUserGetLocation)" "$CHI_CONFIG_USER_FILE_NAME" "$1"
+    chiConfigSet "$(chiConfigUserGetDir)" "$CHI_CONFIG_USER_FILE_NAME" "$1"
 }
 
 function chiConfigUserSetField() {
