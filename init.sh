@@ -18,7 +18,7 @@ fi
 function chiLog() {
     requireArg "a message" "$1" || return 1
 
-    echo "chitin${2:+:}${2} - $1"
+    echo "chitin${2:+:}${2} - $1" >&2
 }
 
 function chiBail() {

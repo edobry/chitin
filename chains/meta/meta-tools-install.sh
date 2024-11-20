@@ -155,7 +155,7 @@ function chiToolsUrlExpand() {
 
     local version=$(jsonReadPath "$1" version)
     if [[ -z "$version" ]]; then
-        chiLog "no version found in tool config!" "$moduleName" >&2
+        chiLog "no version found in tool config!" "$moduleName"
         return 1
     fi
 

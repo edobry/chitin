@@ -40,7 +40,7 @@ function chiToolsCheckStatus() {
             installed="true"
             validVersion="true"
         elif [[ -z "$expectedVersion" ]]; then
-            chiLog "expected version not set for $toolName!" "$moduleName" >&2
+            chiLog "expected version not set for $toolName!" "$moduleName"
             installed="true"
         else
             local currentVersion=$(eval "$versionCommand")
@@ -116,22 +116,22 @@ function chiToolsCheckInstalled() {
 
     if [[ -n "$checkCommandValue" ]]; then
         if $checkBrew; then
-            chiLog "both 'checkCommand' and 'checkBrew' set for '$toolName'!" "$moduleName" >&2
+            chiLog "both 'checkCommand' and 'checkBrew' set for '$toolName'!" "$moduleName"
             return 1
         fi
 
         if $checkPath; then
-            chiLog "both 'checkCommand' and 'checkPath' set for '$toolName'!" "$moduleName" >&2
+            chiLog "both 'checkCommand' and 'checkPath' set for '$toolName'!" "$moduleName"
             return 1
         fi
 
         if [[ -n "$checkPathValue" ]]; then
-            chiLog "both 'checkCommand' and 'checkPath' set for '$toolName'!" "$moduleName" >&2
+            chiLog "both 'checkCommand' and 'checkPath' set for '$toolName'!" "$moduleName"
             return 1
         fi
 
         if [[ -n "$checkEvalValue" ]]; then
-            chiLog "both 'checkCommand' and 'checkEval' set for '$toolName'!" "$moduleName" >&2
+            chiLog "both 'checkCommand' and 'checkEval' set for '$toolName'!" "$moduleName"
             return 1
         fi
         
@@ -140,18 +140,18 @@ function chiToolsCheckInstalled() {
             || echo "$checkCommandValue"))
     elif [[ -n "$checkPathValue" ]]; then
         if $checkBrew; then
-            chiLog "both 'checkPath' and 'checkBrew' set for '$toolName'!" "$moduleName" >&2
+            chiLog "both 'checkPath' and 'checkBrew' set for '$toolName'!" "$moduleName"
             return 1
         fi
 
         if [[ -n "$checkEvalValue" ]]; then
-            chiLog "both 'checkCommand' and 'checkEval' set for '$toolName'!" "$moduleName" >&2
+            chiLog "both 'checkCommand' and 'checkEval' set for '$toolName'!" "$moduleName"
             return 1
         fi
 
         local gitConfig=$(jsonReadPath "$tool" git 2>/dev/null)
         if [[ -z "$gitConfig" ]]; then
-            chiLog "expected git config not found for '$toolName'!" "$moduleName" >&2
+            chiLog "expected git config not found for '$toolName'!" "$moduleName"
             return 1
         fi
 
@@ -160,7 +160,7 @@ function chiToolsCheckInstalled() {
         [[ -f "$(expandPath "$target/$checkPathValue")" ]] && return 0 || return 1
     elif [[ -n "$checkEvalValue" ]]; then
         if $checkBrew; then
-            chiLog "both 'checkEval' and 'checkBrew' set for '$toolName'!" "$moduleName" >&2
+            chiLog "both 'checkEval' and 'checkBrew' set for '$toolName'!" "$moduleName"
             return 1
         fi
 
@@ -181,7 +181,7 @@ function chiToolsCheckInstalled() {
     if $isBrew; then
         # echo "in isBrew" >&2
         if [[ -z "$brewConfig" ]]; then
-            chiLog "expected brew config not found for '$toolName'!" "$moduleName" >&2
+            chiLog "expected brew config not found for '$toolName'!" "$moduleName"
             return 1
         fi
 
@@ -198,12 +198,12 @@ function chiToolsCheckInstalled() {
         fi
         # echo "brew done" >&2
     elif $checkBrew; then
-        chiLog "'checkBrew' set for non-brew tool '$toolName'!" "$moduleName" >&2
+        chiLog "'checkBrew' set for non-brew tool '$toolName'!" "$moduleName"
         return 1
     elif $isArtifact; then
         # echo "in isArtifact" >&2
         if [[ -z "$artifactConfig" ]]; then
-            chiLog "expected artifact config not found for '$toolName'!" "$moduleName" >&2
+            chiLog "expected artifact config not found for '$toolName'!" "$moduleName"
             return 1
         fi
 
