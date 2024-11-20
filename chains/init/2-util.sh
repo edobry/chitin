@@ -162,15 +162,17 @@ function requireDirectoryArg() {
 # args: name of arg, arg value, list of valid options
 function requireArgOptions() {
     local argName="$1"; shift
-    local argValue="$2"; shift
+
+    requireArg "$argName" "$1" || return 1
+    local argValue="$1"; shift
 
     # transform to a space-delimited list
     local options=$(echo "$*" | tr '\n' ' ' | sort)
 
     if [[ -z "$argValue" ]] || ! eval "argsContain $argValue $options"; then
-        echo "Please supply a valid $argName!"
-        echo "It must be one of the following:"
-        echo "$options" | tr " " '\n' | sort
+        echo "Supplied argument '$argValue' is not a valid option for $argName!" >&2
+        echo "It must be one of the following:" >&2
+        echo "$options" | tr " " '\n' | sort >&2
         return 1
     fi
 }
