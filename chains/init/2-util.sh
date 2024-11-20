@@ -221,6 +221,43 @@ function getMajorVersionComponent() {
     echo "$1" | cut -d '.' -f 1
 }
 
+function getMinorVersionComponent() {
+    requireArg "a SemVer version number" "$1" || return 1
+
+    echo "$1" | cut -d '.' -f 2
+}
+
+function getPatchVersionComponent() {
+    requireArg "a SemVer version number" "$1" || return 1
+
+    echo "$1" | cut -d '.' -f 3
+}
+
+function semverBump() {
+    requireArg "a SemVer version number" "$1" || return 1
+    requireArgOptions "a version component to bump" "$2" major minor patch || return 1
+
+    local version="$1"
+    local component="$2"
+
+    local major="$(getMajorVersionComponent "$version")"
+    local minor="$(getMinorVersionComponent "$version")"
+    local patch="$(getPatchVersionComponent "$version")"
+
+    if [[ "$component" == "major" ]]; then
+        major=$((major + 1))
+        minor=0
+        patch=0
+    elif [[ "$component" == "minor" ]]; then
+        minor=$((minor + 1))
+        patch=0
+    elif [[ "$component" == "patch" ]]; then
+        patch=$((patch + 1))
+    fi
+
+    echo "$major.$minor.$patch"
+}
+
 function checkMajorVersion() {
     requireArg "the expected version" "$1" || return 1
     requireArg "the current version" "$2" || return 1
