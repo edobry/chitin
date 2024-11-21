@@ -87,8 +87,14 @@ function chiToolsInstallFromUrl() {
     local installDir="$3"
     local fileName="${4:-$toolName}"
 
-    mkdir -p "$installDir"
     local installPath="$installDir/$fileName"
+
+    GREEN=$(tput setaf 2)
+    NC=$(tput sgr0)
+
+    chiLog "${GREEN}==>${NC} Installing '$toolName' from '$url' to '$installPath'..." "$1"
+
+    mkdir -p "$installDir"
 
     if [[ $(fileGetExtension "$url") == "zip" ]]; then
         local tempDir=$(tempFile)

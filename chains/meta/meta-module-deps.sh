@@ -98,7 +98,10 @@ function chiModuleCheckToolDepsMet() {
             chiToolsInstallArtifact "$moduleName" "$tool" "$toolConfig"
         else
             chiLog "no install method found for '$tool'!" "$moduleName"
+            continue
         fi
+
+        chiToolsRunPostInstall "$moduleName" "$tool" "$toolConfig"
     done
 
     if [[ "${#brewToolsToInstall[@]}" -gt 0 ]]; then

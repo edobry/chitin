@@ -20,6 +20,14 @@ function chiToolsInstallBrew() {
 
     chiLog "installing brew depenedencies..." "$moduleName"
     brew bundle --file="$brewfilePath"
+
+    # iterate over the rest args and run post install command for each
+    for toolEntry in $*; do
+        local toolName="$(jsonReadPath "$toolEntry" key)"
+        local toolConfig="$(jsonReadPath "$toolEntry" value)"
+
+        chiToolsRunPostInstall "$moduleName" "$tool" "$toolConfig"
+    done
 }
 
 function chiToolsGenerateBrewfile() {
@@ -101,19 +109,12 @@ function chiToolsInstallScript() {
     local installScript=$(jsonReadPath "$3" script)
     [[ $? -eq 0 ]] || return 1
 
-    local postInstall=$(jsonReadPath "$3" postInstall)
-
     GREEN=$(tput setaf 2)
     NC=$(tput sgr0)
 
     chiLog "${GREEN}==>${NC} Installing '$2' from script at '$installScript'...\n" "$1"
     
     /bin/bash -c "$(curl -fsSL "$installScript")"
-    
-    if [[ -n "$postInstall" ]]; then
-        chiLog "running post-install script..." "$1"
-        eval "$postInstall"
-    fi
 }
 
 function chiToolsInstallArtifact() {
@@ -176,4 +177,20 @@ function chiToolsArtifactMakeTargetPath() {
     jsonReadBoolPath "$1" appendFilename &>/dev/null \
         && echo "$target/$(basename "$url")" \
         || echo "$target"
+}
+
+function chiToolsRunPostInstall() {
+    requireArg "a module name" "$1" || return 1
+    requireArg "a tool name" "$2" || return 1
+    requireArg "a tool config JSON string" "$3" || return 1
+
+    local postInstall=$(jsonReadPath "$3" postInstall)
+    [[ -z "$postInstall" ]] && return 0
+
+    GREEN=$(tput setaf 2)
+    NC=$(tput sgr0)
+
+    chiLog "${GREEN}==>${NC} Running post-install command for '$2'...\n" "$1"
+    
+    eval "$postInstall"
 }
