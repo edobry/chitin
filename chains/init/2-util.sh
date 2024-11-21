@@ -407,3 +407,7 @@ function checkExtensionYaml() {
 
     checkExtension "$1" "yaml"
 }
+
+function showPath() {
+    echo $PATH | splitOnChar ':'
+}

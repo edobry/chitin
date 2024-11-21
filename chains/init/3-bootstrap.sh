@@ -27,13 +27,16 @@ function chiInitBootstrapDeps() {
 function chiToolsAddDirToPath() {
     requireDirectoryArg "directory" "$1" || return 1
 
+    # check if the PATH already contains the dir
+    [[ ":$PATH:" == *":$1:"* ]] && return 0
+
     export PATH="$1:$PATH"
 }
 
 function chiToolsRemoveDirFromPath() {
     requireDirectoryArg "directory" "$1" || return 1
 
-    export PATH=$(echo "$PATH" | splitOnChar ':' | grep -v "$1" | newlinesToChar ':')
+    export PATH=$(showPath | grep -v "$1" | newlinesToChar ':')
 }
 
 export CHI_TOOLS_BIN="$(expandPath "localshare/chitin/bin")"
@@ -68,7 +71,6 @@ function chiToolsInstallTemporary() {
     chiLog "installing '$toolName' temporarily..." "$(chiInitBootstrapModule)"
     chiToolsInstallExecutableFromUrl "$toolName" "$url" "$CHI_INIT_TEMP_DIR"
     
-    chiToolsAddDirToPath "$CHI_INIT_TEMP_DIR"
     if ! checkCommand "$toolName"; then
         chiBail "something went wrong installing '$toolName'" "$(chiInitBootstrapModule)"
         return 1
@@ -78,6 +80,7 @@ function chiToolsInstallTemporary() {
 function chiToolsInstallFromUrl() {
     requireArg "a tool name" "$1" || return 1
     requireArg "an artifact url" "$2" || return 1
+    requireArg "an install directory" "$3" || return 1
 
     local toolName="$1"
     local url="$2"
@@ -108,7 +111,10 @@ function chiToolsInstallFromUrl() {
 function chiToolsInstallExecutableFromUrl() {
     requireArg "a tool name" "$1" || return 1
     requireArg "an artifact url" "$2" || return 1
+    requireArg "an install directory" "$3" || return 1
 
     local installPath=$(chiToolsInstallFromUrl "$@")
     chmod +x "$installPath"
+
+    chiToolsAddDirToPath "$3"
 }
