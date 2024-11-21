@@ -125,29 +125,33 @@ function chiToolsInstallArtifact() {
     local toolName="$2"
     local artifactConfig=$(jsonReadPath "$3" artifact 2>/dev/null)
 
-    local url=$(jsonReadPath "$artifactConfig" url)
-    [[ $? -eq 0 ]] || return 1
-    url=$(chiToolsUrlExpand "$3" "$url")
+    local url="$(jsonReadPath "$artifactConfig" url)"
+    [[ -n "$url" ]] || return 1
+    
+    url="$(chiToolsUrlExpand "$3" "$url")"
     [[ $? -eq 0 ]] || return 1
     
     local installDir=$(chiToolsArtifactMakeTargetDir "$artifactConfig")
     [[ $? -eq 0 ]] || return 1
     [[ -f "$installDir" ]] && return 0
 
+    local targetConfig=$(jsonReadPath "$artifactConfig" target)
+    local targetBase="$(expandPath "$(jsonReadPath "$targetConfig" base)")"
+
+    local ensureSubdirs=$(jsonRead "$targetConfig" '(.ensureSubdirs // empty)[]')
+    if [[ -n "$ensureSubdirs" ]]; then
+        for subdir in $ensureSubdirs; do
+            mkdir -p "$targetBase/$subdir"
+        done
+    fi
+
     local fileName
-    jsonReadBoolPath "$1" appendFilename &>/dev/null \
+    jsonReadBoolPath "$artifactConfig" appendFilename &>/dev/null \
         && fileName="$(basename "$url")"
-
-    local installPath="$installDir${fileName:+/}$fileName"
-
-    GREEN=$(tput setaf 2)
-    NC=$(tput sgr0)
-
-    chiLog "${GREEN}==>${NC} Installing '$toolName' from '$url' to '$installPath'..." "$1"
 
     $(jsonReadBoolPath "$artifactConfig" isExec &>/dev/null \
         && echo chiToolsInstallExecutableFromUrl \
-        || echo chiToolsInstallFromUrl) "$toolName" "$url" "$installPath" "$fileName" # > /dev/null
+        || echo chiToolsInstallFromUrl) "$toolName" "$url" "$installDir" "$fileName" # > /dev/null
 }
 
 function chiToolsUrlExpand() {
@@ -162,17 +166,31 @@ function chiToolsUrlExpand() {
 function chiToolsArtifactMakeTargetDir() {
     requireArg "a tool artifact config JSON string" "$1" || return 1
 
-    local target=$(jsonReadPath "$1" target)
-    [[ -z "$target" ]] \
-        && echo "$CHI_TOOLS_BIN" \
-        || echo $(expandPath "$target")
+    local targetConfig=$(jsonReadPath "$1" target)
+    if [[ -z "$targetConfig" ]]; then
+        echo "$CHI_TOOLS_BIN"
+        return 0
+    fi
+
+    local targetPath
+
+    if validateJson "$targetConfig" &>/dev/null; then
+        local targetBase="$(expandPath "$(jsonReadPath "$targetConfig" base)")"
+        local targetDir="$(jsonReadPath "$targetConfig" dir)"
+
+        targetPath="$targetBase/$targetDir"
+    else
+        targetPath="$(expandPath "$targetConfig")"
+    fi
+
+    echo "$targetPath"
 }
 
 function chiToolsArtifactMakeTargetPath() {
     requireArg "a tool artifact config JSON string" "$1" || return 1
 
-    local url=$(jsonReadPath "$1" url)
-    local target=$(chiToolsArtifactMakeTargetDir "$1")
+    local url="$(jsonReadPath "$1" url)"
+    local target="$(chiToolsArtifactMakeTargetDir "$1")"
 
     jsonReadBoolPath "$1" appendFilename &>/dev/null \
         && echo "$target/$(basename "$url")" \

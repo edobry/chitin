@@ -207,7 +207,7 @@ function chiToolsCheckInstalled() {
             return 1
         fi
 
-        [[ -f $(chiToolsArtifactMakeTargetPath "$artifactConfig") ]] && return 0 || return 1
+        [[ -f "$(chiToolsArtifactMakeTargetPath "$artifactConfig")" ]] && return 0 || return 1
     fi
 
     checkCommand "$toolName"
