@@ -341,9 +341,13 @@ function expandPath() {
     requireArg "a path" "$1" || return 1
 
     local localShare="localshare"
-    expandHome "$(expandPathSegmentStart "$localShare" "$(xdgHome)/.local/share" "$1")"
+    local xdgHome="xdghome"
+    
+    local expandedPath=$(expandHome "$1")
+    expandedPath="$(expandPathSegmentStart "$xdgHome" "$(xdgHome)" "$expandedPath")"
+    expandedPath="$(expandPathSegmentStart "$localShare" "$(xdgHome)/.local/share" "$expandedPath")"
 
-    # expandHome $(expandPathSegment "$localShare" "${XDG_DATA_HOME:-${HOME}}/.${localShare}" "$1")
+    echo "$expandedPath"
 }
 
 function expandHome() {
@@ -353,13 +357,18 @@ function expandHome() {
 }
 
 function chiUrlExpand() {
-    requireArg "a version" "$1" || return 1
-    requireArg "a URL to expand" "$2" || return 1
+    requireArg "a URL to expand" "$1" || return 1
+    requireJsonArg "of expansion values" "$2" || return 1
 
-    local version="$1"
+    local expandedUrl="$1"
 
     local versionSegment="{{version}}"
-    expandPathSegment "$versionSegment" "$version" "$2" "$versionSegment"
+    local version="$(jsonReadPath "$2" version)"
+    if [[ -n "$version" ]]; then
+        expandedUrl="$(expandPathSegment "$versionSegment" "$version" "$expandedUrl" "$versionSegment")"
+    fi
+
+    echo "$expandedUrl"
 }
 
 function fileGetExtension() {

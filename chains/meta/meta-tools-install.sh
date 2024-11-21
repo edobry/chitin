@@ -153,13 +153,9 @@ function chiToolsUrlExpand() {
     requireArg "a tool config JSON string" "$1" || return 1
     requireArg "a URL to expand" "$2" || return 1
 
-    local version=$(jsonReadPath "$1" version)
-    if [[ -z "$version" ]]; then
-        chiLog "no version found in tool config!" "$moduleName"
-        return 1
-    fi
+    local expansionValues="$(jsonRead "$1" '{ version }')"
 
-    chiUrlExpand "$version" "$2"
+    chiUrlExpand "$2" "$expansionValues"
 }
 
 function chiToolsArtifactMakeTargetDir() {
