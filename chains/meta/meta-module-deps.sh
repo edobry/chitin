@@ -88,6 +88,7 @@ function chiModuleCheckToolDepsMet() {
 
         if jsonReadPath "$toolConfig" brew &>/dev/null; then
             brewToolsToInstall+=("$toolEntry")
+            continue
         elif jsonReadPath "$toolConfig" pipx &>/dev/null; then
             chiToolsInstallPipx "$moduleName" "$tool" "$toolConfig"
         elif jsonReadPath "$toolConfig" git &>/dev/null; then

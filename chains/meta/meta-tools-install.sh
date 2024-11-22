@@ -1,13 +1,3 @@
-# function chiDependenciesInstallTools() {
-#     requireDirectoryArg "module directory" "$1" || return 1
-#     requireArg "a module name" "$2" || return 1
-
-#     chiModuleConfigReadFromFile "$1" "$2"
-
-#     chiToolsInstallBrew "$2"
-#     chiToolsInstallGit "$2"
-# }
-
 function chiToolsInstallBrew() {
     requireArg "a module name" "$1" || return 1
     local moduleName="$1"; shift
@@ -22,7 +12,7 @@ function chiToolsInstallBrew() {
     brew bundle --file="$brewfilePath"
 
     # iterate over the rest args and run post install command for each
-    for toolEntry in $*; do
+    for toolEntry in "$@"; do
         local toolName="$(jsonReadPath "$toolEntry" key)"
         local toolConfig="$(jsonReadPath "$toolEntry" value)"
 
