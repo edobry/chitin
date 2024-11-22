@@ -16,7 +16,7 @@ function chiCheckVersion() {
     requireArg "the minimum version" "$1" || return 1
 
     local minimumVersion="$1"
-    local installedVersion=$(chiGetVersion)
+    local installedVersion="$(chiGetVersion)"
 
     if ! checkVersion $minimumVersion $installedVersion; then
         chiLog "Installed chitin version $installedVersion does not meet minimum of $minimumVersion!"

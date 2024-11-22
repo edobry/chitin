@@ -13,7 +13,7 @@ function prettyYaml() {
 function validateJson() {
     requireArg "a minified JSON string" "$1" || return 1
 
-    echo "$1" | jq -e 'if type == "object" then true else false end' > /dev/null 2>&1
+    echo "$1" | jq -e 'if type == "object" then true else false end' &>/dev/null
 }
 
 function validateJsonFile() {
@@ -75,7 +75,7 @@ function jsonReadPath() {
     requireArg "a JSON path" "$1" || return 1
 
     local output
-    output=$(jq -cr 'getpath($ARGS.positional)' --args $* <<< "$jsonString")
+    output="$(jq -cr 'getpath($ARGS.positional)' --args $* <<< "$jsonString")"
     local jqExit=$?
 
     if [[ $jqExit -ne 0 ]]; then
@@ -214,7 +214,7 @@ function jsonReadBoolPath() {
     requireArg "a JSON path" "$1" || return 1
 
     local output
-    output=$(jsonReadPath "$json" $*)
+    output="$(jsonReadPath "$json" $*)"
 
     if [[ "$?" -ne 0 ]]; then
         echo "the path does not exist!" >&2
@@ -234,7 +234,7 @@ function jsonCheckBoolPath() {
     requireArg "a JSON path" "$1" || return 1
 
     local value
-    value=$(jsonReadBoolPath "$json" $* 2>/dev/null)
+    value="$(jsonReadBoolPath "$json" $* 2>/dev/null)"
     [[ $? -eq 0 ]] || return 1
 
     [[ "$value" == "true" ]]
@@ -265,7 +265,7 @@ function yamlFileSetField() {
 
     # Read the YAML file and convert it to JSON
     local fileContents
-    if ! fileContents=$(yamlFileToJson "$file"); then
+    if ! fileContents="$(yamlFileToJson "$file")"; then
         echo "Error: Failed to read or parse YAML file '$file'" >&2
         return 1
     fi

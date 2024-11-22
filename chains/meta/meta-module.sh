@@ -121,7 +121,7 @@ function chiFiberLoad() {
     [[ -n $(chiModuleGetDynamicVariable "$CHI_FIBER_LOADED_PREFIX" "$fiberName") ]] && return 0
 
     chiModuleConfigMergeFromFile "$1" "$fiberName"
-    local config=$(chiConfigGetVariableValue "$fiberName")
+    local config="$(chiConfigGetVariableValue "$fiberName")"
 
     chiModuleLoadToolConfigs "$fiberName"
 
@@ -171,7 +171,7 @@ function chiChainLoad() {
     requireArg "a fiber name" "$1" || return 1
     requireFileArg "chain path" "$2" || return 1
 
-    local chainName=$(fileStripExtension $(basename "$2"))
+    local chainName="$(fileStripExtension $(basename "$2"))"
     local moduleName="$1:$chainName"
     
     # echo "loading chain $moduleName from $2"
@@ -189,7 +189,7 @@ function chiChainLoad() {
 
     # only load if not disabled
     local enabledValue
-    enabledValue=$(chiModuleConfigReadVariablePath "$moduleName" enabled)
+    enabledValue="$(chiModuleConfigReadVariablePath "$moduleName" enabled)"
 
     if [[ $? -eq 0 ]] && [[ "$enabledValue" == "false" ]]; then
         # chiLog "chain disabled, not loading!" "$moduleName"
@@ -211,7 +211,7 @@ function chiChainLoadDir() {
     requireArg "a fiber name" "$1" || return 1
     requireDirectoryArg "chain directory" "$2" || return 1
 
-    local chainName=$(basename "$2")
+    local chainName="$(basename "$2")"
     local moduleName="$1:$chainName"
 
     # echo "loading chain $moduleName from $2"
@@ -219,7 +219,7 @@ function chiChainLoadDir() {
     # if already loaded, return
     [[ -n $(chiModuleGetDynamicVariable "$CHI_FIBER_CHAIN_LOADED_PREFIX" "$moduleName") ]] && return 0
 
-    local chainConfig=$(chiModuleConfigReadFromFile "$2" "$moduleName")
+    local chainConfig="$(chiModuleConfigReadFromFile "$2" "$moduleName")"
     if [[ -n "$chainConfig" ]]; then
         chiConfigMergeVariableValue "$moduleName" "$chainConfig"
     fi
@@ -228,7 +228,7 @@ function chiChainLoadDir() {
 
     # only load if not disabled
     local enabledValue
-    enabledValue=$(chiModuleConfigReadVariablePath "$moduleName" enabled)
+    enabledValue="$(chiModuleConfigReadVariablePath "$moduleName" enabled)"
 
     if [[ $? -eq 0 ]] && [[ "$enabledValue" == "false" ]]; then
         # chiLog "chain disabled, not loading!" "$moduleName"
@@ -271,7 +271,7 @@ function chiModuleGetName() {
     local fiberName="$(chiFiberPathToName "${moduleDir%/chains*}")"
     local fiberPath="$(chiReadDynamicVariable "$CHI_FIBER_PATH_{$fiberName}")"
 
-    local searchPath=$([[ "$(basename "$moduleDir")" == "chains" ]] && echo "$modulePath" || echo "$moduleDir")
+    local searchPath="$([[ "$(basename "$moduleDir")" == "chains" ]] && echo "$modulePath" || echo "$moduleDir")"
 
     # check all the $CHI_FIBER_PATH_* vars for one that contains the module path
     for var in $(env | grep -o "^${CHI_FIBER_PATH_PREFIX}.*=${searchPath}"); do

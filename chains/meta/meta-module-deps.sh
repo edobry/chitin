@@ -2,12 +2,12 @@ function chiModuleLoadToolConfigs() {
     requireArg "a module name" "$1" || return 1
     local moduleName="$1"; shift
 
-    local config=$(chiConfigGetVariableValue "$moduleName")
+    local config="$(chiConfigGetVariableValue "$moduleName")"
     [[ -z "$config" ]] || [[ "$config" == "{}" ]] && return 1
   
-    local moduleTools=$(jsonRead "$config" '(.tools // {}) | to_entries | 
+    local moduleTools="$(jsonRead "$config" '(.tools // {}) | to_entries | 
             map(.value += { meta: { definedIn: $module }}) |
-        from_entries' --arg module "$moduleName")
+        from_entries' --arg module "$moduleName")"
 
     [[ -z "$moduleTools" ]] || [[ "$moduleTools" == 'null' ]] || [[ "$moduleTools" == '{}' ]] && return 0
 
@@ -27,11 +27,11 @@ function chiModuleCheckToolDepsMet() {
     requireArg "a module name" "$1" || return 1
 
     local moduleName="$1"
-    local config=$(chiConfigGetVariableValue "$moduleName")
+    local config="$(chiConfigGetVariableValue "$moduleName")"
 
     [[ -z "$config" ]] && return 0
 
-    local toolDepsList=$(jsonRead "$config" '(.toolDeps // empty)[]')
+    local toolDepsList="$(jsonRead "$config" '(.toolDeps // empty)[]')"
     [[ -z "$toolDepsList" ]] && return 0
 
     local toolDepsMet=0
@@ -41,16 +41,16 @@ function chiModuleCheckToolDepsMet() {
     while read -r toolDep; do
         # echo "toolDep: $toolDep"
 
-        local toolDepStatus=$(chiToolsGetStatus "$toolDep")
+        local toolDepStatus="$(chiToolsGetStatus "$toolDep")"
         if [[ -z "$toolDepStatus" ]]; then
-            local toolConfig=$(chiToolsGetConfig "$toolDep")
+            local toolConfig="$(chiToolsGetConfig "$toolDep")"
             
             # the tool config might have been defined in a disabled module
             # TODO: rethink this
             if [[ -n "$toolConfig" ]]; then
                 # echo "checking status for $toolDep on-demand..." >&2
                 chiToolsCheckAndUpdateStatus "$toolDep"
-                toolDepStatus=$(chiToolsGetStatus "$toolDep")
+                toolDepStatus="$(chiToolsGetStatus "$toolDep")"
             else
                 chiLog "no tool status found for '$toolDep'!" "$moduleName"
                 toolDepsMet=1
@@ -70,20 +70,20 @@ function chiModuleCheckToolDepsMet() {
 
     [[ "${#toolsToInstall[@]}" -eq 0 ]] && return $toolDepsMet
 
-    local installToolDeps=$(chiModuleConfigReadVariablePath "$moduleName" installToolDeps)
+    local installToolDeps="$(chiModuleConfigReadVariablePath "$moduleName" installToolDeps)"
     [[ "$installToolDeps" != "true" ]] && return $toolDepsMet
 
     local installedTools=()
     local brewToolsToInstall=()
 
     for tool in "${toolsToInstall[@]}"; do
-        local toolConfig=$(chiToolsGetConfig "$tool")
+        local toolConfig="$(chiToolsGetConfig "$tool")"
         if [[ -z "$toolConfig" ]]; then
             chiLog "tool config not found for '$tool'!" "$moduleName"
             continue
         fi
 
-        local toolEntry=$(echo "$toolConfig" | jq -c --arg name "$tool" '{ key: $name, value: . }')
+        local toolEntry="$(echo "$toolConfig" | jq -c --arg name "$tool" '{ key: $name, value: . }')"
         installedTools+=("$tool")
 
         if jsonReadPath "$toolConfig" brew &>/dev/null; then

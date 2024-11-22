@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 if [[ -z "$IS_DOCKER" ]]; then
-    SOURCE_DIR=$(dirname -- "$0")
+    SOURCE_DIR="$(dirname -- "$0")"
     # echo "source dir: $SOURCE_DIR"
     # echo "0: $0"
     # echo "bash source: $BASH_SOURCE"
@@ -97,7 +97,7 @@ function chiShell() {
 
 function chiRunInitCommand() {
     local initCommand
-    initCommand=$(chiConfigChainReadField core:init command)
+    initCommand="$(chiConfigChainReadField core:init command)"
     if [[ $? -eq 0 ]]; then
         $initCommand
     fi

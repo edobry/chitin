@@ -167,7 +167,7 @@ function requireArgOptions() {
     local argValue="$1"; shift
 
     # transform to a space-delimited list
-    local options=$(echo "$*" | tr '\n' ' ' | sort)
+    local options="$(echo "$*" | tr '\n' ' ' | sort)"
 
     if [[ -z "$argValue" ]] || ! eval "argsContain $argValue $options"; then
         echo "Supplied argument '$argValue' is not a valid option for $argName!" >&2
@@ -207,7 +207,7 @@ function checkVersionAndFail() {
     local minimumVersion="$2"
     local currentVersion="$3"
 
-    local majorExpected=$(getMajorVersionComponent $minimumVersion)
+    local majorExpected="$(getMajorVersionComponent $minimumVersion)"
 
     if ! checkVersion "$2" "$3"; then
         chiLog "invalid $1 version: expected $expectedVersion <= X < $(($majorExpected + 1)).0.0; found $currentVersion"
@@ -245,14 +245,14 @@ function semverBump() {
     local patch="$(getPatchVersionComponent "$version")"
 
     if [[ "$component" == "major" ]]; then
-        major=$((major + 1))
+        major="$((major + 1))"
         minor=0
         patch=0
     elif [[ "$component" == "minor" ]]; then
-        minor=$((minor + 1))
+        minor="$((minor + 1))"
         patch=0
     elif [[ "$component" == "patch" ]]; then
-        patch=$((patch + 1))
+        patch="$((patch + 1))"
     fi
 
     echo "$major.$minor.$patch"
@@ -289,9 +289,9 @@ function chiShowColors() {
 }
 
 function chiColorInit() {
-    export CHI_COLOR_RED=$(tput setaf 1)
-    export CHI_COLOR_GREEN=$(tput setaf 2)
-    export CHI_COLOR_STOP=$(tput sgr0)
+    export CHI_COLOR_RED="$(tput setaf 1)"
+    export CHI_COLOR_GREEN="$(tput setaf 2)"
+    export CHI_COLOR_STOP="$(tput sgr0)"
 }
 
 function chiColor() {
@@ -343,7 +343,7 @@ function expandPath() {
     local localShare="localshare"
     local xdgHome="xdghome"
     
-    local expandedPath=$(expandHome "$1")
+    local expandedPath="$(expandHome "$1")"
     expandedPath="$(expandPathSegmentStart "$xdgHome" "$(xdgHome)" "$expandedPath")"
     expandedPath="$(expandPathSegmentStart "$localShare" "$(xdgHome)/.local/share" "$expandedPath")"
 

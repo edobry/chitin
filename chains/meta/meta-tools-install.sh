@@ -4,8 +4,8 @@ function chiToolsInstallBrew() {
 
     requireArg "a tool config JSON string" "$1" || return 1
 
-    local brewfilePath=$(tempFile)
-    local brewfile=$(chiToolsGenerateBrewfile $*)
+    local brewfilePath="$(tempFile)"
+    local brewfile="$(chiToolsGenerateBrewfile $*)"
     echo "$brewfile" > $brewfilePath
 
     chiLog "installing brew depenedencies..." "$moduleName"
@@ -61,13 +61,13 @@ function chiToolsInstallGit() {
     requireArg "a tool config JSON string" "$3" || return 1
 
     local toolName="$2"
-    local url=$(jsonRead "$3" '.git.url // empty')
-    local target=$(expandPath $(jsonRead "$3" '.git.target // empty'))
+    local url="$(jsonRead "$3" '.git.url // empty')"
+    local target="$(expandPath $(jsonRead "$3" '.git.target // empty'))"
 
     [[ -d "$target" ]] && return 0
 
-    GREEN=$(tput setaf 2)
-    NC=$(tput sgr0)
+    GREEN="$(tput setaf 2)"
+    NC="$(tput sgr0)"
 
     chiLog "${GREEN}==>${NC} Cloning '$toolName' from '$url' to '$target'...\n" "$1"
     
@@ -80,11 +80,11 @@ function chiToolsInstallCommand() {
     requireArg "a tool name" "$2" || return 1
     requireArg "a tool config JSON string" "$3" || return 1
 
-    local installCommand=$(jsonReadPath "$3" command)
+    local installCommand="$(jsonReadPath "$3" command)"
     [[ $? -eq 0 ]] || return 1
 
-    GREEN=$(tput setaf 2)
-    NC=$(tput sgr0)
+    GREEN="$(tput setaf 2)"
+    NC="$(tput sgr0)"
 
     chiLog "${GREEN}==>${NC} Installing '$2' with command '$installCommand'...\n" "$1"
     
@@ -96,11 +96,11 @@ function chiToolsInstallScript() {
     requireArg "a tool name" "$2" || return 1
     requireArg "a tool config JSON string" "$3" || return 1
 
-    local installScript=$(jsonReadPath "$3" script)
+    local installScript="$(jsonReadPath "$3" script)"
     [[ $? -eq 0 ]] || return 1
 
-    GREEN=$(tput setaf 2)
-    NC=$(tput sgr0)
+    GREEN="$(tput setaf 2)"
+    NC="$(tput sgr0)"
 
     chiLog "${GREEN}==>${NC} Installing '$2' from script at '$installScript'...\n" "$1"
     
@@ -113,7 +113,7 @@ function chiToolsInstallArtifact() {
     requireArg "a tool config JSON string" "$3" || return 1
 
     local toolName="$2"
-    local artifactConfig=$(jsonReadPath "$3" artifact 2>/dev/null)
+    local artifactConfig="$(jsonReadPath "$3" artifact 2>/dev/null)"
 
     local url="$(jsonReadPath "$artifactConfig" url)"
     [[ -n "$url" ]] || return 1
@@ -121,14 +121,14 @@ function chiToolsInstallArtifact() {
     url="$(chiToolsUrlExpand "$3" "$url")"
     [[ $? -eq 0 ]] || return 1
     
-    local installDir=$(chiToolsArtifactMakeTargetDir "$artifactConfig")
+    local installDir="$(chiToolsArtifactMakeTargetDir "$artifactConfig")"
     [[ $? -eq 0 ]] || return 1
     [[ -f "$installDir" ]] && return 0
 
-    local targetConfig=$(jsonReadPath "$artifactConfig" target)
+    local targetConfig="$(jsonReadPath "$artifactConfig" target)"
     local targetBase="$(expandPath "$(jsonReadPath "$targetConfig" base)")"
 
-    local ensureSubdirs=$(jsonRead "$targetConfig" '(.ensureSubdirs // empty)[]')
+    local ensureSubdirs="$(jsonRead "$targetConfig" '(.ensureSubdirs // empty)[]')"
     if [[ -n "$ensureSubdirs" ]]; then
         for subdir in $ensureSubdirs; do
             mkdir -p "$targetBase/$subdir"
@@ -156,7 +156,7 @@ function chiToolsUrlExpand() {
 function chiToolsArtifactMakeTargetDir() {
     requireArg "a tool artifact config JSON string" "$1" || return 1
 
-    local targetConfig=$(jsonReadPath "$1" target)
+    local targetConfig="$(jsonReadPath "$1" target)"
     if [[ -z "$targetConfig" ]]; then
         echo "$CHI_TOOLS_BIN"
         return 0
@@ -193,14 +193,13 @@ function chiToolsInstallPipx() {
     requireArg "a tool config JSON string" "$3" || return 1
 
     local pipxPackage="$2"
-    local pipxConfig=$(jsonReadPath "$3" pipx 2>/dev/null)
+    local pipxConfig="$(jsonReadPath "$3" pipx 2>/dev/null)"
     if [[ -n "$pipxConfig" ]] && validateJson "$pipxConfig" &>/dev/null; then
-    echo "in pipx: $pipxConfig" >&2
-        pipxPackage=$(jsonRead "$pipxConfig" '.package // empty')
+        pipxPackage="$(jsonRead "$pipxConfig" '.package // empty')"
     fi
 
-    GREEN=$(tput setaf 2)
-    NC=$(tput sgr0)
+    GREEN="$(tput setaf 2)"
+    NC="$(tput sgr0)"
 
     chiLog "${GREEN}==>${NC} Installing '$2' with pipx...\n" "$1"
     
@@ -212,11 +211,11 @@ function chiToolsRunPostInstall() {
     requireArg "a tool name" "$2" || return 1
     requireArg "a tool config JSON string" "$3" || return 1
 
-    local postInstall=$(jsonReadPath "$3" postInstall)
+    local postInstall="$(jsonReadPath "$3" postInstall)"
     [[ -z "$postInstall" ]] && return 0
 
-    GREEN=$(tput setaf 2)
-    NC=$(tput sgr0)
+    GREEN="$(tput setaf 2)"
+    NC="$(tput sgr0)"
 
     chiLog "${GREEN}==>${NC} Running post-install command for '$2'...\n" "$1"
     

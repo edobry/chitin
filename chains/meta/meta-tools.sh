@@ -24,10 +24,10 @@ function chiToolsCheckStatus() {
     local toolConfig="$(chiToolsGetConfig "$toolName")"
     [[ -z "$toolConfig" ]] && return 1
 
-    local moduleName=$(jsonRead "$toolConfig" '.meta.definedIn // empty')
+    local moduleName="$(jsonRead "$toolConfig" '.meta.definedIn // empty')"
     
-    local expectedVersion=$(jsonRead "$toolConfig" '.version // empty')
-    local versionCommand=$(jsonRead "$toolConfig" '.versionCommand // empty')
+    local expectedVersion="$(jsonRead "$toolConfig" '.version // empty')"
+    local versionCommand="$(jsonRead "$toolConfig" '.versionCommand // empty')"
 
     local installed="false"
     local validVersion="false"
@@ -43,7 +43,7 @@ function chiToolsCheckStatus() {
             chiLog "expected version not set for $toolName!" "$moduleName"
             installed="true"
         else
-            local currentVersion=$(eval "$versionCommand")
+            local currentVersion="$(eval "$versionCommand")"
             
             if checkVersionAndFail "$toolName" "$expectedVersion" "$currentVersion"; then
                 installed="true"
@@ -63,8 +63,8 @@ function chiToolsUpdateStatus() {
 
     # echo "updating tool status: ${toolStatus[@]}" >&2
 
-    local updatedToolStatus=$(jsonMerge $toolStatus '{}')
-    local globalToolStatus=$(jsonMerge "${CHI_TOOL_STATUS:-"{}"}" "$updatedToolStatus" "{}")
+    local updatedToolStatus="$(jsonMerge $toolStatus '{}')"
+    local globalToolStatus="$(jsonMerge "${CHI_TOOL_STATUS:-"{}"}" "$updatedToolStatus" "{}")"
 
     # echo "globalToolStatus: $globalToolStatus" >&2
 
@@ -87,10 +87,10 @@ function chiToolsCheckInstalled() {
     local toolName="$1"; shift
 
     local tool="$1"
-    [[ -z "$tool" ]] && tool=$(chiToolsGetConfig "$toolName")
+    [[ -z "$tool" ]] && tool="$(chiToolsGetConfig "$toolName")"
     [[ -z "$tool" ]] && return 1
 
-    local moduleName=$(jsonReadPath "$tool" meta definedIn 2>/dev/null)
+    local moduleName="$(jsonReadPath "$tool" meta definedIn 2>/dev/null)"
 
     # check order:
     #
@@ -99,8 +99,8 @@ function chiToolsCheckInstalled() {
     #   if its a cask, use `brewCheck`
     #   if checkBrew is set, use `brewCheck`
     # else, use `checkCommand` with the tool name
-    
-    local checkCommandValue=$(jsonReadPath "$tool" checkCommand 2>/dev/null)
+
+    local checkCommandValue="$(jsonReadPath "$tool" checkCommand 2>/dev/null)"
     
     local checkBrew
     jsonCheckBoolPath "$tool" checkBrew &>/dev/null && checkBrew=true || checkBrew=false
@@ -109,10 +109,10 @@ function chiToolsCheckInstalled() {
     jsonCheckBoolPath "$tool" checkPipx &>/dev/null && checkPipx=true || checkPipx=false
     
     local checkPathValue
-    checkPathValue=$(jsonReadPath "$tool" checkPath 2>/dev/null)
+    checkPathValue="$(jsonReadPath "$tool" checkPath 2>/dev/null)"
     
     local checkEvalValue
-    checkEvalValue=$(jsonReadPath "$tool" checkEval 2>/dev/null)
+    checkEvalValue="$(jsonReadPath "$tool" checkEval 2>/dev/null)"
 
     local checkPath
     jsonCheckBoolPath "$tool" checkPath &>/dev/null && checkPath=true || checkPath=false
@@ -162,13 +162,13 @@ function chiToolsCheckInstalled() {
             return 1
         fi
 
-        local gitConfig=$(jsonReadPath "$tool" git 2>/dev/null)
+        local gitConfig="$(jsonReadPath "$tool" git 2>/dev/null)"
         if [[ -z "$gitConfig" ]]; then
             chiLog "expected git config not found for '$toolName'!" "$moduleName"
             return 1
         fi
 
-        local target=$(jsonReadPath "$gitConfig" target 2>/dev/null)
+        local target="$(jsonReadPath "$gitConfig" target 2>/dev/null)"
 
         [[ -f "$(expandPath "$target/$checkPathValue")" ]] && return 0 || return 1
     elif [[ -n "$checkEvalValue" ]]; then
@@ -188,12 +188,12 @@ function chiToolsCheckInstalled() {
 
     local isBrew=false
     local brewConfig
-    brewConfig=$(jsonReadPath "$tool" brew 2>/dev/null)
+    brewConfig="$(jsonReadPath "$tool" brew 2>/dev/null)"
     [[ $? -eq 0 ]] && isBrew=true
 
     local isPipx=false
     local pipxConfig
-    pipxConfig=$(jsonReadPath "$tool" pipx 2>/dev/null)
+    pipxConfig="$(jsonReadPath "$tool" pipx 2>/dev/null)"
     [[ $? -eq 0 ]] && isPipx=true
 
     local isArtifact=false

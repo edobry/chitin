@@ -36,7 +36,7 @@ function chiToolsAddDirToPath() {
 function chiToolsRemoveDirFromPath() {
     requireDirectoryArg "directory" "$1" || return 1
 
-    export PATH=$(showPath | grep -v "$1" | newlinesToChar ':')
+    export PATH="$(showPath | grep -v "$1" | newlinesToChar ':')"
 }
 
 export CHI_TOOLS_BIN="$(expandPath "localshare/chitin/bin")"
@@ -66,7 +66,7 @@ function chiToolsInstallTemporary() {
 
     local toolName="$1"
     local version="$2"
-    local url=$(chiUrlExpand "$2" "$3") 
+    local url="$(chiUrlExpand "$2" "$3") "
 
     chiLog "installing '$toolName' temporarily..." "$(chiInitBootstrapModule)"
     chiToolsInstallExecutableFromUrl "$toolName" "$url" "$CHI_INIT_TEMP_DIR"
@@ -89,18 +89,18 @@ function chiToolsInstallFromUrl() {
 
     local installPath="$installDir/$fileName"
 
-    GREEN=$(tput setaf 2)
-    NC=$(tput sgr0)
+    GREEN="$(tput setaf 2)"
+    NC="$(tput sgr0)"
 
     chiLog "${GREEN}==>${NC} Installing '$toolName' from '$url' to '$installPath'..." "$1"
 
     mkdir -p "$installDir"
 
     if [[ $(fileGetExtension "$url") == "zip" ]]; then
-        local tempDir=$(tempFile)
+        local tempDir="$(tempFile)"
         mkdir -p "$tempDir"
 
-        local archiveName=$(basename "$url")
+        local archiveName="$(basename "$url")"
         curl -sLo "$tempDir/$archiveName" "$url"
 
         local archiveDir="$tempDir/${archiveName%.zip}"
@@ -119,7 +119,7 @@ function chiToolsInstallExecutableFromUrl() {
     requireArg "an artifact url" "$2" || return 1
     requireArg "an install directory" "$3" || return 1
 
-    local installPath=$(chiToolsInstallFromUrl "$@")
+    local installPath="$(chiToolsInstallFromUrl "$@")"
     chmod +x "$installPath"
 
     chiToolsAddDirToPath "$3"

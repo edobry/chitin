@@ -47,18 +47,18 @@ function chiConfigConvertAndReadFile() {
     requireArg "a config file name, sans extension" "$2" || return 1
 
     local filePath
-    filePath=$(chiConfigFindFilePath "$1" "$2")
+    filePath="$(chiConfigFindFilePath "$1" "$2")"
     [[ $? -eq 0 ]] || return 1
 
-    local extension=$(fileGetExtension "$filePath")
+    local extension="$(fileGetExtension "$filePath")"
     local convertedFilePath
     
     case "$extension" in
         json5)
-            convertedFilePath=$(json5Convert "$filePath")
+            convertedFilePath="$(json5Convert "$filePath")"
             ;;
         yaml)
-            convertedFilePath=$(yamlConvert "$filePath")
+            convertedFilePath="$(yamlConvert "$filePath")"
             ;;
         *)
             chiBail "unsupported extension '$extension'!"
@@ -72,7 +72,7 @@ function chiConfigConvertAndReadFile() {
 }
 
 function chiConfigUserLoad() {
-    local configLocation=$(chiConfigUserGetDir)
+    local configLocation="$(chiConfigUserGetDir)"
     local configFileFullName="$CHI_CONFIG_USER_FILE_NAME.yaml"
     local configFilePath="$configLocation/$configFileFullName"
 
@@ -85,15 +85,15 @@ function chiConfigUserLoad() {
     fi
 
     local configFile
-    configFile=$(chiConfigUserReadFile "$configLocation" "$CHI_CONFIG_USER_FILE_NAME")
+    configFile="$(chiConfigUserReadFile "$configLocation" "$CHI_CONFIG_USER_FILE_NAME")"
     [[ $? -eq 0 ]] || return 1
 
     local inlineConfig="${1:-"{}"}"
-    local mergedConfig=$(jsonMergeDeep "$configFile" "$inlineConfig")
+    local mergedConfig="$(jsonMergeDeep "$configFile" "$inlineConfig")"
     export CHI_CONFIG_USER="$mergedConfig"
     local config="$mergedConfig"
 
-    local projectDir=$(chiConfigUserRead projectDir)
+    local projectDir="$(chiConfigUserRead projectDir)"
     if [[ -z "$projectDir" ]]; then
         chiLog "projectDir not set!" "meta:config"
         return 1
@@ -101,7 +101,7 @@ function chiConfigUserLoad() {
 
     export CHI_PROJECT_DIR="$(expandPath "$projectDir")"
 
-    local dotfilesDir=$(chiConfigUserRead dotfilesDir)
+    local dotfilesDir="$(chiConfigUserRead dotfilesDir)"
     if [[ ! -z "$dotfilesDir" ]]; then
         export CHI_DOTFILES_DIR="$(expandPath "$dotfilesDir")"
     fi
@@ -164,7 +164,7 @@ function chiConfigChainRead() {
     local fieldPath="$1"
     [[ -z $fieldPath ]] || shift
 
-    local config=$(chiConfigUserRead chainConfig "$chainName" $fieldPath $@)
+    local config="$(chiConfigUserRead chainConfig "$chainName" $fieldPath $@)"
     if [[ "$config" == 'null' ]]; then
         chiLog "'$chainName' config section not initialized!" "$chainName"
         return 1
@@ -177,14 +177,14 @@ function chiConfigChainCheckBoolean() {
     requireArg "a chain name or config" "$1" || return 1
     requireArg "a field name" "$2" || return 1
 
-    local config=$([[ "$3" == "loaded" ]] && echo "$1" || chiConfigChainRead "$1")
+    local config="$([[ "$3" == "loaded" ]] && echo "$1" || chiConfigChainRead "$1")"
     jsonCheckBool "$2" "$config"
 }
 
 function chiChainCheckEnabled() {
     requireArg "a chain name or config" "$1" || return 1
 
-    local config=$([[ "$2" == "loaded" ]] && echo "$1" || chiConfigChainRead "$1")
+    local config="$([[ "$2" == "loaded" ]] && echo "$1" || chiConfigChainRead "$1")"
 
     chiConfigChainCheckBoolean "$config" enabled "$2"
 }
@@ -193,7 +193,7 @@ function chiConfigChainReadField() {
     requireArg "a chain name" "$1" || return 1
     requireArg "a field name" "$2" || return 1
 
-    local config=$(chiConfigChainRead "$1")
+    local config="$(chiConfigChainRead "$1")"
     [[ -z "$config" ]] && return 1
 
     jsonReadPath "$config" "$2"
@@ -204,7 +204,7 @@ function chiModuleConfigReadFromFile() {
     requireArg "a module name" "$2" || return 1
 
     local fileContents
-    fileContents=$(chiConfigConvertAndReadFile "$1" "config")
+    fileContents="$(chiConfigConvertAndReadFile "$1" "config")"
     [[ $? -eq 0 ]] || return 1
 
     [[ "$fileContents" == "null" ]] && return 0
@@ -215,7 +215,7 @@ function chiModuleConfigMergeFromFile() {
     requireDirectoryArg "a directory" "$1" || return 1
     requireArg "a module name" "$2" || return 1
 
-    local fileContents=$(chiModuleConfigReadFromFile "$1" "$2")
+    local fileContents="$(chiModuleConfigReadFromFile "$1" "$2")"
     [[ -z "$fileContents" ]] && return 1
 
     chiConfigMergeVariableValue "$2" "$fileContents"
@@ -255,7 +255,7 @@ function chiConfigMergeVariableValue() {
     # echo "currentConfig: $currentConfig" >&2
     
     # merge the configs, with the current config overriding
-    local mergedConfig=$(jsonMergeDeep "$2" "${currentConfig:-"{}"}")
+    local mergedConfig="$(jsonMergeDeep "$2" "${currentConfig:-"{}"}")"
     # echo "mergedConfig: $mergedConfig" >&2
 
     chiConfigSetVariableValue "$1" "$mergedConfig"
@@ -270,8 +270,8 @@ function chiConfigMergeChain() {
     while IFS= read -r chainConfig; do
         [[ -z "$chainConfig" ]] && continue
 
-        local moduleName=$(jsonReadPath "$chainConfig" key)
-        local chainConfigValue=$(jsonReadPath "$chainConfig" value)
+        local moduleName="$(jsonReadPath "$chainConfig" key)"
+        local chainConfigValue="$(jsonReadPath "$chainConfig" value)"
         
         if [[ -n "$chainConfigValue" ]]; then
             chiConfigMergeVariableValue "${fiberName}${fiberName:+:}$moduleName" "$chainConfigValue"
