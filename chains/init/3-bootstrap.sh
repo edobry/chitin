@@ -30,7 +30,7 @@ function chiToolsAddDirToPath() {
     # check if the PATH already contains the dir
     [[ ":$PATH:" == *":$1:"* ]] && return 0
 
-    export PATH="$1:$PATH"
+    export PATH=":$1:$PATH"
 }
 
 function chiToolsRemoveDirFromPath() {
@@ -40,9 +40,6 @@ function chiToolsRemoveDirFromPath() {
 }
 
 export CHI_TOOLS_BIN="$(expandPath "localshare/chitin/bin")"
-mkdir -p "$CHI_TOOLS_BIN"
-chiToolsAddDirToPath "$CHI_TOOLS_BIN"
-
 export CHI_INIT_TEMP_DIR="/tmp/chitin-install"
 
 function chiToolsInstallJqTemporary() {

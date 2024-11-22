@@ -10,8 +10,20 @@ function chiToolsCheckAndUpdateStatus() {
 
     local toolStatus=('{}')
     for tool in $@; do
-        # echo "tool: $tool"
-        toolStatus+=("$(chiToolsCheckStatus "$tool")")
+        # echo "tool: $tool" >&2
+
+        local toolConfig="$(chiToolsGetConfig "$tool")"
+        [[ -z "$toolConfig" ]] && continue
+
+        # if its an executable artifact, add its dir to the PATH
+        local artifactConfig="$(jsonReadPath "$toolConfig" artifact 2>/dev/null)"
+        if [[ -n "$artifactConfig" ]] && jsonCheckBoolPath "$artifactConfig" isExec 2>/dev/null; then
+            local targetDir="$(chiToolsArtifactMakeTargetDir "$artifactConfig")"
+            chiToolsAddDirToPath "$targetDir"
+        fi
+
+        local returnedStatus="$(chiToolsCheckStatus "$tool" "$toolConfig")"
+        toolStatus+=("$returnedStatus")
     done
 
     chiToolsUpdateStatus "${toolStatus[@]}"
@@ -19,10 +31,10 @@ function chiToolsCheckAndUpdateStatus() {
 
 function chiToolsCheckStatus() {
     requireArg "a tool name" "$1" || return 1
+    requireJsonArg "a tool config" "$2" || return 1
 
     local toolName="$1"
-    local toolConfig="$(chiToolsGetConfig "$toolName")"
-    [[ -z "$toolConfig" ]] && return 1
+    local toolConfig="$2"
 
     local moduleName="$(jsonRead "$toolConfig" '.meta.definedIn // empty')"
     
@@ -197,9 +209,8 @@ function chiToolsCheckInstalled() {
     [[ $? -eq 0 ]] && isPipx=true
 
     local isArtifact=false
-    local artifactConfig
-    artifactConfig=$(jsonReadPath "$tool" artifact 2>/dev/null)
-    [[ $? -eq 0 ]] && isArtifact=true
+    local artifactConfig="$(jsonReadPath "$tool" artifact 2>/dev/null)"
+    [[ -n "$artifactConfig" ]] && isArtifact=true
 
     if $isBrew; then
         # echo "in isBrew" >&2
@@ -227,7 +238,7 @@ function chiToolsCheckInstalled() {
         fi
 
         if $checkPipx; then
-            return $(pipxCheckPackage "$toolName")
+            pipxCheckPackage "$toolName" && return 0 || return 1
         fi
     elif $checkBrew; then
         chiLog "'checkBrew' set for non-brew tool '$toolName'!" "$moduleName"
