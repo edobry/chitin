@@ -13,7 +13,7 @@ function prettyYaml() {
 function validateJson() {
     requireArg "a minified JSON string" "$1" || return 1
 
-    echo "$1" | jq -e . > /dev/null 2>&1
+    echo "$1" | jq -e 'if type == "object" then true else false end' > /dev/null 2>&1
 }
 
 function validateJsonFile() {
