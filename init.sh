@@ -87,11 +87,11 @@ function chiShell() {
 
     chiRunInitCommand
 
-    if [[ -d "$CHITIN_INIT_TEMP_DIR" ]]; then
+    if [[ -d "$CHI_INIT_TEMP_DIR" ]]; then
         chiLog "cleaning up bootstrap deps" "init"
         
-        chiToolsRemoveDirFromPath "$CHITIN_INIT_TEMP_DIR"
-        rm -rf "$CHITIN_INIT_TEMP_DIR"
+        chiToolsRemoveDirFromPath "$CHI_INIT_TEMP_DIR"
+        rm -rf "$CHI_INIT_TEMP_DIR"
     fi
 }
 
