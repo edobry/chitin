@@ -18,9 +18,13 @@ tools:
     brew: true
   json5:
     brew: true
+  pipx:
+    brew: true
+    postInstall: pipx ensurepath
 toolDeps:
   - xcode-dev-tools
   - brew
+  - pipx
   - jq
   - yq
   - json5

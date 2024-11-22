@@ -104,6 +104,9 @@ function chiToolsCheckInstalled() {
     
     local checkBrew
     jsonCheckBoolPath "$tool" checkBrew &>/dev/null && checkBrew=true || checkBrew=false
+
+    local checkPipx
+    jsonCheckBoolPath "$tool" checkPipx &>/dev/null && checkPipx=true || checkPipx=false
     
     local checkPathValue
     checkPathValue=$(jsonReadPath "$tool" checkPath 2>/dev/null)
@@ -117,6 +120,11 @@ function chiToolsCheckInstalled() {
     if [[ -n "$checkCommandValue" ]]; then
         if $checkBrew; then
             chiLog "both 'checkCommand' and 'checkBrew' set for '$toolName'!" "$moduleName"
+            return 1
+        fi
+
+        if $checkPipx; then
+            chiLog "both 'checkCommand' and 'checkPipx' set for '$toolName'!" "$moduleName"
             return 1
         fi
 
@@ -144,6 +152,11 @@ function chiToolsCheckInstalled() {
             return 1
         fi
 
+        if $checkPipx; then
+            chiLog "both 'checkCommand' and 'checkPipx' set for '$toolName'!" "$moduleName"
+            return 1
+        fi
+
         if [[ -n "$checkEvalValue" ]]; then
             chiLog "both 'checkCommand' and 'checkEval' set for '$toolName'!" "$moduleName"
             return 1
@@ -164,6 +177,11 @@ function chiToolsCheckInstalled() {
             return 1
         fi
 
+        if $checkPipx; then
+            chiLog "both 'checkCommand' and 'checkPipx' set for '$toolName'!" "$moduleName"
+            return 1
+        fi
+
         eval "$checkEvalValue" &>/dev/null
         return $?
     fi
@@ -172,6 +190,11 @@ function chiToolsCheckInstalled() {
     local brewConfig
     brewConfig=$(jsonReadPath "$tool" brew 2>/dev/null)
     [[ $? -eq 0 ]] && isBrew=true
+
+    local isPipx=false
+    local pipxConfig
+    pipxConfig=$(jsonReadPath "$tool" pipx 2>/dev/null)
+    [[ $? -eq 0 ]] && isPipx=true
 
     local isArtifact=false
     local artifactConfig
@@ -197,6 +220,15 @@ function chiToolsCheckInstalled() {
             return $(brewCheckFormula "$toolName")
         fi
         # echo "brew done" >&2
+    elif $isPipx; then
+        if [[ -z "$pipxConfig" ]]; then
+            chiLog "expected pipx config not found for '$toolName'!" "$moduleName"
+            return 1
+        fi
+
+        if $checkPipx; then
+            return $(pipxCheckPackage "$toolName")
+        fi
     elif $checkBrew; then
         chiLog "'checkBrew' set for non-brew tool '$toolName'!" "$moduleName"
         return 1

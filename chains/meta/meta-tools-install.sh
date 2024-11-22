@@ -197,6 +197,26 @@ function chiToolsArtifactMakeTargetPath() {
         || echo "$target"
 }
 
+function chiToolsInstallPipx() {
+    requireArg "a module name" "$1" || return 1
+    requireArg "a tool name" "$2" || return 1
+    requireArg "a tool config JSON string" "$3" || return 1
+
+    local pipxPackage="$2"
+    local pipxConfig=$(jsonReadPath "$3" pipx 2>/dev/null)
+    if [[ -n "$pipxConfig" ]] && validateJson "$pipxConfig" &>/dev/null; then
+    echo "in pipx: $pipxConfig" >&2
+        pipxPackage=$(jsonRead "$pipxConfig" '.package // empty')
+    fi
+
+    GREEN=$(tput setaf 2)
+    NC=$(tput sgr0)
+
+    chiLog "${GREEN}==>${NC} Installing '$2' with pipx...\n" "$1"
+    
+    pipx install "$pipxPackage"
+}
+
 function chiToolsRunPostInstall() {
     requireArg "a module name" "$1" || return 1
     requireArg "a tool name" "$2" || return 1
