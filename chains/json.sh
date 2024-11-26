@@ -177,8 +177,13 @@ function yamlConvert() {
 function yamlFileToJson() {
     requireYamlFileArg "filepath" "$1" || return 1
 
-    local jsonFilePath="$(tempFile).json"
     cat "$1" | yamlToJson | jq -c
+}
+
+function tomlFileToJson() {
+    requireFileArg "filepath" "$1" || return 1
+
+    yq "$1" -oj | jq -c
 }
 
 function jsonToYamlConvert() {
