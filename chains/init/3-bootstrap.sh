@@ -24,18 +24,6 @@ function chiInitBootstrapDeps() {
     source $CHI_DIR/chains/json.sh
 }
 
-function chiToolsAddDirToPath() {
-    requireDirectoryArg "directory" "$1" || return 1
-
-    chiAddToPathVar PATH "$1"
-}
-
-function chiToolsRemoveDirFromPath() {
-    requireDirectoryArg "directory" "$1" || return 1
-
-    chiRemoveFromPathVar PATH "$1"
-}
-
 export CHI_SHARE="$(expandPath "localshare/chitin")"
 export CHI_TOOLS_BIN="$CHI_SHARE/bin"
 export CHI_INIT_TEMP_DIR="/tmp/chitin-install"

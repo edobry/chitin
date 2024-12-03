@@ -1,5 +1,5 @@
 function checkNumeric() {
-    [[ $1 =~ '^[0-9]+$' ]]
+    [[ "$1" =~ '^[0-9]+$' ]]
 }
 
 function checkFileExists() {
@@ -9,6 +9,31 @@ function checkFileExists() {
         echo "No file exists at the given path!"
         return 1
     fi
+}
+
+function checkExtension() {
+    requireArg "a file path" "$1" || return 1
+    requireArg "an extension" "$2" || return 1
+
+    local filePath="$1"
+    local extension="$2"
+
+    if [[ "$(fileGetExtension $filePath)" != "$extension" ]]; then
+        chiBail "extension must be '.$extension'!"
+        return 1
+    fi
+}
+
+function checkExtensionJson() {
+    requireArg "a JSON file path" "$1" || return 1
+
+    checkExtension "$1" "json"
+}
+
+function checkExtensionYaml() {
+    requireArg "a YAML file path" "$1" || return 1
+
+    checkExtension "$1" "yaml"
 }
 
 function checkDirectoryExists() {
