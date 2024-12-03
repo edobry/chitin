@@ -39,6 +39,21 @@ function requireArg() {
     requireArgWithCheck "$1" "$2" true ""
 }
 
+# checks that an argument is supplied and that it passes the check, and prints a message if not
+# args: name of arg, arg value, validation command, (optional) validation failure prefix
+function requireArgWithCheck() {
+    if [[ -z "$2" ]] || ! eval "$3 '$2'"; then
+        echo "Please supply ${4}${1:-a value}!" >&2
+        return 1
+    fi
+}
+
+# checks that an argument is supplied and that it is numeric, and prints a message if not
+# args: name of arg, arg value
+function requirePathlikeVarArg() {
+    requireArg "a PATH-like variable name" "$1"
+}
+
 # checks that an argument is supplied and that it is numeric, and prints a message if not
 # args: name of arg, arg value
 function requireNumericArg() {
@@ -86,15 +101,6 @@ function requireArgOptions() {
         echo "Supplied argument '$argValue' is not a valid option for $argName!" >&2
         echo "It must be one of the following:" >&2
         echo "$options" | tr " " '\n' | sort >&2
-        return 1
-    fi
-}
-
-# checks that an argument is supplied and that it passes the check, and prints a message if not
-# args: name of arg, arg value, validation command, (optional) validation failure prefix
-function requireArgWithCheck() {
-    if [[ -z "$2" ]] || ! eval "$3 '$2'"; then
-        echo "Please supply ${4}${1:-a value}!" >&2
         return 1
     fi
 }

@@ -27,19 +27,17 @@ function chiInitBootstrapDeps() {
 function chiToolsAddDirToPath() {
     requireDirectoryArg "directory" "$1" || return 1
 
-    # check if the PATH already contains the dir
-    [[ ":$PATH:" == *":$1:"* ]] && return 0
-
-    export PATH=":$1:$PATH"
+    chiAddToPathVar PATH "$1"
 }
 
 function chiToolsRemoveDirFromPath() {
     requireDirectoryArg "directory" "$1" || return 1
 
-    export PATH="$(showPath | grep -v "$1" | newlinesToChar ':')"
+    chiRemoveFromPathVar PATH "$1"
 }
 
-export CHI_TOOLS_BIN="$(expandPath "localshare/chitin/bin")"
+export CHI_SHARE="$(expandPath "localshare/chitin")"
+export CHI_TOOLS_BIN="$CHI_SHARE/bin"
 export CHI_INIT_TEMP_DIR="/tmp/chitin-install"
 
 function chiToolsInstallJqTemporary() {

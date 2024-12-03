@@ -126,6 +126,25 @@ function chiReadDynamicVariable() {
     fi
 }
 
+function chiAddToPathVar() {
+    requirePathlikeVarArg "$1" || return 1
+    requireArg "an existing path" "$2" || return 1
+
+    local currentValue="$(chiReadDynamicVariable "$1")"
+
+    # check if the variable already contains the dir
+    [[ ":${currentValue}:" == *":$2:"* ]] && return 0
+
+    export "${1}=:${2}:${currentValue}"
+}
+
+function chiRemoveFromPathVar() {
+    requirePathlikeVarArg "$1" || return 1
+    requireArg "an existing path" "$2" || return 1
+
+    export "${1}=$(showPathVar "$1" | grep -v "$2" | newlinesToChar ':')"
+}
+
 function xdgHome() {
     echo "${XDG_DATA_HOME:-${HOME}}"
 }
@@ -224,5 +243,11 @@ function checkExtensionYaml() {
 }
 
 function showPath() {
-    echo $PATH | splitOnChar ':'
+    showPathVar PATH
+}
+
+function showPathVar() {
+    requirePathlikeVarArg "$1" || return 1
+    
+    chiReadDynamicVariable "$1" | splitOnChar ':'
 }
