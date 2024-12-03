@@ -53,6 +53,8 @@ function chiConfigConvertAndReadFile() {
     local extension="$(fileGetExtension "$filePath")"
     local convertedFilePath
     
+    # echo "filePath: $filePath" >&2
+
     case "$extension" in
         json5)
             convertedFilePath="$(json5Convert "$filePath")"
@@ -67,6 +69,8 @@ function chiConfigConvertAndReadFile() {
     esac
     
     [[ $? -eq 0 ]] || return 1
+
+    # echo "convertedFilePath: $convertedFilePath" >&2
 
     jsonReadFile "$convertedFilePath"
 }
@@ -88,6 +92,8 @@ function chiConfigUserLoad() {
     configFile="$(chiConfigUserReadFile "$configLocation" "$CHI_CONFIG_USER_FILE_NAME")"
     [[ $? -eq 0 ]] || return 1
 
+    # echo "configFile: $configFile" >&2
+
     local inlineConfig="${1:-"{}"}"
     local mergedConfig="$(jsonMergeDeep "$configFile" "$inlineConfig")"
     export CHI_CONFIG_USER="$mergedConfig"
@@ -99,11 +105,11 @@ function chiConfigUserLoad() {
         return 1
     fi
 
-    export CHI_PROJECT_DIR="$(expandPath "$projectDir")"
+    export CHI_PROJECT_DIR="$(chiExpandPath "$projectDir")"
 
     local dotfilesDir="$(chiConfigUserRead dotfilesDir)"
     if [[ ! -z "$dotfilesDir" ]]; then
-        export CHI_DOTFILES_DIR="$(expandPath "$dotfilesDir")"
+        export CHI_DOTFILES_DIR="$(chiExpandPath "$dotfilesDir")"
     fi
 
     # read chain configs

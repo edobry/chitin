@@ -55,7 +55,7 @@ function showPath() {
     showPathVar PATH
 }
 
-function expandPathSegment() {
+function chiExpandPathSegment() {
     requireArg "a path segment" "$1" || return 1
     requireArg "a path expansion" "$2" || return 1
     requireArg "a path" "$3" || return 1
@@ -69,31 +69,31 @@ function expandPathSegment() {
     echo "$pathToExpand" | sed -e "s/${pathRegex}/$(echo "$pathExpansion" | escapeSlashes)/g"
 }
 
-function expandPathSegmentStart() {
+function chiExpandPathSegmentStart() {
     requireArg "a path segment" "$1" || return 1
     requireArg "a path expansion" "$2" || return 1
     requireArg "a path" "$3" || return 1
     
-    expandPathSegment "$1" "$2" "$3" "^${1}"
+    chiExpandPathSegment "$1" "$2" "$3" "^${1}"
 }
 
-function expandPath() {
+function chiExpandPath() {
     requireArg "a path" "$1" || return 1
 
     local localShare="localshare"
     local xdgHome="xdghome"
     
-    local expandedPath="$(expandHome "$1")"
-    expandedPath="$(expandPathSegmentStart "$xdgHome" "$(xdgHome)" "$expandedPath")"
-    expandedPath="$(expandPathSegmentStart "$localShare" "$(xdgHome)/.local/share" "$expandedPath")"
+    local expandedPath="$(chiExpandHome "$1")"
+    expandedPath="$(chiExpandPathSegmentStart "$xdgHome" "$(xdgHome)" "$expandedPath")"
+    expandedPath="$(chiExpandPathSegmentStart "$localShare" "$(xdgHome)/.local/share" "$expandedPath")"
 
     echo "$expandedPath"
 }
 
-function expandHome() {
+function chiExpandHome() {
     requireArg "a path" "$1" || return 1
     
-    expandPathSegmentStart "~" "$HOME" "$1"
+    chiExpandPathSegmentStart "~" "$HOME" "$1"
 }
 
 function chiUrlExpand() {
@@ -105,7 +105,7 @@ function chiUrlExpand() {
     local versionSegment="{{version}}"
     local version="$(jsonReadPath "$2" version)"
     if [[ -n "$version" ]]; then
-        expandedUrl="$(expandPathSegment "$versionSegment" "$version" "$expandedUrl" "$versionSegment")"
+        expandedUrl="$(chiExpandPathSegment "$versionSegment" "$version" "$expandedUrl" "$versionSegment")"
     fi
 
     echo "$expandedUrl"

@@ -24,7 +24,7 @@ function chiInitBootstrapDeps() {
     source $CHI_DIR/chains/json.sh
 }
 
-export CHI_SHARE="$(expandPath "localshare/chitin")"
+export CHI_SHARE="$(chiExpandPath "localshare/chitin")"
 export CHI_TOOLS_BIN="$CHI_SHARE/bin"
 export CHI_INIT_TEMP_DIR="/tmp/chitin-install"
 

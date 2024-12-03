@@ -182,7 +182,7 @@ function chiToolsCheckInstalled() {
 
         local target="$(jsonReadPath "$gitConfig" target 2>/dev/null)"
 
-        [[ -f "$(expandPath "$target/$checkPathValue")" ]] && return 0 || return 1
+        [[ -f "$(chiExpandPath "$target/$checkPathValue")" ]] && return 0 || return 1
     elif [[ -n "$checkEvalValue" ]]; then
         if $checkBrew; then
             chiLog "both 'checkEval' and 'checkBrew' set for '$toolName'!" "$moduleName"

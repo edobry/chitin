@@ -62,7 +62,7 @@ function chiToolsInstallGit() {
 
     local toolName="$2"
     local url="$(jsonRead "$3" '.git.url // empty')"
-    local target="$(expandPath $(jsonRead "$3" '.git.target // empty'))"
+    local target="$(chiExpandPath $(jsonRead "$3" '.git.target // empty'))"
 
     [[ -d "$target" ]] && return 0
 
@@ -126,7 +126,7 @@ function chiToolsInstallArtifact() {
     [[ -f "$installDir" ]] && return 0
 
     local targetConfig="$(jsonReadPath "$artifactConfig" target)"
-    local targetBase="$(expandPath "$(jsonReadPath "$targetConfig" base)")"
+    local targetBase="$(chiExpandPath "$(jsonReadPath "$targetConfig" base)")"
 
     local ensureSubdirs="$(jsonRead "$targetConfig" '(.ensureSubdirs // empty)[]')"
     if [[ -n "$ensureSubdirs" ]]; then
@@ -165,12 +165,12 @@ function chiToolsArtifactMakeTargetDir() {
     local targetPath
 
     if validateJson "$targetConfig" &>/dev/null; then
-        local targetBase="$(expandPath "$(jsonReadPath "$targetConfig" base)")"
+        local targetBase="$(chiExpandPath "$(jsonReadPath "$targetConfig" base)")"
         local targetDir="$(jsonReadPath "$targetConfig" dir)"
 
         targetPath="$targetBase/$targetDir"
     else
-        targetPath="$(expandPath "$targetConfig")"
+        targetPath="$(chiExpandPath "$targetConfig")"
     fi
 
     echo "$targetPath"
