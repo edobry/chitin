@@ -90,25 +90,6 @@ function deleteFiles() {
     find . -type f -name "$1" -prune -print -exec rm -rf {} \;
 }
 
-function chiShowColors() {
-    for i in $(seq 0 $(($(tput colors) - 1))); do
-        printf "$(tput setaf $i)Color code $i$(tput sgr0)\n"
-    done
-}
-
-function chiColorInit() {
-    export CHI_COLOR_RED="$(tput setaf 1)"
-    export CHI_COLOR_GREEN="$(tput setaf 2)"
-    export CHI_COLOR_STOP="$(tput sgr0)"
-}
-
-function chiColor() {
-    requireArg "a known color name" "$1" || return 1
-    requireArg "a message" "$2" || return 1
-
-    echo -n "${1}$2${CHI_COLOR_STOP}"
-}
-
 function chiReadDynamicVariable() {
     requireArg "a variable name" "$1" || return 1
 
@@ -117,4 +98,33 @@ function chiReadDynamicVariable() {
     else
         echo "${(P)1}"
     fi
+}
+
+function chiShowColors() {
+    for i in $(seq 0 $(($(tput colors) - 1))); do
+        printf "$(tput setaf $i)Color code $i$(tput sgr0)\n"
+    done
+}
+
+CHI_COLOR_PREFIX="CHI_COLOR"
+
+function chiColorInit() {
+    export "${CHI_COLOR_PREFIX}_RED=$(tput setaf 1)"
+    export "${CHI_COLOR_PREFIX}_GREEN=$(tput setaf 2)"
+    export CHI_CODE_STOP="$(tput sgr0)"
+}
+
+function chiShowKnownColors() {
+    for colorVar in $(env | grep "${CHI_COLOR_PREFIX}_" | cut -d= -f1); do
+        local color="${colorVar#"${CHI_COLOR_PREFIX}_"}"
+        chiColor "$(chiReadDynamicVariable "$colorVar")" "$color"
+        echo
+    done
+}
+
+function chiColor() {
+    requireArg "a known color name" "$1" || return 1
+    requireArg "a message" "$2" || return 1
+
+    echo -n "${1}${2}${CHI_CODE_STOP}"
 }
