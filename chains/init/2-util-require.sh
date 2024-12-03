@@ -45,19 +45,6 @@ function checkDirectoryExists() {
     fi
 }
 
-# can be used to check arguments for a specific string
-# args: search target, args...
-# example: argsContain "some string" $* || exit 1
-function argsContain() {
-    local target="$1"; shift
-
-    for option in "$@"; do
-        [[ "$option" == "$target" ]] && return 0
-    done
-
-    return 1
-}
-
 # checks that an argument is supplied and prints a message if not
 # args: name of arg, arg value
 function requireArg() {
@@ -111,6 +98,19 @@ function requireDirectoryArg() {
     requireArgWithCheck "$1" "$2" checkDirectoryExists "a path to an existing "
 }
 
+# can be used to check arguments for a specific string
+# args: search target, args...
+# example: listContains "some string" $* || exit 1
+function listContains() {
+    local target="$1"; shift
+
+    for option in "$@"; do
+        [[ "$option" == "$target" ]] && return 0
+    done
+
+    return 1
+}
+
 # checks that an argument is supplied and that its one of the allowed options, and prints a message listing the available options if not
 # args: name of arg, arg value, list of valid options
 function requireArgOptions() {
@@ -122,7 +122,7 @@ function requireArgOptions() {
     # transform to a space-delimited list
     local options="$(echo "$*" | tr '\n' ' ' | sort)"
 
-    if [[ -z "$argValue" ]] || ! eval "argsContain $argValue $options"; then
+    if [[ -z "$argValue" ]] || ! eval "listContains $argValue $options"; then
         echo "Supplied argument '$argValue' is not a valid option for $argName!" >&2
         echo "It must be one of the following:" >&2
         echo "$options" | tr " " '\n' | sort >&2

@@ -78,13 +78,6 @@ function sedStripGitEx() {
     sed 's/\.git//'
 }
 
-# can be used to check a list for a specific string
-# args: search target, list
-# example: listContains "eu-west-1" $(awsListAZs) || exit 1
-function listContains() {
-    echo "$2" | grep -q "$1"
-}
-
 function findFile() {
     requireArg "a search pattern" "$1" || return 1
     
