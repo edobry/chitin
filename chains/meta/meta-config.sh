@@ -121,7 +121,7 @@ function chiConfigModify() {
     requireArg "a config path" "$1" || return 1
     requireArg "a config file name" "$2" || return 1
 
-    ${EDITOR:-nano} "$(chiConfigFindFilePath "$1" "$2")"
+    $EDITOR "$(chiConfigFindFilePath "$1" "$2")"
     chiLog "updated, reinitializing..." "meta:config"
     chiReinit
 }
