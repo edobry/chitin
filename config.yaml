@@ -20,6 +20,9 @@ tools:
   pipx:
     brew: true
     postInstall: pipx ensurepath
+  grep:
+    checkCommand: ggrep
+    brew: true
 toolDeps:
   - xcode-dev-tools
   - brew
