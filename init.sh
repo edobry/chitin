@@ -15,18 +15,6 @@ if [[ -z "$IS_DOCKER" ]]; then
     export CHI_DIR="$(dirname $SCRIPT_PATH)"
 fi
 
-function chiLog() {
-    requireArg "a message" "$1" || return 1
-
-    echo "chitin${2:+:}${2} - $1" >&2
-}
-
-function chiBail() {
-    chiLog "${1:-"something went wrong"}!"
-    chiLog "exiting!"
-    return 1
-}
-
 function chiLoadDir() {
     local moduleName="$1"; shift
 
@@ -61,13 +49,12 @@ function chiShell() {
 
     # load init chain
     chiLoadDir core:init $CHI_DIR/chains/init/**/*.sh
-
+    chiColorInit
     chiInitBootstrapDeps
 
     # load meta chain
     chiLoadDir core:meta $CHI_DIR/chains/meta/**/*.sh
     chiConfigUserLoad "$1"
-    chiColorInit
 
     # load core chains
     chiFiberLoad "$CHI_DIR" "core" "$([[ -n "$IS_DOCKER" ]] && echo "nocheck")"

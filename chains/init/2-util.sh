@@ -1,3 +1,15 @@
+function chiLog() {
+    requireArg "a message" "$1" || return 1
+
+    echo "chitin${2:+:}${2} - $1" >&2
+}
+
+function chiBail() {
+    chiLog "$(chiColorRed "${1:-"something went wrong"}!")"
+    chiLog "$(chiColorRed "exiting!")"
+    return 1
+}
+
 # checks if a command exists
 # args: command
 function checkCommand() {
@@ -127,4 +139,16 @@ function chiColor() {
     requireArg "a message" "$2" || return 1
 
     echo -n "${1}${2}${CHI_CODE_STOP}"
+}
+
+function chiColorRed() {
+    requireArg "a message" "$1" || return 1
+
+    chiColor "$CHI_COLOR_RED" "$1"
+}
+
+function chiColorGreen() {
+    requireArg "a message" "$1" || return 1
+
+    chiColor "$CHI_COLOR_GREEN" "$1"
 }

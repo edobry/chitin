@@ -21,7 +21,7 @@ function chiInitBootstrapDeps() {
     fi
 
     # bring in json chain
-    source $CHI_DIR/chains/json.sh
+    source "$CHI_DIR/chains/json.sh"
 }
 
 export CHI_SHARE="$(chiExpandPath "localshare/chitin")"
