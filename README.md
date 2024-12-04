@@ -59,6 +59,7 @@ The `user` configuration contains global settings, and allows you to set machine
 
 - `dotfilesDir`: directory where you store your dotfiles (absolute path)
 - `projectDir`: directory you clone git repositories to (absolute path)
+- `installToolDeps`: whether any missing tool dependencies should be automatically installed
 
 Modify this config by running `chiConfigUserModify`.
 
@@ -70,7 +71,6 @@ Both `fiber` and `chain` configurations support the following fields:
 - `tools`: allows you to declare and configure tools that modules can depend on
   - see [Tool Configuration](#tool-configuration) for details
 - `toolDeps`: which tools this module depends on, and should not be loaded without
-- `installToolDeps`: whether any missing tool dependencies should be automatically installed
 
 #### Tool Configuration
 
@@ -90,7 +90,7 @@ In addition, the following configuration options can be set:
 
 ##### Install Method
 
-Tools can be automatically installed if `installToolDeps` is set on a module configuration, using the following install methods:
+Tools can be automatically installed if `installToolDeps` is set, using the following install methods:
 
 - `brew`: install with [brew](https://brew.sh/); all subfields are optional
   - `name`: can be used to override the tool name

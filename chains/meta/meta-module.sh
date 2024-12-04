@@ -174,8 +174,6 @@ function chiChainLoad() {
     local chainName="$(fileStripExtension $(basename "$2"))"
     local moduleName="$1:$chainName"
     
-    # echo "loading chain $moduleName from $2"
-
     # zsh chains only loaded on zsh shells
     [[ "$(fileGetExtension "$2")" == "zsh" ]] && [[ -z "$ZSH_VERSION" ]] && return 0
 

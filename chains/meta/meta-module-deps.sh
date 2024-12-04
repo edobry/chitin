@@ -70,7 +70,7 @@ function chiModuleCheckToolDepsMet() {
 
     [[ "${#toolsToInstall[@]}" -eq 0 ]] && return $toolDepsMet
 
-    local installToolDeps="$(chiModuleConfigReadVariablePath "$moduleName" installToolDeps)"
+    local installToolDeps="$(chiConfigUserRead installToolDeps)"
     [[ "$installToolDeps" != "true" ]] && return $toolDepsMet
 
     local installedTools=()
