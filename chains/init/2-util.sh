@@ -86,8 +86,15 @@ function splitOnSpaces() {
 function sedStripRef() {
     sed 's/\?ref=.*$//g'
 }
+
 function sedStripGitEx() {
     sed 's/\.git//'
+}
+
+function decimalToHex() {
+    requireNumericArg "value to convert" "$1" || return 1
+
+    printf "%x" "$1"
 }
 
 function findFile() {
