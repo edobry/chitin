@@ -174,7 +174,7 @@ function chiConfigChainRead() {
     local fieldPath="$1"
     [[ -z $fieldPath ]] || shift
 
-    local config="$(chiConfigUserRead chainConfig "$chainName" $fieldPath $@)"
+    local config="$(chiConfigUserRead moduleConfig "$chainName" $fieldPath $@)"
     if [[ "$config" == 'null' ]]; then
         chiLog "'$chainName' config section not initialized!" "$chainName"
         return 1
