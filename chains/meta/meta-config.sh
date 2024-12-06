@@ -17,10 +17,6 @@ function chiConfigUserShow() {
     cat "$(chiConfigUserGetPath)" | prettyYaml
 }
 
-function chiConfigUserGet() {
-    chiConfigUserRead '.'
-}
-
 function chiConfigUserRead() {
     jsonReadPath "$CHI_CONFIG_USER" $@
 }

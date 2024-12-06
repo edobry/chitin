@@ -72,8 +72,6 @@ function jsonReadPath() {
     requireJsonArg "" "$1" || return 1
     local jsonString="$1"; shift
 
-    requireArg "a JSON path" "$1" || return 1
-
     local output
     output="$(jq -cr 'getpath($ARGS.positional)' --args $* <<< "$jsonString")"
     local jqExit=$?
