@@ -146,8 +146,8 @@ function chiFiberLoad() {
     fi
 
     # read chain configs
-    local chainConfig="$(jsonReadPath "$config" chainConfig)"
-    [[ -n "$chainConfig" ]] && chiConfigMergeChain "$chainConfig" "$fiberName"
+    local moduleConfig="$(jsonReadPath "$config" moduleConfig)"
+    [[ -n "$moduleConfig" ]] && chiConfigModuleMerge "$moduleConfig" "$fiberName"
 
     if [[ "$3" != "nocheck" ]]; then
         if ! chiModuleCheckToolStatusAndDepsMet "$fiberName"; then

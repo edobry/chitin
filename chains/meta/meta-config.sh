@@ -112,13 +112,13 @@ function chiConfigUserLoad() {
         export CHI_DOTFILES_DIR="$(chiExpandPath "$dotfilesDir")"
     fi
 
-    # read fiber configs
-    local fiberConfig="$(jsonReadPath "$config" fiberConfig)"
-    [[ -n "$fiberConfig" ]] && chiConfigMergeFiber "$fiberConfig"
+    # read module configs
+    local moduleConfig="$(jsonReadPath "$config" moduleConfig)"
+    [[ -n "$moduleConfig" ]] && chiConfigModuleMerge "$moduleConfig"
 
-    # read chain configs
+    # read chain configs (backwards compatibility)
     local chainConfig="$(jsonReadPath "$config" chainConfig)"
-    [[ -n "$chainConfig" ]] && chiConfigMergeChain "$chainConfig"
+    [[ -n "$chainConfig" ]] && chiConfigModuleMerge "$chainConfig"
 }
 
 function chiConfigModify() {
@@ -201,12 +201,14 @@ function chiChainCheckEnabled() {
 
 function chiConfigChainReadField() {
     requireArg "a chain name" "$1" || return 1
-    requireArg "a field name" "$2" || return 1
+    requireArg "a field path" "$2" || return 1
 
-    local config="$(chiConfigChainRead "$1")"
+    local chainName="$1"; shift
+
+    local config="$(chiConfigChainRead "$chainName")"
     [[ -z "$config" ]] && return 1
 
-    jsonReadPath "$config" "$2"
+    jsonReadPath "$config" $*
 }
 
 function chiModuleConfigReadFromFile() {
@@ -271,8 +273,10 @@ function chiConfigMergeVariableValue() {
     chiConfigSetVariableValue "$1" "$mergedConfig"
 }
 
-function chiConfigMergeFiber() {
-    requireArg "a fiber config json string" "$1" || return 1
+function chiConfigModuleMerge() {
+    requireArg "a module config json string" "$1" || return 1
+
+    local moduleNamePrefix="$2"
 
     # read fiber configs
     while IFS= read -r moduleConfig; do
@@ -282,25 +286,7 @@ function chiConfigMergeFiber() {
         local configValue="$(jsonReadPath "$moduleConfig" value)"
         
         if [[ -n "$configValue" ]]; then
-            chiConfigMergeVariableValue "$moduleName" "$configValue"
-        fi
-    done <<< "$(jsonRead "$1" '(. // []) | to_entries[]')"
-}
-
-function chiConfigMergeChain() {
-    requireArg "a chain config json string" "$1" || return 1
-
-    local fiberName="$2"
-
-    # read chain configs
-    while IFS= read -r moduleConfig; do
-        [[ -z "$moduleConfig" ]] && continue
-
-        local moduleName="$(jsonReadPath "$moduleConfig" key)"
-        local configValue="$(jsonReadPath "$moduleConfig" value)"
-        
-        if [[ -n "$configValue" ]]; then
-            chiConfigMergeVariableValue "${fiberName}${fiberName:+:}$moduleName" "$chainConfigValue"
+            chiConfigMergeVariableValue "${moduleNamePrefix}${moduleNamePrefix:+:}$moduleName" "$configValue"
         fi
     done <<< "$(jsonRead "$1" '(. // []) | to_entries[]')"
 }

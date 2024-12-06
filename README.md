@@ -134,13 +134,13 @@ In addition to presence checking, a tool can optionally be configured to require
 The following fields are unique to `fiber` configurations:
 
 - `fiberDeps`: which `fibers` must be loaded prior to this one
-- `chainConfig`: allows you to set overrides for child chains' configuration
+- `moduleConfig`: allows you to set overrides for child chains' configuration
 
 Modify this config by running `chiConfigModuleModify <fiber name>`.
 
 ### Chain Configuration
 
-`chain` configurations are optional, and are merged with any matching parent `chainConfig` fields, higher-level ones overriding lower.
+`chain` configurations are optional, and are merged with any matching parent `moduleConfig` fields, higher-level ones overriding lower.
 
 Modify this config by running `chiConfigModuleModify <fiber name:chain name>`.
 
