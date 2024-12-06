@@ -139,7 +139,6 @@ function jsonMergeArraysDeep() {
     '
 }
 
-
 function jsonWriteToYamlFile() {
     requireJsonArg "a JSON string" "$1" || return 1
     requireArg "a target file path" "$2" || return 1

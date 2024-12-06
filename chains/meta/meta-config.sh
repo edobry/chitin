@@ -112,6 +112,10 @@ function chiConfigUserLoad() {
         export CHI_DOTFILES_DIR="$(chiExpandPath "$dotfilesDir")"
     fi
 
+    # read fiber configs
+    local fiberConfig="$(jsonReadPath "$config" fiberConfig)"
+    [[ -n "$fiberConfig" ]] && chiConfigMergeFiber "$fiberConfig"
+
     # read chain configs
     local chainConfig="$(jsonReadPath "$config" chainConfig)"
     [[ -n "$chainConfig" ]] && chiConfigMergeChain "$chainConfig"
@@ -267,19 +271,35 @@ function chiConfigMergeVariableValue() {
     chiConfigSetVariableValue "$1" "$mergedConfig"
 }
 
+function chiConfigMergeFiber() {
+    requireArg "a fiber config json string" "$1" || return 1
+
+    # read fiber configs
+    while IFS= read -r moduleConfig; do
+        [[ -z "$moduleConfig" ]] && continue
+
+        local moduleName="$(jsonReadPath "$moduleConfig" key)"
+        local configValue="$(jsonReadPath "$moduleConfig" value)"
+        
+        if [[ -n "$configValue" ]]; then
+            chiConfigMergeVariableValue "$moduleName" "$configValue"
+        fi
+    done <<< "$(jsonRead "$1" '(. // []) | to_entries[]')"
+}
+
 function chiConfigMergeChain() {
     requireArg "a chain config json string" "$1" || return 1
 
     local fiberName="$2"
 
     # read chain configs
-    while IFS= read -r chainConfig; do
-        [[ -z "$chainConfig" ]] && continue
+    while IFS= read -r moduleConfig; do
+        [[ -z "$moduleConfig" ]] && continue
 
-        local moduleName="$(jsonReadPath "$chainConfig" key)"
-        local chainConfigValue="$(jsonReadPath "$chainConfig" value)"
+        local moduleName="$(jsonReadPath "$moduleConfig" key)"
+        local configValue="$(jsonReadPath "$moduleConfig" value)"
         
-        if [[ -n "$chainConfigValue" ]]; then
+        if [[ -n "$configValue" ]]; then
             chiConfigMergeVariableValue "${fiberName}${fiberName:+:}$moduleName" "$chainConfigValue"
         fi
     done <<< "$(jsonRead "$1" '(. // []) | to_entries[]')"

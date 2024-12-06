@@ -123,6 +123,14 @@ function chiFiberLoad() {
     chiModuleConfigMergeFromFile "$1" "$fiberName"
     local config="$(chiConfigGetVariableValue "$fiberName")"
 
+    local enabledValue
+    enabledValue="$(chiModuleConfigReadVariablePath "$fiberName" enabled)"
+
+    if [[ $? -eq 0 ]] && [[ "$enabledValue" == "false" ]]; then
+        # chiLog "chain disabled, not loading!" "$fiberName"
+        return 1
+    fi
+
     chiModuleLoadToolConfigs "$fiberName"
 
     # echo "fiber config: $config" >&2
