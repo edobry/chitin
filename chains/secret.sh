@@ -7,7 +7,7 @@ function chiSecretGet() {
     local commandField="tool"
 
     local secretCommand
-    secretCommand="$(chiConfigChainReadField "$CHI_SECRETS_CHAIN_NAME" "$commandField")"
+    secretCommand="$(chiConfigUserReadField core chiSecret "$commandField")"
     if [[ $? -ne 0 ]]; then
         echo "$secretCommand"
         return 1

@@ -2,4 +2,5 @@
 dotfilesDir:
 # directory you clone git repositories to (absolute path)
 projectDir:
-chains: {}
+# custom configuration for modules
+moduleConfig:

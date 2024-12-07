@@ -48,8 +48,6 @@ function chiConfigConvertAndReadFile() {
 
     local extension="$(fileGetExtension "$filePath")"
     local convertedFilePath
-    
-    # echo "filePath: $filePath" >&2
 
     case "$extension" in
         json5)
@@ -65,8 +63,6 @@ function chiConfigConvertAndReadFile() {
     esac
     
     [[ $? -eq 0 ]] || return 1
-
-    # echo "convertedFilePath: $convertedFilePath" >&2
 
     jsonReadFile "$convertedFilePath"
 }
@@ -88,8 +84,6 @@ function chiConfigUserLoad() {
     configFile="$(chiConfigUserReadFile "$configLocation" "$CHI_CONFIG_USER_FILE_NAME")"
     [[ $? -eq 0 ]] || return 1
 
-    # echo "configFile: $configFile" >&2
-
     local inlineConfig="${1:-"{}"}"
     local mergedConfig="$(jsonMergeDeep "$configFile" "$inlineConfig")"
     export CHI_CONFIG_USER="$mergedConfig"
@@ -108,13 +102,8 @@ function chiConfigUserLoad() {
         export CHI_DOTFILES_DIR="$(chiExpandPath "$dotfilesDir")"
     fi
 
-    # read module configs
     local moduleConfig="$(jsonReadPath "$config" moduleConfig)"
     [[ -n "$moduleConfig" ]] && chiConfigModuleMerge "$moduleConfig"
-
-    # read chain configs (backwards compatibility)
-    local chainConfig="$(jsonReadPath "$config" chainConfig)"
-    [[ -n "$chainConfig" ]] && chiConfigModuleMerge "$chainConfig"
 }
 
 function chiConfigModify() {
@@ -156,55 +145,19 @@ function chiConfigUserSetField() {
     chiConfigUserSet "$newConfig"
 }
 
-
 function chiConfigFiberModify() {
     requireArg "a fiber name" "$1" || return 1
 
     chiConfigModify "$(chiModuleGetDynamicVariable "$CHI_FIBER_PATH_PREFIX" "$1")" "$CHI_CONFIG_FIBER_FILE_NAME"
 }
 
-function chiConfigChainRead() {
-    requireArg "a chain name" "$1" || return 1
+function chiConfigUserReadField() {
+    requireArg "a module name" "$1" || return 1
 
-    local chainName="$1"; shift
-    local fieldPath="$1"
-    [[ -z $fieldPath ]] || shift
+    local moduleName="$1"; shift
+    local moduleConfig="$(chiConfigUserRead moduleConfig "$moduleName")"
 
-    local config="$(chiConfigUserRead moduleConfig "$chainName" $fieldPath $@)"
-    if [[ "$config" == 'null' ]]; then
-        chiLog "'$chainName' config section not initialized!" "$chainName"
-        return 1
-    fi
-
-    echo "$config"
-}
-
-function chiConfigChainCheckBoolean() {
-    requireArg "a chain name or config" "$1" || return 1
-    requireArg "a field name" "$2" || return 1
-
-    local config="$([[ "$3" == "loaded" ]] && echo "$1" || chiConfigChainRead "$1")"
-    jsonCheckBool "$2" "$config"
-}
-
-function chiChainCheckEnabled() {
-    requireArg "a chain name or config" "$1" || return 1
-
-    local config="$([[ "$2" == "loaded" ]] && echo "$1" || chiConfigChainRead "$1")"
-
-    chiConfigChainCheckBoolean "$config" enabled "$2"
-}
-
-function chiConfigChainReadField() {
-    requireArg "a chain name" "$1" || return 1
-    requireArg "a field path" "$2" || return 1
-
-    local chainName="$1"; shift
-
-    local config="$(chiConfigChainRead "$chainName")"
-    [[ -z "$config" ]] && return 1
-
-    jsonReadPath "$config" $*
+    jsonReadPath "$moduleConfig" $*
 }
 
 function chiModuleConfigReadFromFile() {
