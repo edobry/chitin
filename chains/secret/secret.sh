@@ -1,4 +1,4 @@
-export CHI_SECRETS_CHAIN_NAME="core:chiSecret"
+export CHI_SECRETS_CHAIN_NAME="core:secret"
 
 # retrieves a secret with the given name from the secret store
 function chiSecretGet() {
