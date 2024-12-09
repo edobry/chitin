@@ -84,7 +84,7 @@ function chiShell() {
 
 function chiRunInitCommand() {
     local initCommand
-    initCommand="$(chiConfigUserReadField core init command)"
+    initCommand="$(chiConfigUserRead core init command)"
     if [[ $? -eq 0 ]]; then
         $initCommand
     fi

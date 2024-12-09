@@ -22,7 +22,7 @@ function chiConfigUserRead() {
 }
 
 function chiConfigUserReadFile() {
-    yamlFileToJson "$(chiConfigUserGetDir)/$CHI_CONFIG_USER_FILE_NAME" $@
+    yamlFileToJson "$(chiConfigUserGetDir)/$CHI_CONFIG_USER_FILE_NAME"
 }
 
 function chiConfigUserLoad() {
@@ -46,7 +46,7 @@ function chiConfigUserLoad() {
     export CHI_CONFIG_USER="$mergedConfig"
     local config="$mergedConfig"
 
-    local projectDir="$(chiConfigUserRead projectDir)"
+    local projectDir="$(chiConfigUserRead core projectDir)"
     if [[ -z "$projectDir" ]]; then
         chiLog "projectDir not set!" "meta:config"
         return 1
@@ -54,7 +54,7 @@ function chiConfigUserLoad() {
 
     export CHI_PROJECT_DIR="$(chiExpandPath "$projectDir")"
 
-    local dotfilesDir="$(chiConfigUserRead dotfilesDir)"
+    local dotfilesDir="$(chiConfigUserRead core dotfilesDir)"
     if [[ ! -z "$dotfilesDir" ]]; then
         export CHI_DOTFILES_DIR="$(chiExpandPath "$dotfilesDir")"
     fi
@@ -108,25 +108,10 @@ function chiConfigFiberModify() {
     chiConfigModify "$(chiModuleGetDynamicVariable "$CHI_FIBER_PATH_PREFIX" "$1")" "$CHI_CONFIG_MODULE_FILE_NAME"
 }
 
-function chiConfigUserReadField() {
-    requireArg "a module name" "$1" || return 1
-
-    local moduleName="$1"; shift
-    local moduleConfig="$(chiConfigUserRead moduleConfig "$moduleName")"
-
-    jsonReadPath "$moduleConfig" $*
-}
-
 function chiModuleConfigReadFromFile() {
     requireDirectoryArg "a directory" "$1" || return 1
-    requireArg "a module name" "$2" || return 1
 
-    local fileContents
-    fileContents="$(yamlFileToJson "$1/$CHI_CONFIG_MODULE_FILE_NAME")"
-    [[ $? -eq 0 ]] || return 1
-
-    [[ "$fileContents" == "null" ]] && return 0
-    echo "$fileContents"
+    yamlFileToJson "$1/$CHI_CONFIG_MODULE_FILE_NAME"
 }
 
 function chiModuleConfigMergeFromFile() {
@@ -137,6 +122,25 @@ function chiModuleConfigMergeFromFile() {
     [[ -z "$fileContents" ]] && return 1
 
     chiConfigMergeVariableValue "$2" "$fileContents"
+}
+
+function chiModuleUserConfigMergeFromFile() {
+    requireDirectoryArg "a directory" "$1" || return 1
+    requireArg "a module name" "$2" || return 1
+
+    local moduleDir="$1"; shift
+    local moduleName="$1"; shift
+
+    local userConfig="$(yamlFileToJson "$moduleDir/$CHI_CONFIG_USER_FILE_NAME" 2>/dev/null)"
+    [[ -z "$userConfig" ]] && return 1
+
+    local moduleConfigPath=("$moduleName" "moduleConfig" "$@")
+
+    local existingModuleConfig="$(yamlReadFilePath "$(chiConfigUserGetPath)" "${moduleConfigPath[@]}")"
+    if [[ -z "$existingModuleConfig" ]]; then
+        chiLog "initializing user config for module '$moduleName'" "meta:config"
+        yamlFileSetFieldWrite "$(chiConfigUserGetPath)" "$userConfig" "${moduleConfigPath[@]}"
+    fi
 }
 
 export CHI_CONFIG_VARIABLE_PREFIX="CHI_CONFIG"

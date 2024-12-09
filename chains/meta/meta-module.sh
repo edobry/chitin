@@ -120,6 +120,8 @@ function chiFiberLoad() {
     # if already loaded, return
     [[ -n $(chiModuleGetDynamicVariable "$CHI_FIBER_LOADED_PREFIX" "$fiberName") ]] && return 0
 
+    chiModuleUserConfigMergeFromFile "$1" "$fiberName"
+
     chiModuleConfigMergeFromFile "$1" "$fiberName"
     local config="$(chiConfigGetVariableValue "$fiberName")"
 
@@ -225,7 +227,9 @@ function chiChainLoadDir() {
     # if already loaded, return
     [[ -n $(chiModuleGetDynamicVariable "$CHI_FIBER_CHAIN_LOADED_PREFIX" "$moduleName") ]] && return 0
 
-    local chainConfig="$(chiModuleConfigReadFromFile "$2" "$moduleName")"
+    chiModuleUserConfigMergeFromFile "$(dirname $2)" "$fiberName" "$chainName"
+
+    local chainConfig="$(chiModuleConfigReadFromFile "$2" 2>/dev/null)"
     if [[ -n "$chainConfig" ]]; then
         chiConfigMergeVariableValue "$moduleName" "$chainConfig"
     fi

@@ -157,7 +157,7 @@ Add a section to your chiConfig with the `command` to use:
 ```json
 {
   "chains": {
-    "chiSecret": {
+    "secret": {
       "command": "pass"
     }
   }
