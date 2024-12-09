@@ -56,6 +56,15 @@ function yamlReadFile() {
     yamlFileToJson "$filePath" | jq -cr "$@"
 }
 
+# reads (a value at a certain path from) a YAML File
+# args: yaml file path, json path to read (optional)
+function yamlReadFilePath() {
+    requireYamlFileArg "file path" "$1" || return 1
+    local filePath="$1"; shift
+
+    jsonReadPath "$(yamlFileToJson "$filePath")" $*
+}
+
 # reads the value at a certain path from a JSON object
 # args: minified json string, jq path to read
 function jsonRead() {
