@@ -1,12 +1,12 @@
-export CHI_CONFIG_USER_FILE_NAME="userConfig"
-export CHI_CONFIG_FIBER_FILE_NAME="config"
+export CHI_CONFIG_USER_FILE_NAME="userConfig.yaml"
+export CHI_CONFIG_MODULE_FILE_NAME="config.yaml"
 
 function chiConfigUserGetDir() {
     echo "${XDG_CONFIG_HOME:-$HOME/.config}/chitin"
 }
 
 function chiConfigUserGetPath() {
-    echo "$(chiConfigUserGetDir)/$CHI_CONFIG_USER_FILE_NAME.yaml"
+    echo "$(chiConfigUserGetDir)/$CHI_CONFIG_USER_FILE_NAME"
 }
 
 function chiConfigUserCd() {
@@ -21,60 +21,17 @@ function chiConfigUserRead() {
     jsonReadPath "$CHI_CONFIG_USER" $@
 }
 
-function chiConfigFindFilePath() {
-    requireDirectoryArg "directory" "$1" || return 1
-    requireArg "a config file name, sans extension" "$2" || return 1
-
-    local json5DepFilePath="$1/$2.json5"
-    local yamlDepFilePath="$1/$2.yaml"
-
-    checkFileExists "$json5DepFilePath" >/dev/null && echo "$json5DepFilePath" && return 0
-    checkFileExists "$yamlDepFilePath" >/dev/null && echo "$yamlDepFilePath" && return 0
-
-    return 1
-}
-
 function chiConfigUserReadFile() {
-    chiConfigConvertAndReadFile "$(chiConfigUserGetDir)" "$CHI_CONFIG_USER_FILE_NAME" $@
-}
-
-function chiConfigConvertAndReadFile() {
-    requireDirectoryArg "directory" "$1" || return 1
-    requireArg "a config file name, sans extension" "$2" || return 1
-
-    local filePath
-    filePath="$(chiConfigFindFilePath "$1" "$2")"
-    [[ $? -eq 0 ]] || return 1
-
-    local extension="$(fileGetExtension "$filePath")"
-    local convertedFilePath
-
-    case "$extension" in
-        json5)
-            convertedFilePath="$(json5Convert "$filePath")"
-            ;;
-        yaml)
-            convertedFilePath="$(yamlConvert "$filePath")"
-            ;;
-        *)
-            chiBail "unsupported extension '$extension'!"
-            return 1
-            ;;
-    esac
-    
-    [[ $? -eq 0 ]] || return 1
-
-    jsonReadFile "$convertedFilePath"
+    yamlFileToJson "$(chiConfigUserGetDir)/$CHI_CONFIG_USER_FILE_NAME" $@
 }
 
 function chiConfigUserLoad() {
     local configLocation="$(chiConfigUserGetDir)"
-    local configFileFullName="$CHI_CONFIG_USER_FILE_NAME.yaml"
-    local configFilePath="$configLocation/$configFileFullName"
+    local configFilePath="$configLocation/$CHI_CONFIG_USER_FILE_NAME"
 
     if [[ ! -f "$configFilePath" ]]; then
         mkdir -p "$configLocation"
-        cp "$CHI_DIR/$configFileFullName" "$configFilePath"
+        cp "$CHI_DIR/$CHI_CONFIG_USER_FILE_NAME" "$configFilePath"
 
         chiLog "initialized config file at '$configFilePath'" "init"
         chiLog 'please complete setup by running `chiConfigUserModify`' "init"
@@ -110,7 +67,7 @@ function chiConfigModify() {
     requireArg "a config path" "$1" || return 1
     requireArg "a config file name" "$2" || return 1
 
-    $EDITOR "$(chiConfigFindFilePath "$1" "$2")"
+    $EDITOR "$1/$2"
     chiLog "updated, reinitializing..." "meta:config"
     chiReinit
 }
@@ -120,7 +77,7 @@ function chiConfigSet() {
     requireArg "a config file name" "$2" || return 1
     requireArg "a config value object" "$3" || return 1
 
-    echo "$3" | prettyYaml > "$(chiConfigFindFilePath "$1" "$2")"
+    echo "$3" | prettyYaml > "$1/$2"
     chiLog "updated, reinitializing..." "meta:config"
     chiReinit
 }
@@ -148,7 +105,7 @@ function chiConfigUserSetField() {
 function chiConfigFiberModify() {
     requireArg "a fiber name" "$1" || return 1
 
-    chiConfigModify "$(chiModuleGetDynamicVariable "$CHI_FIBER_PATH_PREFIX" "$1")" "$CHI_CONFIG_FIBER_FILE_NAME"
+    chiConfigModify "$(chiModuleGetDynamicVariable "$CHI_FIBER_PATH_PREFIX" "$1")" "$CHI_CONFIG_MODULE_FILE_NAME"
 }
 
 function chiConfigUserReadField() {
@@ -165,7 +122,7 @@ function chiModuleConfigReadFromFile() {
     requireArg "a module name" "$2" || return 1
 
     local fileContents
-    fileContents="$(chiConfigConvertAndReadFile "$1" "config")"
+    fileContents="$(yamlFileToJson "$1/$CHI_CONFIG_MODULE_FILE_NAME")"
     [[ $? -eq 0 ]] || return 1
 
     [[ "$fileContents" == "null" ]] && return 0
