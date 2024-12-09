@@ -134,7 +134,12 @@ function chiModuleUserConfigMergeFromFile() {
     local userConfig="$(yamlFileToJson "$moduleDir/$CHI_CONFIG_USER_FILE_NAME" 2>/dev/null)"
     [[ -z "$userConfig" ]] && return 1
 
-    local moduleConfigPath=("$moduleName" "moduleConfig" "$@")
+    local moduleConfigPath=("$moduleName")
+
+    while [[ $# -gt 0 ]]; do
+        moduleConfigPath+=("moduleConfig" "$1")
+        shift
+    done
 
     local existingModuleConfig="$(yamlReadFilePath "$(chiConfigUserGetPath)" "${moduleConfigPath[@]}")"
     if [[ -z "$existingModuleConfig" ]]; then
