@@ -44,10 +44,7 @@ function chiToolsCheckStatus() {
     local installed="false"
     local validVersion="false"
 
-    if \
-        ! jsonCheckBoolPath "$toolConfig" optional &>/dev/null &&
-        chiToolsCheckInstalled "$toolName" "$toolConfig" \
-    ; then
+    if chiToolsCheckInstalled "$toolName" "$toolConfig"; then
         if [[ -z "$versionCommand" ]]; then
             installed="true"
             validVersion="true"
