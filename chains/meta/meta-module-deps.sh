@@ -27,11 +27,7 @@ function chiModuleCheckToolDepsMet() {
     requireArg "a module name" "$1" || return 1
 
     local moduleName="$1"
-    local config="$(chiConfigGetVariableValue "$moduleName")"
-
-    [[ -z "$config" ]] && return 0
-
-    local toolDepsList="$(jsonRead "$config" '(.toolDeps // empty)[]')"
+    local toolDepsList="$(chiModuleConfigReadVariablePath "$moduleName" toolDeps | jq -r '.[]')"
     [[ -z "$toolDepsList" ]] && return 0
 
     local toolDepsMet=0

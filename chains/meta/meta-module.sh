@@ -1,3 +1,7 @@
+export CHI_MODULE_PREFIX="CHI_MODULE"
+export CHI_MODULE_PATH_PREFIX="${CHI_MODULE_PREFIX}_PATH"
+export CHI_MODULE_LOADED_PREFIX="${CHI_MODULE_PREFIX}_LOADED"
+
 function chiModuleGetDynamicVariable() {
     requireArg "a variable prefix" "$1" || return 1
     requireArg "a module name" "$2" || return 1
@@ -39,6 +43,24 @@ function chiModuleDependenciesGetRequiredTools() {
     chiModulesGetRequiredTools $(chiConfigGetVariableValue "$1") "$2"
 }
 
+function chiModuleGetPath() {
+    requireArg "a module name" "$1" || return 1
+
+    chiModuleGetDynamicVariable "$CHI_MODULE_PATH_PREFIX" "$1"
+}
+
+function chiFiberPathToName() {
+    requireArg "a fiber path" "$1" || return 1
+
+    if [[ "$1" == "$CHI_DIR" ]]; then
+        echo "core"
+    elif [[ "$1" == "$CHI_DOTFILES_DIR" ]]; then
+        echo "dotfiles"
+    else
+        echo "${$(basename "$1")#chitin-}"
+    fi
+}
+
 function chiFiberLoadExternal() {
     IFS=$'\n' fibers=($(find "$CHI_PROJECT_DIR" -maxdepth 1 -type d -not -path "$CHI_PROJECT_DIR" -name 'chitin-*'))
 
@@ -70,22 +92,16 @@ function chiFiberLoadExternalLoop() {
     fi
 }
 
-function chiFiberGetPath() {
-    requireArg "a fiber name" "$1" || return 1
-
-    chiModuleGetDynamicVariable "$CHI_FIBER_PATH_PREFIX" "$1"
-}
-
 function chiShellReload() {
     requireArg "at least one fiber name" "$1" || return 1
 
     local fibers=("$@")
     for fiber in "${fibers[@]}"; do
-        local fiberPath="$(chiFiberGetPath "$fiber")"
+        local fiberPath="$(chiModuleGetPath "$fiber")"
         [[ -z "$fiberPath" ]] && continue
 
-        unset "$(chiModuleMakeDynamicVariableName "$CHI_FIBER_LOADED_PREFIX" "$fiber")"
-        for var in $(env | grep "^${CHI_FIBER_CHAIN_LOADED_PREFIX}_${fiber}_" | cut -d= -f1); do
+        unset "$(chiModuleMakeDynamicVariableName "$CHI_MODULE_LOADED_PREFIX" "$fiber")"
+        for var in $(env | grep "^${CHI_MODULE_LOADED_PREFIX}_${fiber}_" | cut -d= -f1); do
             unset "$var"
         done
         
@@ -93,57 +109,34 @@ function chiShellReload() {
     done
 }
 
-export CHI_FIBER_PREFIX="CHI_FIBER"
-export CHI_FIBER_PATH_PREFIX="${CHI_FIBER_PREFIX}_PATH"
-export CHI_FIBER_LOADED_PREFIX="${CHI_FIBER_PREFIX}_LOADED"
-export CHI_FIBER_CHAIN_LOADED_PREFIX="${CHI_FIBER_PREFIX}_CHAIN_LOADED"
-
-function chiFiberPathToName() {
-    requireArg "a fiber path" "$1" || return 1
-
-    if [[ "$1" == "$CHI_DIR" ]]; then
-        echo "core"
-    elif [[ "$1" == "$CHI_DOTFILES_DIR" ]]; then
-        echo "dotfiles"
-    else
-        echo "${$(basename "$1")#chitin-}"
-    fi
-}
-
 function chiFiberLoad() {
     requireDirectoryArg "fiber directory" "$1" || return 1
 
     local fiberName="${2:-$(chiFiberPathToName "$1")}"
 
-    # echo "loading fiber $fiberName from $1" >&2
-
     # if already loaded, return
-    [[ -n $(chiModuleGetDynamicVariable "$CHI_FIBER_LOADED_PREFIX" "$fiberName") ]] && return 0
+    [[ -n $(chiModuleGetDynamicVariable "$CHI_MODULE_LOADED_PREFIX" "$fiberName") ]] && return 0
 
     chiModuleUserConfigMergeFromFile "$1" "$fiberName"
 
-    chiModuleConfigMergeFromFile "$1" "$fiberName"
+    chiConfigModuleMergeFromFile "$1" "$fiberName"
     local config="$(chiConfigGetVariableValue "$fiberName")"
 
     local enabledValue
     enabledValue="$(chiModuleConfigReadVariablePath "$fiberName" enabled)"
 
     if [[ $? -eq 0 ]] && [[ "$enabledValue" == "false" ]]; then
-        # chiLog "fiber disabled, not loading!" "$fiberName"
         return 0
     fi
 
     chiModuleLoadToolConfigs "$fiberName"
-
-    # echo "fiber config: $config" >&2
 
     local fiberDeps="$(jsonRead "$config" '(.fiberDeps // [])[]')"
 
     # if not all fiber dependencies have been loaded, retry
     if [[ -n "$fiberDeps" ]]; then
         while IFS= read -r fiberDep; do
-            # echo "fiberDep: $fiberDep" >&2
-            [[ -z $(chiModuleGetDynamicVariable "$CHI_FIBER_LOADED_PREFIX" "$fiberDep") ]] && return 1
+            [[ -z $(chiModuleGetDynamicVariable "$CHI_MODULE_LOADED_PREFIX" "$fiberDep") ]] && return 1
         done <<< "$fiberDeps"
     fi
 
@@ -160,8 +153,8 @@ function chiFiberLoad() {
 
     chiChainLoadNested "$fiberName" "$1"/chains
     
-    chiModuleSetDynamicVariable "$CHI_FIBER_PATH_PREFIX" "$fiberName" "$1"
-    chiModuleSetDynamicVariable "$CHI_FIBER_LOADED_PREFIX" "$fiberName" true
+    chiModuleSetDynamicVariable "$CHI_MODULE_PATH_PREFIX" "$fiberName" "$1"
+    chiModuleSetDynamicVariable "$CHI_MODULE_LOADED_PREFIX" "$fiberName" true
 }
 
 function chiChainLoadNested() {
@@ -264,8 +257,8 @@ function chiChainLoadDir() {
         chiLoadDir "$moduleName" $(find "$2" -type f -name '*.zsh' -not -path "$chainInitScriptPath")
     fi
 
-    chiModuleSetDynamicVariable "$CHI_FIBER_PATH_PREFIX" "$moduleName" "$2"
-    chiModuleSetDynamicVariable "$CHI_FIBER_CHAIN_LOADED_PREFIX" "$moduleName" true
+    chiModuleSetDynamicVariable "$CHI_MODULE_PATH_PREFIX" "$moduleName" "$2"
+    chiModuleSetDynamicVariable "$CHI_MODULE_LOADED_PREFIX" "$moduleName" true
 }
 
 function chiDotfilesCheckToolStatus() {
@@ -279,35 +272,16 @@ function chiModuleGetName() {
     local moduleDir="$(dirname "$modulePath")"
     
     local fiberName="$(chiFiberPathToName "${moduleDir%/chains*}")"
-    local fiberPath="$(chiReadDynamicVariable "$CHI_FIBER_PATH_{$fiberName}")"
+    local fiberPath="$(chiReadDynamicVariable "${CHI_MODULE_PATH_PREFIX}_{$fiberName}")"
 
     local searchPath="$([[ "$(basename "$moduleDir")" == "chains" ]] && echo "$modulePath" || echo "$moduleDir")"
 
-    # check all the $CHI_FIBER_PATH_* vars for one that contains the module path
-    for var in $(env | grep -o "^${CHI_FIBER_PATH_PREFIX}.*=${searchPath}"); do
+    # check all the $CHI_MODULE_PATH_* vars for one that contains the module path
+    for var in $(env | grep -o "^${CHI_MODULE_PATH_PREFIX}.*=${searchPath}"); do
         local varName="${var%%=*}"
-        local fiberVariableName="${varName#"${CHI_FIBER_PATH_PREFIX}"_}"
+        local fiberVariableName="${varName#"${CHI_MODULE_PATH_PREFIX}"_}"
         local chainVariableName="${fiberVariableName#"${fiberName}_"}"
         
         echo "${fiberName}:$(chiModuleVariableNameToName "$chainVariableName")"
     done
-}
-
-function chiModuleCheckLoaded() {
-    requireArg "a prefix" "$1" || return 1
-    requireArg "a module name" "$2" || return 1
-
-    [[ -n $(chiModuleGetDynamicVariable "$1" "$2") ]]
-}
-
-function chiFiberCheckLoaded() {
-    requireArg "a fiber name" "$1" || return 1
-
-    chiModuleCheckLoaded "$CHI_FIBER_LOADED_PREFIX" "$1"
-}
-
-function chiChainCheckLoaded() {
-    requireArg "a chain name" "$1" || return 1
-
-    chiModuleCheckLoaded "$CHI_FIBER_CHAIN_LOADED_PREFIX" "$1"
 }
