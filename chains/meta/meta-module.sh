@@ -162,67 +162,34 @@ function chiChainLoadNested() {
     requireDirectoryArg "chain directory" "$2" || return 1
 
     for chainPath in $(find "$2" -maxdepth 1 -type f -not -path "$2"); do
-        chiChainLoad "$1" "$chainPath"
+        chiChainLoad "$1" "$chainPath" "false"
     done
 
     for chainPath in $(find "$2" -maxdepth 1 -type d -not -path "$2"); do
-        chiChainLoadDir "$1" "$chainPath"
+        chiChainLoad "$1" "$chainPath" "true"
     done
 }
 
 function chiChainLoad() {
     requireArg "a fiber name" "$1" || return 1
-    requireFileArg "chain path" "$2" || return 1
+    requireFileOrDirectoryArg "chain path" "$2" || return 1
+    requireArg "a boolean indicating whether this is a nested chain" "$3" || return 1
 
-    local chainName="$(fileStripExtension $(basename "$2"))"
-    local moduleName="$1:$chainName"
-    
-    # zsh chains only loaded on zsh shells
-    [[ "$(fileGetExtension "$2")" == "zsh" ]] && [[ -z "$ZSH_VERSION" ]] && return 0
+    local isNestedChain="$([[ "$3" == "true" ]] && echo true || echo false)"
 
-    # if already loaded, return
-    [[ -n $(chiModuleGetDynamicVariable "$CHI_FIBER_CHAIN_LOADED_PREFIX" "$moduleName") ]] && return 0
-
-    local chainConfig="{}"
-    chiConfigMergeVariableValue "$moduleName" "$chainConfig"
-
-    chiModuleLoadToolConfigs "$moduleName"
-
-    # only load if not disabled
-    local enabledValue
-    enabledValue="$(chiModuleConfigReadVariablePath "$moduleName" enabled)"
-
-    if [[ $? -eq 0 ]] && [[ "$enabledValue" == "false" ]]; then
-        # chiLog "chain disabled, not loading!" "$moduleName"
-        return 1
-    fi
-
-    if ! chiModuleCheckToolStatusAndDepsMet "$moduleName"; then
-        chiLog "missing tool dependencies, not loading!" "$moduleName"
-        return 1
-    fi
-
-    chiLoadDir "$moduleName" "$2"
-
-    chiModuleSetDynamicVariable "$CHI_FIBER_PATH_PREFIX" "$moduleName" "$2"
-    chiModuleSetDynamicVariable "$CHI_FIBER_CHAIN_LOADED_PREFIX" "$moduleName" true
-}
-
-function chiChainLoadDir() {
-    requireArg "a fiber name" "$1" || return 1
-    requireDirectoryArg "chain directory" "$2" || return 1
-
-    local chainName="$(basename "$2")"
-    local moduleName="$1:$chainName"
-
-    # echo "loading chain $moduleName from $2"
+    local fiberName="$1"
+    local chainPath="$2"
+    local chainName="$($isNestedChain && basename "$chainPath" || fileStripExtension $(basename "$2"))"
+    local moduleName="$fiberName:$chainName"
 
     # if already loaded, return
-    [[ -n $(chiModuleGetDynamicVariable "$CHI_FIBER_CHAIN_LOADED_PREFIX" "$moduleName") ]] && return 0
+    [[ -n $(chiModuleGetDynamicVariable "$CHI_MODULE_LOADED_PREFIX" "$moduleName") ]] && return 0
 
-    chiModuleUserConfigMergeFromFile "$(dirname $2)" "$fiberName" "$chainName"
+    if $isNestedChain; then
+        chiModuleUserConfigMergeFromFile "$(dirname $chainPath)" "$fiberName" "$chainName"
+    fi
 
-    local chainConfig="$(chiModuleConfigReadFromFile "$2" 2>/dev/null)"
+    local chainConfig="$($isNested && chiConfigModuleReadFromFile "$chainPath" 2>/dev/null || echo "{}")"
     if [[ -n "$chainConfig" ]]; then
         chiConfigMergeVariableValue "$moduleName" "$chainConfig"
     fi
@@ -243,26 +210,26 @@ function chiChainLoadDir() {
         return 1
     fi
 
-    local chainInitScriptPath="$2/$chainName-init.sh"
-    if [[ -f "$chainInitScriptPath" ]]; then
-        source "$chainInitScriptPath" "$moduleName"
-        [[ $? -eq 0 ]] || return 0
-    fi
+    if $isNestedChain; then
+        local chainInitScriptPath="$chainPath/$chainName-init.sh"
+        if [[ -f "$chainInitScriptPath" ]]; then
+            source "$chainInitScriptPath" "$moduleName"
+            [[ $? -eq 0 ]] || return 0
+        fi
 
-    # load all scripts in chain directory
-    chiLoadDir "$moduleName" $(find "$2" -type f -name '*.sh' -not -path "$chainInitScriptPath")
-
-    # zsh chains only loaded on zsh shells
-    if [[ -n "$ZSH_VERSION" ]]; then
-        chiLoadDir "$moduleName" $(find "$2" -type f -name '*.zsh' -not -path "$chainInitScriptPath")
+        # load all scripts in chain directory
+        chiLoadDir "$moduleName" $(find "$chainPath" -type f -name '*.sh' -not -path "$chainInitScriptPath")
+      
+        # zsh chains only loaded on zsh shells
+        if [[ -n "$ZSH_VERSION" ]]; then
+            chiLoadDir "$moduleName" $(find "$chainPath" -type f -name '*.zsh' -not -path "$chainInitScriptPath")
+        fi
+    else
+        chiLoadDir "$moduleName" "$chainPath"
     fi
 
     chiModuleSetDynamicVariable "$CHI_MODULE_PATH_PREFIX" "$moduleName" "$2"
     chiModuleSetDynamicVariable "$CHI_MODULE_LOADED_PREFIX" "$moduleName" true
-}
-
-function chiDotfilesCheckToolStatus() {
-    chiModuleCheckToolStatus dotfiles
 }
 
 function chiModuleGetName() {

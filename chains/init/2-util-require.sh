@@ -11,6 +11,24 @@ function checkFileExists() {
     fi
 }
 
+function checkDirectoryExists() {
+    requireArg "a filepath" "$1" || return 1
+
+    if [[ ! -d "$1" ]]; then
+        echo "No directory exists at the given path!" >&2
+        return 1
+    fi
+}
+
+function checkFileOrDirectoryExists() {
+    requireArg "a filepath" "$1" || return 1
+
+    if [[ ! -e "$1" ]]; then
+        echo "No directory exists at the given path!" >&2
+        return 1
+    fi
+}
+
 function checkExtension() {
     requireArg "a file path" "$1" || return 1
     requireArg "an extension" "$2" || return 1
@@ -36,14 +54,6 @@ function checkExtensionYaml() {
     checkExtension "$1" "yaml"
 }
 
-function checkDirectoryExists() {
-    requireArg "a filepath" "$1" || return 1
-
-    if [[ ! -d "$1" ]]; then
-        echo "No directory exists at the given path!" >&2
-        return 1
-    fi
-}
 
 # checks that an argument is supplied and prints a message if not
 # args: name of arg, arg value
@@ -96,6 +106,12 @@ function requireYamlFileArg() {
 # args: name of arg, arg value
 function requireDirectoryArg() {
     requireArgWithCheck "$1" "$2" checkDirectoryExists "a path to an existing "
+}
+
+# checks that an argument is supplied and that points to an existing file or directory, and prints a message if not
+# args: name of arg, arg value
+function requireFileOrDirectoryArg() {
+    requireArgWithCheck "$1" "$2" checkFileOrDirectoryExists "a path to an existing "
 }
 
 # can be used to check arguments for a specific string
