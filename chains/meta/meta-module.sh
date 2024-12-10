@@ -162,11 +162,11 @@ function chiChainLoadNested() {
     requireDirectoryArg "chain directory" "$2" || return 1
 
     for chainPath in $(find "$2" -maxdepth 1 -type f -not -path "$2"); do
-        chiChainLoad "$1" "$chainPath" "false"
+        chiChainLoad "$1" "$chainPath" false
     done
 
     for chainPath in $(find "$2" -maxdepth 1 -type d -not -path "$2"); do
-        chiChainLoad "$1" "$chainPath" "true"
+        chiChainLoad "$1" "$chainPath" true
     done
 }
 
@@ -175,10 +175,10 @@ function chiChainLoad() {
     requireFileOrDirectoryArg "chain path" "$2" || return 1
     requireArg "a boolean indicating whether this is a nested chain" "$3" || return 1
 
-    local isNestedChain="$([[ "$3" == "true" ]] && echo true || echo false)"
-
     local fiberName="$1"
     local chainPath="$2"
+    local isNestedChain=$3
+    
     local chainName="$($isNestedChain && basename "$chainPath" || fileStripExtension $(basename "$2"))"
     local moduleName="$fiberName:$chainName"
 
