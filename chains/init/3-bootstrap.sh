@@ -5,6 +5,23 @@ function chiInitBootstrapModule() {
     echo "init:bootstrap"
 }
 
+export CHI_LOG_TIME="/tmp/chitin-prev-time-$(randomString 10)"
+function chiLog() {
+    requireArg "a message" "$1" || return 1
+  
+    local currentTime="$(gdate +%s%N)"
+    local delta=$([[ -f "$CHI_LOG_TIME" ]] && echo $(( (currentTime - $(cat "$CHI_LOG_TIME")) / 1000000 )) || echo "0")
+ 
+    echo "[$delta ms]" "chitin${2:+:}${2} - $1" >&2
+    echo "$currentTime" > "$CHI_LOG_TIME"
+}
+
+function chiBail() {
+    chiLog "$(chiColorRed "${1:-"something went wrong"}!")"
+    chiLog "$(chiColorRed "exiting!")"
+    return 1
+}
+
 function chiInitBootstrapDeps() {
     # we need jq to bootstrap
     if ! checkCommand jq; then
