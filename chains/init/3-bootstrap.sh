@@ -8,15 +8,15 @@ function chiInitBootstrapModule() {
 if [[ -z "$CHI_LOG_LEVEL" ]]; then
     export CHI_LOG_LEVEL="$CHI_LOG_LEVEL_INFO"
 fi
-export CHI_LOG_LEVEL_INFO=INFO
-export CHI_LOG_LEVEL_DEBUG=DEBUG
-export CHI_LOG_LEVEL_TRACE=TRACE
+export CHI_LOG_LEVEL_INFO=1
+export CHI_LOG_LEVEL_DEBUG=2
+export CHI_LOG_LEVEL_TRACE=3
 export CHI_LOG_TIME="/tmp/chitin-prev-time-$(randomString 10)"
 function chiLog() {
     requireArg "a message" "$1" || return 1
   
     local logMode="${3:-$CHI_LOG_LEVEL_INFO}"
-    [[ "$logMode" == "${CHI_LOG_LEVEL:-$CHI_LOG_LEVEL_INFO}" ]] || return 0
+    [[ "$logMode" -ge "${CHI_LOG_LEVEL:-$CHI_LOG_LEVEL_INFO}" ]] || return 0
 
     local msg="chitin${2:+:}${2} - $1"
 
