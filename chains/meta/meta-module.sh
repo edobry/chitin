@@ -123,7 +123,7 @@ function chiFiberLoad() {
     local config="$(chiConfigGetVariableValue "$fiberName")"
 
     local enabledValue
-    enabledValue="$(chiModuleConfigReadVariablePath "$fiberName" enabled)"
+    enabledValue="$(chiConfigUserRead "$fiberName" enabled)"
 
     if [[ $? -eq 0 ]] && [[ "$enabledValue" == "false" ]]; then
         return 0
@@ -198,7 +198,7 @@ function chiChainLoad() {
 
     # only load if not disabled
     local enabledValue
-    enabledValue="$(chiModuleConfigReadVariablePath "$moduleName" enabled)"
+    enabledValue="$(chiConfigUserRead "$fiberName" moduleConfig "$chainName" enabled)"
 
     if [[ $? -eq 0 ]] && [[ "$enabledValue" == "false" ]]; then
         # chiLog "chain disabled, not loading!" "$moduleName"
