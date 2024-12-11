@@ -17,6 +17,8 @@ function chiModuleLoadToolConfigs() {
 function chiModuleCheckToolStatus() {
     requireArg "a module name" "$1" || return 1
 
+    chiLogDebug "checking tool status for module '$1'..."  "meta:module"
+
     local moduleTools="$(chiModuleConfigReadVariablePath "$1" tools | jq -r 'keys[]')"
     [[ -z "$moduleTools" ]] && return 0
 
@@ -35,7 +37,7 @@ function chiModuleCheckToolDepsMet() {
     local toolsToInstall=()
     
     while read -r toolDep; do
-        # echo "toolDep: $toolDep"
+        chiLogDebug "checking toolDep: $toolDep..." "meta:module"
 
         local toolDepStatus="$(chiToolsGetStatus "$toolDep")"
         if [[ -z "$toolDepStatus" ]]; then

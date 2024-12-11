@@ -114,6 +114,8 @@ function chiFiberLoad() {
 
     local fiberName="${2:-$(chiFiberPathToName "$1")}"
 
+    chiLogDebug "loading fiber..." "$fiberName"
+
     # if already loaded, return
     [[ -n $(chiModuleGetDynamicVariable "$CHI_MODULE_LOADED_PREFIX" "$fiberName") ]] && return 0
 
@@ -201,7 +203,7 @@ function chiChainLoad() {
     enabledValue="$(chiConfigUserRead "$fiberName" moduleConfig "$chainName" enabled)"
 
     if [[ $? -eq 0 ]] && [[ "$enabledValue" == "false" ]]; then
-        # chiLog "chain disabled, not loading!" "$moduleName"
+        chiLogDebug "chain disabled, not loading!" "$moduleName"
         return 1
     fi
 

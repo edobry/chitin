@@ -44,6 +44,8 @@ function chiToolsCheckStatus() {
     local installed="false"
     local validVersion="false"
 
+    chiLogDebug "checking status for '$toolName'..." "meta:tools"
+
     if chiToolsCheckInstalled "$toolName" "$toolConfig"; then
         if [[ -z "$versionCommand" ]]; then
             installed="true"
