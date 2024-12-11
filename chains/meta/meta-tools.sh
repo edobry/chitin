@@ -17,7 +17,7 @@ function chiToolsCheckAndUpdateStatus() {
 
         # if its an executable artifact, add its dir to the PATH
         local artifactConfig="$(jsonReadPath "$toolConfig" artifact 2>/dev/null)"
-        if [[ -n "$artifactConfig" ]] && jsonCheckBoolPath "$artifactConfig" isExec 2>/dev/null; then
+        if [[ -n "$artifactConfig" ]] && jsonCheckBool "$artifactConfig" isExec 2>/dev/null; then
             local targetDir="$(chiToolsArtifactMakeTargetDir "$artifactConfig")"
             chiToolsAddDirToPath "$targetDir"
         fi
@@ -112,10 +112,10 @@ function chiToolsCheckInstalled() {
     local checkCommandValue="$(jsonReadPath "$tool" checkCommand 2>/dev/null)"
     
     local checkBrew
-    jsonCheckBoolPath "$tool" checkBrew &>/dev/null && checkBrew=true || checkBrew=false
+    jsonCheckBool "$tool" checkBrew &>/dev/null && checkBrew=true || checkBrew=false
 
     local checkPipx
-    jsonCheckBoolPath "$tool" checkPipx &>/dev/null && checkPipx=true || checkPipx=false
+    jsonCheckBool "$tool" checkPipx &>/dev/null && checkPipx=true || checkPipx=false
     
     local checkPathValue
     checkPathValue="$(jsonReadPath "$tool" checkPath 2>/dev/null)"
@@ -124,7 +124,7 @@ function chiToolsCheckInstalled() {
     checkEvalValue="$(jsonReadPath "$tool" checkEval 2>/dev/null)"
 
     local checkPath
-    jsonCheckBoolPath "$tool" checkPath &>/dev/null && checkPath=true || checkPath=false
+    jsonCheckBool "$tool" checkPath &>/dev/null && checkPath=true || checkPath=false
 
     if [[ -n "$checkCommandValue" ]]; then
         if $checkBrew; then
@@ -216,7 +216,7 @@ function chiToolsCheckInstalled() {
             return 1
         fi
 
-        if jsonCheckBoolPath "$brewConfig" cask &>/dev/null; then
+        if jsonCheckBool "$brewConfig" cask &>/dev/null; then
             # echo "running brew check cask"
             return $(brewCheckCask "$toolName")
         fi

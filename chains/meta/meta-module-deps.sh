@@ -54,11 +54,11 @@ function chiModuleCheckToolDepsMet() {
             fi
         fi
 
-        if ! jsonCheckBoolPath "$toolDepStatus" installed; then
+        if ! jsonCheckBool "$toolDepStatus" installed; then
             chiLog "$toolDep not installed!" "$moduleName"
 
             toolsToInstall+=("$toolDep")
-        elif ! jsonCheckBoolPath "$toolDepStatus" validVersion; then
+        elif ! jsonCheckBool "$toolDepStatus" validVersion; then
             chiLog "$toolDep version not valid!" "$moduleName"
             toolDepsMet=1
         fi
