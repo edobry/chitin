@@ -1,4 +1,4 @@
-export CHI_SECRETS_CHAIN_NAME="core:chiSecret"
+export CHI_SECRETS_CHAIN_NAME="core:secret"
 
 # retrieves a secret with the given name from the secret store
 function chiSecretGet() {
@@ -7,7 +7,7 @@ function chiSecretGet() {
     local commandField="tool"
 
     local secretCommand
-    secretCommand="$(chiConfigChainReadField "$CHI_SECRETS_CHAIN_NAME" "$commandField")"
+    secretCommand="$(chiConfigUserRead core secret "$commandField")"
     if [[ $? -ne 0 ]]; then
         echo "$secretCommand"
         return 1

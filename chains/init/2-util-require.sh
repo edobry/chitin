@@ -6,7 +6,25 @@ function checkFileExists() {
     requireArg "a filepath" "$1" || return 1
 
     if [[ ! -f "$1" ]]; then
-        echo "No file exists at the given path!"
+        echo "No file exists at the given path!" >&2
+        return 1
+    fi
+}
+
+function checkDirectoryExists() {
+    requireArg "a filepath" "$1" || return 1
+
+    if [[ ! -d "$1" ]]; then
+        echo "No directory exists at the given path!" >&2
+        return 1
+    fi
+}
+
+function checkFileOrDirectoryExists() {
+    requireArg "a filepath" "$1" || return 1
+
+    if [[ ! -e "$1" ]]; then
+        echo "No directory exists at the given path!" >&2
         return 1
     fi
 }
@@ -36,14 +54,6 @@ function checkExtensionYaml() {
     checkExtension "$1" "yaml"
 }
 
-function checkDirectoryExists() {
-    requireArg "a filepath" "$1" || return 1
-
-    if [[ ! -d "$1" ]]; then
-        echo "No directory exists at the given path!"
-        return 1
-    fi
-}
 
 # checks that an argument is supplied and prints a message if not
 # args: name of arg, arg value
@@ -81,14 +91,14 @@ function requireFileArg() {
 # checks that an argument is supplied and that it points to an existing JSON file, and prints a message if not
 # args: name of arg, arg value
 function requireJsonFileArg() {
-    requireFileArg "$1" "$2"
+    requireFileArg "$1" "$2" || return 1
     requireArgWithCheck "$1" "$2" checkExtensionJson "a path to an existing JSON "
 }
 
 # checks that an argument is supplied and that it points to an existing YAML file, and prints a message if not
 # args: name of arg, arg value
 function requireYamlFileArg() {
-    requireFileArg "$1" "$2"
+    requireFileArg "$1" "$2" || return 1
     requireArgWithCheck "$1" "$2" checkExtensionYaml "a path to an existing YAML "
 }
 
@@ -96,6 +106,12 @@ function requireYamlFileArg() {
 # args: name of arg, arg value
 function requireDirectoryArg() {
     requireArgWithCheck "$1" "$2" checkDirectoryExists "a path to an existing "
+}
+
+# checks that an argument is supplied and that points to an existing file or directory, and prints a message if not
+# args: name of arg, arg value
+function requireFileOrDirectoryArg() {
+    requireArgWithCheck "$1" "$2" checkFileOrDirectoryExists "a path to an existing "
 }
 
 # can be used to check arguments for a specific string

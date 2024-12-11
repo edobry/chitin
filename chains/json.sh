@@ -56,6 +56,15 @@ function yamlReadFile() {
     yamlFileToJson "$filePath" | jq -cr "$@"
 }
 
+# reads (a value at a certain path from) a YAML File
+# args: yaml file path, json path to read (optional)
+function yamlReadFilePath() {
+    requireYamlFileArg "file path" "$1" || return 1
+    local filePath="$1"; shift
+
+    jsonReadPath "$(yamlFileToJson "$filePath")" $*
+}
+
 # reads the value at a certain path from a JSON object
 # args: minified json string, jq path to read
 function jsonRead() {
@@ -71,8 +80,6 @@ function jsonRead() {
 function jsonReadPath() {
     requireJsonArg "" "$1" || return 1
     local jsonString="$1"; shift
-
-    requireArg "a JSON path" "$1" || return 1
 
     local output
     output="$(jq -cr 'getpath($ARGS.positional)' --args $* <<< "$jsonString")"
@@ -138,7 +145,6 @@ function jsonMergeArraysDeep() {
         deepmerge($a; $b)
     '
 }
-
 
 function jsonWriteToYamlFile() {
     requireJsonArg "a JSON string" "$1" || return 1
