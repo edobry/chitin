@@ -40,7 +40,7 @@ function autoinitChi() {
 }
 
 function chiShell() {
-    # reset envvars if reloading, besides $CHI_DIR
+    local startTime=$(date +%s)
     # reset envvars if reloading, besides CHI_DIR and CHI_LOG_LEVEL
     if [[ ! -z "$CHI_ENV_INITIALIZED" ]]; then
         local chiDir=$CHI_DIR
@@ -52,6 +52,8 @@ function chiShell() {
 
     # load init chain
     chiLoadDir core:init $CHI_DIR/chains/init/**/*.sh
+    chiLog "initializing chitin..." "init"
+
     chiColorInit
     chiInitBootstrapDeps
 
@@ -83,6 +85,10 @@ function chiShell() {
         chiToolsRemoveDirFromPath "$CHI_INIT_TEMP_DIR"
         rm -rf "$CHI_INIT_TEMP_DIR"
     fi
+
+    local endTime=$(gdate +%s)
+    local duration=$((endTime - startTime))
+    chiLog "$(chiColorGreen "initialized in $duration seconds")" "init"
 }
 
 function chiRunInitCommand() {
