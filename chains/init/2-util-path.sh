@@ -2,6 +2,14 @@ function xdgHome() {
     echo "${XDG_DATA_HOME:-${HOME}}"
 }
 
+function xdgData() {
+    echo "$(xdgHome)/.local/share"
+}
+
+function xdgCache() {
+    echo "$(xdgHome)/.cache"
+}
+
 function fileGetExtension() {
     requireArg "a file path" "$1" || return 1
 
@@ -85,7 +93,7 @@ function chiExpandPath() {
     
     local expandedPath="$(chiExpandHome "$1")"
     expandedPath="$(chiExpandPathSegmentStart "$xdgHome" "$(xdgHome)" "$expandedPath")"
-    expandedPath="$(chiExpandPathSegmentStart "$localShare" "$(xdgHome)/.local/share" "$expandedPath")"
+    expandedPath="$(chiExpandPathSegmentStart "$localShare" "$(xdgData)" "$expandedPath")"
 
     echo "$expandedPath"
 }

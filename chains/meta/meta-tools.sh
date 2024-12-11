@@ -66,18 +66,17 @@ function chiToolsCheckStatus() {
     chiToolsMakeStatus "$toolName" "$installed" "$validVersion"
 }
 
+export CHI_CACHE="$(xdgCache)/chitin"
+export CHI_CACHE_TOOLS="$CHI_CACHE/tool-status.json"
+
 function chiToolsUpdateStatus() {
     requireArg "at least one tool status JSON string" "$1" || return 1
     local toolStatus=("$@")
 
-    # echo "updating tool status: ${toolStatus[@]}" >&2
-
-    local updatedToolStatus="$(jsonMerge $toolStatus '{}')"
-    local globalToolStatus="$(jsonMerge "${CHI_TOOL_STATUS:-"{}"}" "$updatedToolStatus" "{}")"
-
-    # echo "globalToolStatus: $globalToolStatus" >&2
-
-    export CHI_TOOL_STATUS="$globalToolStatus"
+    export CHI_TOOL_STATUS="$(jsonMerge "${CHI_TOOL_STATUS:-"{}"}" $toolStatus "{}")"
+    
+    mkdir -p "$CHI_CACHE"
+    echo "$CHI_TOOL_STATUS" > "$CHI_CACHE_TOOLS"
 }
 
 function chiToolsGetStatus() {
