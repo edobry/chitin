@@ -180,7 +180,7 @@ function chiChainLoad() {
     local fiberName="$1"
     local chainPath="$2"
     local isNestedChain=$3
-    
+
     local chainName="$($isNestedChain && basename "$chainPath" || fileStripExtension $(basename "$2"))"
     local moduleName="$fiberName:$chainName"
 

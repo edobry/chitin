@@ -116,18 +116,11 @@ function chiModuleCheckToolDepsMet() {
     fi
 }
 
-function chiToolsLoadFromCache() {
-    [[ ! -f "$CHI_CACHE_TOOLS" ]] && return 1
-    [[ -n "$CHI_TOOL_STATUS" ]] && return 0
-
-    export CHI_TOOL_STATUS="$(cat "$CHI_CACHE_TOOLS")"
-}
-
 function chiModuleCheckToolStatusAndDepsMet() {
     requireArg "a module name" "$1" || return 1
 
-    if ! chiToolsLoadFromCache; then
-        chiLog "building tool status cache for module '$1'..." "meta:tools"
+    if [[ -n "$CHI_CACHE_TOOLS_REBUILD" ]]; then
+        chiLog "building tool status cache..." "$1"
         chiModuleCheckToolStatus "$1"
     fi
 

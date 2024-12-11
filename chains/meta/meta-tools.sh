@@ -71,6 +71,13 @@ function chiToolsCheckStatus() {
 export CHI_CACHE="$(xdgCache)/chitin"
 export CHI_CACHE_TOOLS="$CHI_CACHE/tool-status.json"
 
+function chiToolsLoadFromCache() {
+    [[ ! -f "$CHI_CACHE_TOOLS" ]] && return 1
+    [[ -n "$CHI_TOOL_STATUS" ]] && return 0
+
+    export CHI_TOOL_STATUS="$(cat "$CHI_CACHE_TOOLS")"
+}
+
 function chiToolsUpdateStatus() {
     requireArg "at least one tool status JSON string" "$1" || return 1
     local toolStatus=("$@")
