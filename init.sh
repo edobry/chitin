@@ -41,10 +41,13 @@ function autoinitChi() {
 
 function chiShell() {
     # reset envvars if reloading, besides $CHI_DIR
+    # reset envvars if reloading, besides CHI_DIR and CHI_LOG_LEVEL
     if [[ ! -z "$CHI_ENV_INITIALIZED" ]]; then
         local chiDir=$CHI_DIR
+        local chiLogLevel=$CHI_LOG_LEVEL
         unset $(env | grep "^CHI_" | sed 's/=.*//')
         export CHI_DIR=$chiDir
+        export CHI_LOG_LEVEL=$chiLogLevel
     fi
 
     # load init chain

@@ -5,17 +5,22 @@ function chiInitBootstrapModule() {
     echo "init:bootstrap"
 }
 
-export CHI_LOG_MODE=INFO
+if [[ -z "$CHI_LOG_LEVEL" ]]; then
+    export CHI_LOG_LEVEL="$CHI_LOG_LEVEL_INFO"
+fi
+export CHI_LOG_LEVEL_INFO=INFO
+export CHI_LOG_LEVEL_DEBUG=DEBUG
+export CHI_LOG_LEVEL_TRACE=TRACE
 export CHI_LOG_TIME="/tmp/chitin-prev-time-$(randomString 10)"
 function chiLog() {
     requireArg "a message" "$1" || return 1
   
-    local logMode="${3:-INFO}"
-    [[ "$logMode" == "$CHI_LOG_MODE" ]] || return 0
+    local logMode="${3:-$CHI_LOG_LEVEL_INFO}"
+    [[ "$logMode" == "${CHI_LOG_LEVEL:-$CHI_LOG_LEVEL_INFO}" ]] || return 0
 
     local msg="chitin${2:+:}${2} - $1"
 
-    if [[ "$logMode" == "DEBUG" ]]; then
+    if [[ "$logMode" == "$CHI_LOG_LEVEL_DEBUG" ]]; then
         local currentTime="$(gdate +%s%N)"
         local delta=$([[ -f "$CHI_LOG_TIME" ]] && echo $(( (currentTime - $(cat "$CHI_LOG_TIME")) / 1000000 )) || echo "0")
         echo "$currentTime" > "$CHI_LOG_TIME"
@@ -30,14 +35,14 @@ function chiLogDebug() {
     requireArg "a message" "$1" || return 1
     requireArg "a module name" "$2" || return 1
 
-    chiLogDebug "$1" "$2" DEBUG
+    chiLog "$1" "$2" DEBUG
 }
 
 function chiLogTrace() {
     requireArg "a message" "$1" || return 1
     requireArg "a module name" "$2" || return 1
 
-    chiLogDebug "$1" "$2" TRACE
+    chiLog "$1" "$2" TRACE
 }
 
 function chiBail() {
