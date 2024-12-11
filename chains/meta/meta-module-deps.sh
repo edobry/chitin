@@ -107,9 +107,11 @@ function chiModuleCheckToolDepsMet() {
         chiToolsInstallBrew "$moduleName" "${brewToolsToInstall[@]}"
     fi
 
-    # check again after installing
-    chiToolsCheckAndUpdateStatus "${installedTools[@]}"
-    chiModuleCheckToolDepsMet "$moduleName"
+    if [[ "${#installedTools[@]}" -gt 0 ]]; then
+        # check again after installing
+        chiToolsCheckAndUpdateStatus "${installedTools[@]}"
+        chiModuleCheckToolDepsMet "$moduleName"
+    fi
 }
 
 function chiModuleCheckToolStatusAndDepsMet() {
