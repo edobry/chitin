@@ -24,7 +24,7 @@ function chiLog() {
   
     local logLevel="$(chiLogGetLevel "${3:-INFO}")"
     local currentLogLevel="$(chiLogGetLevel "$CHI_LOG_LEVEL")"
-    [[ "$logLevel" -ge $currentLogLevel ]] || return 0
+    [[ "$logLevel" -le $currentLogLevel ]] || return 0
 
     local msg="chitin${2:+:}${2} - $1"
 
