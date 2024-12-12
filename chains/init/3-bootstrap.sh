@@ -13,10 +13,12 @@ export CHI_LOG_LEVEL_DEBUG=2
 export CHI_LOG_LEVEL_TRACE=3
 
 function chiLogGetLevel() {
-    requireArgOptions "a known log level" "$1" INFO DEBUG TRACE || return 1
+    # requireArgOptions "a known log level" "$1" INFO DEBUG TRACE || return 1
 
     chiReadDynamicVariable "CHI_LOG_LEVEL_${1}"
 }
+
+export CHI_LOG_IS_DEBUG=$([[ "$(chiLogGetLevel "$CHI_LOG_LEVEL")" -ge "$CHI_LOG_LEVEL_DEBUG" ]] && echo true || echo false)
 
 export CHI_LOG_TIME="/tmp/chitin-prev-time-$(randomString 10)"
 function chiLog() {
@@ -28,7 +30,7 @@ function chiLog() {
 
     local msg="chitin${2:+:}${2} - $1"
 
-    if [[ "$currentLogLevel" -ge "$CHI_LOG_LEVEL_DEBUG" ]]; then
+    if $CHI_LOG_IS_DEBUG; then
         local currentTime="$(gdate +%s%N)"
         local delta=$([[ -f "$CHI_LOG_TIME" ]] && echo $(( (currentTime - $(cat "$CHI_LOG_TIME")) / 1000000 )) || echo "0")
         echo "$currentTime" > "$CHI_LOG_TIME"
