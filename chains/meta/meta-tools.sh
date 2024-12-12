@@ -19,6 +19,13 @@ function chiToolsLoad() {
             chiToolsAddDirToPath "$targetDir"
             continue
         fi
+
+        # if it has a sourceScript field set, source it
+        local sourceScript="$(jsonReadPath "$toolConfig" sourceScript 2>/dev/null)"
+        if [[ -n "$sourceScript" ]]; then
+            local targetDir="$(chiToolsGitMakeTargetDir "$(jsonReadPath "$toolConfig" git 2>/dev/null)")"
+            source "$targetDir/$sourceScript"
+        fi
     done
 }
 

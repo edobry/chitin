@@ -61,8 +61,9 @@ function chiToolsInstallGit() {
     requireArg "a tool config JSON string" "$3" || return 1
 
     local toolName="$2"
-    local url="$(jsonRead "$3" '.git.url // empty')"
-    local target="$(chiExpandPath $(jsonRead "$3" '.git.target // empty'))"
+    local gitConfig="$(jsonReadPath "$3" git)"
+    local url="$(jsonReadPath "$gitConfig" url)"
+    local target="$(chiToolsGitMakeTargetDir "$gitConfig")"
 
     [[ -d "$target" ]] && return 0
 
@@ -73,6 +74,12 @@ function chiToolsInstallGit() {
     
     mkdir -p "$target"
     git clone "$url" "$target"
+}
+
+function chiToolsGitMakeTargetDir() {
+    requireArg "a tool git config JSON string" "$1" || return 1
+
+    chiExpandPath $(jsonReadPath "$1" target)
 }
 
 function chiToolsInstallCommand() {
