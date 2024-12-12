@@ -204,10 +204,10 @@ function jsonToYamlConvert() {
 }
 
 function jsonCheckBool() {
-    requireArg "a field name" "$1" || return 1
-    requireArg "a JSON string" "$2" || return 1
+    requireArg "a JSON string" "$1" || return 1
+    requireArg "a field name" "$2" || return 1
 
-    echo "$2" | jq -e --arg fieldName "$1" '.[$fieldName] // empty' >/dev/null
+    echo "$1" | jq -e --arg fieldName "$2" '.[$fieldName]' &>/dev/null
 }
 
 function yamlToJson() {
@@ -244,11 +244,7 @@ function jsonCheckBoolPath() {
 
     requireArg "a JSON path" "$1" || return 1
 
-    local value
-    value="$(jsonReadBoolPath "$json" $* 2>/dev/null)"
-    [[ $? -eq 0 ]] || return 1
-
-    [[ "$value" == "true" ]]
+    [[ "$(jsonReadPath "$json" $* 2>/dev/null)" == "true" ]]
 }
 
 function jsonMakeArray() {

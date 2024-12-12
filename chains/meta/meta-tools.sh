@@ -5,24 +5,47 @@ function chiToolsGetConfig() {
     echo "$CHI_TOOLS" | jq -ce --arg tool "$1" '.[$tool] // empty'
 }
 
-function chiToolsCheckAndUpdateStatus() {
-    requireArg "at least one tool name" "$1" || return 1
+function chiToolsLoad() {
+    requireArg "a module name" "$1" || return 1
+    requireJsonArg "at least one tool config entry" "$2" || return 1
 
-    local toolStatus=('{}')
-    for tool in $@; do
-        # echo "tool: $tool" >&2
+    local moduleName="$1"; shift
 
-        local toolConfig="$(chiToolsGetConfig "$tool")"
-        [[ -z "$toolConfig" ]] && continue
+    chiLogDebug "loading tools..." "$moduleName"
+
+    echo "$*" | jq -sc '.[] | select(.value.artifact != null or .value.sourceScript != null)' | while read -r toolEntry; do
+        # local toolName="$(jsonReadPath "$toolEntry" key)"
+        local toolConfig="$(jsonReadPath "$toolEntry" value)"
 
         # if its an executable artifact, add its dir to the PATH
         local artifactConfig="$(jsonReadPath "$toolConfig" artifact 2>/dev/null)"
-        if [[ -n "$artifactConfig" ]] && jsonCheckBoolPath "$artifactConfig" isExec 2>/dev/null; then
+        if [[ -n "$artifactConfig" ]] && jsonCheckBool "$artifactConfig" isExec 2>/dev/null; then
             local targetDir="$(chiToolsArtifactMakeTargetDir "$artifactConfig")"
             chiToolsAddDirToPath "$targetDir"
+            continue
         fi
 
-        local returnedStatus="$(chiToolsCheckStatus "$tool" "$toolConfig")"
+        # if it has a sourceScript field set, source it
+        local sourceScript="$(jsonReadPath "$toolConfig" sourceScript 2>/dev/null)"
+        if [[ -n "$sourceScript" ]]; then
+            local targetDir="$(chiToolsGitMakeTargetDir "$(jsonReadPath "$toolConfig" git 2>/dev/null)")"
+            source "$targetDir/$sourceScript"
+        fi
+    done
+
+    chiLogDebug "tools loaded" "$moduleName"
+}
+
+function chiToolsCheckAndUpdateStatus() {
+    requireJsonArg "at least one tool config entry" "$1" || return 1
+
+    local toolStatus=('{}')
+    for toolEntry in $@; do
+        local toolName="$(jsonReadPath "$toolEntry" key)"
+        local toolConfig="$(jsonReadPath "$toolEntry" value)"
+        local returnedStatus="$(chiToolsCheckStatus "$toolName" "$toolConfig")"
+        
+        chiLogDebug "tool status for '$toolName': $returnedStatus" "meta:tools"
         toolStatus+=("$returnedStatus")
     done
 
@@ -36,13 +59,15 @@ function chiToolsCheckStatus() {
     local toolName="$1"
     local toolConfig="$2"
 
-    local moduleName="$(jsonRead "$toolConfig" '.meta.definedIn // empty')"
+    local moduleName="$(jsonReadPath "$toolConfig" meta definedIn)"
     
-    local expectedVersion="$(jsonRead "$toolConfig" '.version // empty')"
-    local versionCommand="$(jsonRead "$toolConfig" '.versionCommand // empty')"
+    local expectedVersion="$(jsonReadPath "$toolConfig" version)"
+    local versionCommand="$(jsonReadPath "$toolConfig" versionCommand)"
 
     local installed="false"
     local validVersion="false"
+
+    chiLogDebug "checking status for '$toolName'..." "meta:tools"
 
     if chiToolsCheckInstalled "$toolName" "$toolConfig"; then
         if [[ -z "$versionCommand" ]]; then
@@ -66,18 +91,24 @@ function chiToolsCheckStatus() {
     chiToolsMakeStatus "$toolName" "$installed" "$validVersion"
 }
 
+export CHI_CACHE="$(xdgCache)/chitin"
+export CHI_CACHE_TOOLS="$CHI_CACHE/tool-status.json"
+
+function chiToolsLoadFromCache() {
+    [[ ! -f "$CHI_CACHE_TOOLS" ]] && return 1
+    [[ -n "$CHI_TOOL_STATUS" ]] && return 0
+
+    export CHI_TOOL_STATUS="$(cat "$CHI_CACHE_TOOLS")"
+}
+
 function chiToolsUpdateStatus() {
     requireArg "at least one tool status JSON string" "$1" || return 1
     local toolStatus=("$@")
 
-    # echo "updating tool status: ${toolStatus[@]}" >&2
-
-    local updatedToolStatus="$(jsonMerge $toolStatus '{}')"
-    local globalToolStatus="$(jsonMerge "${CHI_TOOL_STATUS:-"{}"}" "$updatedToolStatus" "{}")"
-
-    # echo "globalToolStatus: $globalToolStatus" >&2
-
-    export CHI_TOOL_STATUS="$globalToolStatus"
+    export CHI_TOOL_STATUS="$(jsonMerge "${CHI_TOOL_STATUS:-"{}"}" $toolStatus "{}")"
+    
+    mkdir -p "$CHI_CACHE"
+    echo "$CHI_TOOL_STATUS" > "$CHI_CACHE_TOOLS"
 }
 
 function chiToolsGetStatus() {
@@ -112,10 +143,10 @@ function chiToolsCheckInstalled() {
     local checkCommandValue="$(jsonReadPath "$tool" checkCommand 2>/dev/null)"
     
     local checkBrew
-    jsonCheckBoolPath "$tool" checkBrew &>/dev/null && checkBrew=true || checkBrew=false
+    jsonCheckBool "$tool" checkBrew &>/dev/null && checkBrew=true || checkBrew=false
 
     local checkPipx
-    jsonCheckBoolPath "$tool" checkPipx &>/dev/null && checkPipx=true || checkPipx=false
+    jsonCheckBool "$tool" checkPipx &>/dev/null && checkPipx=true || checkPipx=false
     
     local checkPathValue
     checkPathValue="$(jsonReadPath "$tool" checkPath 2>/dev/null)"
@@ -124,7 +155,7 @@ function chiToolsCheckInstalled() {
     checkEvalValue="$(jsonReadPath "$tool" checkEval 2>/dev/null)"
 
     local checkPath
-    jsonCheckBoolPath "$tool" checkPath &>/dev/null && checkPath=true || checkPath=false
+    jsonCheckBool "$tool" checkPath &>/dev/null && checkPath=true || checkPath=false
 
     if [[ -n "$checkCommandValue" ]]; then
         if $checkBrew; then
@@ -216,7 +247,7 @@ function chiToolsCheckInstalled() {
             return 1
         fi
 
-        if jsonCheckBoolPath "$brewConfig" cask &>/dev/null; then
+        if jsonCheckBool "$brewConfig" cask &>/dev/null; then
             # echo "running brew check cask"
             return $(brewCheckCask "$toolName")
         fi

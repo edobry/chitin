@@ -114,6 +114,8 @@ function chiFiberLoad() {
 
     local fiberName="${2:-$(chiFiberPathToName "$1")}"
 
+    chiLogDebug "loading fiber..." "$fiberName"
+
     # if already loaded, return
     [[ -n $(chiModuleGetDynamicVariable "$CHI_MODULE_LOADED_PREFIX" "$fiberName") ]] && return 0
 
@@ -123,7 +125,7 @@ function chiFiberLoad() {
     local config="$(chiConfigGetVariableValue "$fiberName")"
 
     local enabledValue
-    enabledValue="$(chiModuleConfigReadVariablePath "$fiberName" enabled)"
+    enabledValue="$(chiConfigUserRead "$fiberName" enabled)"
 
     if [[ $? -eq 0 ]] && [[ "$enabledValue" == "false" ]]; then
         return 0
@@ -145,7 +147,7 @@ function chiFiberLoad() {
     [[ -n "$moduleConfig" ]] && chiConfigModuleMerge "$moduleConfig" "$fiberName"
 
     if [[ "$3" != "nocheck" ]]; then
-        if ! chiModuleCheckToolStatusAndDepsMet "$fiberName"; then
+        if ! chiModuleCheckTools "$fiberName"; then
             chiLog "missing tool dependencies, not loading!" "$fiberName"
             return 1
         fi
@@ -178,7 +180,7 @@ function chiChainLoad() {
     local fiberName="$1"
     local chainPath="$2"
     local isNestedChain=$3
-    
+
     local chainName="$($isNestedChain && basename "$chainPath" || fileStripExtension $(basename "$2"))"
     local moduleName="$fiberName:$chainName"
 
@@ -198,14 +200,14 @@ function chiChainLoad() {
 
     # only load if not disabled
     local enabledValue
-    enabledValue="$(chiModuleConfigReadVariablePath "$moduleName" enabled)"
+    enabledValue="$(chiConfigUserRead "$fiberName" moduleConfig "$chainName" enabled)"
 
     if [[ $? -eq 0 ]] && [[ "$enabledValue" == "false" ]]; then
-        # chiLog "chain disabled, not loading!" "$moduleName"
+        chiLogDebug "chain disabled, not loading!" "$moduleName"
         return 1
     fi
 
-    if ! chiModuleCheckToolStatusAndDepsMet "$moduleName"; then
+    if ! chiModuleCheckTools "$moduleName"; then
         chiLog "missing tool dependencies, not loading!" "$moduleName"
         return 1
     fi

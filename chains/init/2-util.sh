@@ -1,15 +1,3 @@
-function chiLog() {
-    requireArg "a message" "$1" || return 1
-
-    echo "chitin${2:+:}${2} - $1" >&2
-}
-
-function chiBail() {
-    chiLog "$(chiColorRed "${1:-"something went wrong"}!")"
-    chiLog "$(chiColorRed "exiting!")"
-    return 1
-}
-
 # checks if a command exists
 # args: command
 function checkCommand() {
@@ -24,7 +12,7 @@ isTrue () [[ "$1" = true ]]
 
 #args: length of string
 function randomString() {
-    cat /dev/urandom | LC_ALL=C tr -dc 'a-z0-9' | fold -w $1 | head -n 1
+    cat /dev/urandom | LC_ALL=C tr -dc 'a-z0-9' | fold -w "${1:-10}" | head -n 1
 }
 
 #creates a randomly named temporary file

@@ -40,21 +40,31 @@ function autoinitChi() {
 }
 
 function chiShell() {
-    # reset envvars if reloading, besides $CHI_DIR
+    local startTime=$(date +%s)
+    # reset envvars if reloading, besides CHI_DIR and CHI_LOG_LEVEL
     if [[ ! -z "$CHI_ENV_INITIALIZED" ]]; then
         local chiDir=$CHI_DIR
+        local chiLogLevel=$CHI_LOG_LEVEL
         unset $(env | grep "^CHI_" | sed 's/=.*//')
         export CHI_DIR=$chiDir
+        export CHI_LOG_LEVEL=$chiLogLevel
     fi
 
     # load init chain
     chiLoadDir core:init $CHI_DIR/chains/init/**/*.sh
+    chiLog "initializing chitin..." "init"
+
     chiColorInit
     chiInitBootstrapDeps
 
     # load meta chain
     chiLoadDir core:meta $CHI_DIR/chains/meta/**/*.sh
     chiConfigUserLoad "$1"
+
+    if ! chiToolsLoadFromCache; then
+        chiLog "tools status cache not found, rebuilding..." "meta:tools"
+        export CHI_CACHE_TOOLS_REBUILD=true
+    fi
 
     # load core chains
     chiFiberLoad "$CHI_DIR" "core" "$([[ -n "$IS_DOCKER" ]] && echo "nocheck")"
@@ -67,6 +77,7 @@ function chiShell() {
     chiFiberLoadExternal
     
     export CHI_ENV_INITIALIZED=true
+    unset CHI_CACHE_TOOLS_REBUILD
 
     if [[ -z "$CHI_FAIL_ON_ERROR" ]]; then
         set +e
@@ -80,6 +91,10 @@ function chiShell() {
         chiToolsRemoveDirFromPath "$CHI_INIT_TEMP_DIR"
         rm -rf "$CHI_INIT_TEMP_DIR"
     fi
+
+    local endTime=$(gdate +%s)
+    local duration=$((endTime - startTime))
+    chiLog "$(chiColorGreen "initialized in $duration seconds")" "init"
 }
 
 function chiRunInitCommand() {

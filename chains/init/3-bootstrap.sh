@@ -5,6 +5,62 @@ function chiInitBootstrapModule() {
     echo "init:bootstrap"
 }
 
+if [[ -z "$CHI_LOG_LEVEL" ]]; then
+    export CHI_LOG_LEVEL=INFO
+fi
+export CHI_LOG_LEVEL_INFO=1
+export CHI_LOG_LEVEL_DEBUG=2
+export CHI_LOG_LEVEL_TRACE=3
+
+function chiLogGetLevel() {
+    # requireArgOptions "a known log level" "$1" INFO DEBUG TRACE || return 1
+
+    chiReadDynamicVariable "CHI_LOG_LEVEL_${1}"
+}
+
+export CHI_LOG_IS_DEBUG=$([[ "$(chiLogGetLevel "$CHI_LOG_LEVEL")" -ge "$CHI_LOG_LEVEL_DEBUG" ]] && echo true || echo false)
+
+export CHI_LOG_TIME="/tmp/chitin-prev-time-$(randomString 10)"
+function chiLog() {
+    requireArg "a message" "$1" || return 1
+  
+    local logLevel="$(chiLogGetLevel "${3:-INFO}")"
+    local currentLogLevel="$(chiLogGetLevel "$CHI_LOG_LEVEL")"
+    [[ "$logLevel" -le $currentLogLevel ]] || return 0
+
+    local msg="chitin${2:+:}${2} - $1"
+
+    if $CHI_LOG_IS_DEBUG; then
+        local currentTime="$(gdate +%s%N)"
+        local delta=$([[ -f "$CHI_LOG_TIME" ]] && echo $(( (currentTime - $(cat "$CHI_LOG_TIME")) / 1000000 )) || echo "0")
+        echo "$currentTime" > "$CHI_LOG_TIME"
+        
+        msg="[$delta ms] $msg"
+    fi
+
+    echo "$msg" >&2
+}
+
+function chiLogDebug() {
+    requireArg "a message" "$1" || return 1
+    requireArg "a module name" "$2" || return 1
+
+    chiLog "$1" "$2" DEBUG
+}
+
+function chiLogTrace() {
+    requireArg "a message" "$1" || return 1
+    requireArg "a module name" "$2" || return 1
+
+    chiLog "$1" "$2" TRACE
+}
+
+function chiBail() {
+    chiLog "$(chiColorRed "${1:-"something went wrong"}!")"
+    chiLog "$(chiColorRed "exiting!")"
+    return 1
+}
+
 function chiInitBootstrapDeps() {
     # we need jq to bootstrap
     if ! checkCommand jq; then

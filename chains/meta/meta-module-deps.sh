@@ -14,13 +14,29 @@ function chiModuleLoadToolConfigs() {
     export CHI_TOOLS="$(jsonMerge "${CHI_TOOLS:-"{}"}" "$moduleTools")"
 }
 
+function chiModuleCheckTools() {
+    requireArg "a module name" "$1" || return 1
+
+    chiLogDebug "checking tools..."  "$1"
+
+    chiModuleCheckToolStatus "$1"
+    chiModuleCheckToolDepsMet "$1"
+
+    chiLogDebug "tools checked" "$1"
+}
+
 function chiModuleCheckToolStatus() {
     requireArg "a module name" "$1" || return 1
 
-    local moduleTools="$(chiModuleConfigReadVariablePath "$1" tools | jq -r 'keys[]')"
+    local moduleTools="$(chiModuleConfigReadVariablePath "$1" tools | jq -c 'to_entries[]')"
     [[ -z "$moduleTools" ]] && return 0
 
-    chiToolsCheckAndUpdateStatus $moduleTools
+    chiToolsLoad "$1" "$moduleTools"
+
+    if [[ -n "$CHI_CACHE_TOOLS_REBUILD" ]]; then
+        chiLog "building tool status cache..." "$1"
+        chiToolsCheckAndUpdateStatus "$moduleTools"
+    fi
 }
 
 function chiModuleCheckToolDepsMet() {
@@ -35,7 +51,7 @@ function chiModuleCheckToolDepsMet() {
     local toolsToInstall=()
     
     while read -r toolDep; do
-        # echo "toolDep: $toolDep"
+        chiLogDebug "checking toolDep: $toolDep..." "$moduleName"
 
         local toolDepStatus="$(chiToolsGetStatus "$toolDep")"
         if [[ -z "$toolDepStatus" ]]; then
@@ -45,7 +61,7 @@ function chiModuleCheckToolDepsMet() {
             # TODO: rethink this
             if [[ -n "$toolConfig" ]]; then
                 # echo "checking status for $toolDep on-demand..." >&2
-                chiToolsCheckAndUpdateStatus "$toolDep"
+                chiToolsCheckAndUpdateStatus "$toolConfig"
                 toolDepStatus="$(chiToolsGetStatus "$toolDep")"
             else
                 chiLog "no tool status found for '$toolDep'!" "$moduleName"
@@ -54,11 +70,11 @@ function chiModuleCheckToolDepsMet() {
             fi
         fi
 
-        if ! jsonCheckBoolPath "$toolDepStatus" installed; then
+        if ! jsonCheckBool "$toolDepStatus" installed; then
             chiLog "$toolDep not installed!" "$moduleName"
 
             toolsToInstall+=("$toolDep")
-        elif ! jsonCheckBoolPath "$toolDepStatus" validVersion; then
+        elif ! jsonCheckBool "$toolDepStatus" validVersion; then
             chiLog "$toolDep version not valid!" "$moduleName"
             toolDepsMet=1
         fi
@@ -68,6 +84,16 @@ function chiModuleCheckToolDepsMet() {
 
     local installToolDeps="$(chiConfigUserRead core installToolDeps)"
     [[ "$installToolDeps" != "true" ]] && return $toolDepsMet
+
+    chiModuleInstallTools "$moduleName" "${toolsToInstall[@]}"
+}
+
+function chiModuleInstallTools() {
+    requireArg "a module name" "$1" || return 1
+    requireArg "at least one tool name" "$2" || return 1
+
+    local moduleName="$1"; shift
+    local toolsToInstall=("$@")
 
     local installedTools=()
     local brewToolsToInstall=()
@@ -80,7 +106,7 @@ function chiModuleCheckToolDepsMet() {
         fi
 
         local toolEntry="$(echo "$toolConfig" | jq -c --arg name "$tool" '{ key: $name, value: . }')"
-        installedTools+=("$tool")
+        installedTools+=("$toolEntry")
 
         if jsonReadPath "$toolConfig" brew &>/dev/null; then
             brewToolsToInstall+=("$toolEntry")
@@ -107,23 +133,10 @@ function chiModuleCheckToolDepsMet() {
         chiToolsInstallBrew "$moduleName" "${brewToolsToInstall[@]}"
     fi
 
-    # check again after installing
-    chiToolsCheckAndUpdateStatus "${installedTools[@]}"
-    chiModuleCheckToolDepsMet "$moduleName"
-}
-
-function chiModuleCheckToolStatusAndDepsMet() {
-    requireArg "a module name" "$1" || return 1
-
-    chiModuleCheckToolStatus "$1" 
-    chiModuleCheckToolDepsMet "$1"
-}
-
-function chiModulesGetRequiredTools() {
-    requireArg "a config JSON string" "$1" || return 1
-    requireArg "a tool type" "$2" || return 1
-
-    echo "$1" | jq -c --arg type "$2" '.tools | to_entries[] |
-        select((.value.optional // false) == false) |
-        select(.value | has($type))'
+    if [[ "${#installedTools[@]}" -gt 0 ]]; then
+        # check again after installing
+        chiLogDebug "checking: ${installedTools[*]}..." "$moduleName"
+        chiToolsCheckAndUpdateStatus "${installedTools[@]}"
+        chiModuleCheckToolDepsMet "$moduleName"
+    fi
 }
