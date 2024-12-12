@@ -6,6 +6,13 @@ function chiConfigModuleReadFromFile() {
     yamlFileToJson "$1/$CHI_CONFIG_MODULE_FILE_NAME"
 }
 
+function chiConfigReloadModuleConfig() {
+    requireArg "a module name" "$1" || return 1
+
+    local moduleDir="$(chiModuleGetPath "$1")"
+    chiConfigModuleMergeFromFile "$moduleDir" "$1"
+}
+
 function chiConfigModuleMergeFromFile() {
     requireDirectoryArg "a directory" "$1" || return 1
     requireArg "a module name" "$2" || return 1
