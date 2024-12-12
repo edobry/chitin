@@ -8,7 +8,7 @@ function chiToolsGetConfig() {
 function chiToolsLoad() {
     requireJsonArg "at least one tool config entry" "$1" || return 1
 
-    echo "$1" | jq -c 'select(.value.artifact != null or .value.sourceScript != null)' | while read -r toolEntry; do
+    echo "$@" | jq -c 'select(.value.artifact != null or .value.sourceScript != null)' | while read -r toolEntry; do
         # local toolName="$(jsonReadPath "$toolEntry" key)"
         local toolConfig="$(jsonReadPath "$toolEntry" value)"
 
