@@ -6,9 +6,14 @@ function chiToolsGetConfig() {
 }
 
 function chiToolsLoad() {
-    requireJsonArg "at least one tool config entry" "$1" || return 1
+    requireArg "a module name" "$1" || return 1
+    requireJsonArg "at least one tool config entry" "$2" || return 1
 
-    echo "$@" | jq -c 'select(.value.artifact != null or .value.sourceScript != null)' | while read -r toolEntry; do
+    local moduleName="$1"; shift
+
+    chiLogDebug "loading tools..." "$moduleName"
+
+    echo "$*" | jq -sc '.[] | select(.value.artifact != null or .value.sourceScript != null)' | while read -r toolEntry; do
         # local toolName="$(jsonReadPath "$toolEntry" key)"
         local toolConfig="$(jsonReadPath "$toolEntry" value)"
 
@@ -27,6 +32,8 @@ function chiToolsLoad() {
             source "$targetDir/$sourceScript"
         fi
     done
+
+    chiLogDebug "tools loaded" "$moduleName"
 }
 
 function chiToolsCheckAndUpdateStatus() {

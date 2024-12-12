@@ -17,19 +17,21 @@ function chiModuleLoadToolConfigs() {
 function chiModuleCheckTools() {
     requireArg "a module name" "$1" || return 1
 
+    chiLogDebug "checking tools..."  "$1"
+
     chiModuleCheckToolStatus "$1"
     chiModuleCheckToolDepsMet "$1"
+
+    chiLogDebug "tools checked" "$1"
 }
 
 function chiModuleCheckToolStatus() {
     requireArg "a module name" "$1" || return 1
 
-    chiLogDebug "loading tools..."  "$1"
-
     local moduleTools="$(chiModuleConfigReadVariablePath "$1" tools | jq -c 'to_entries[]')"
     [[ -z "$moduleTools" ]] && return 0
 
-    chiToolsLoad "$moduleTools"
+    chiToolsLoad "$1" "$moduleTools"
 
     if [[ -n "$CHI_CACHE_TOOLS_REBUILD" ]]; then
         chiLog "building tool status cache..." "$1"
