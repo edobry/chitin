@@ -217,7 +217,7 @@ function chiToolsRunPostInstall() {
     GREEN="$(tput setaf 2)"
     NC="$(tput sgr0)"
 
-    chiLog "${GREEN}==>${NC} Running post-install command for '$2'...\n" "$1"
+    chiLog "$(chiColorGreen "Running post-install command for '$2'...")" "$1"
     
     eval "$postInstall"
 }

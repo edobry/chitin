@@ -147,7 +147,7 @@ function chiFiberLoad() {
     [[ -n "$moduleConfig" ]] && chiConfigModuleMerge "$moduleConfig" "$fiberName"
 
     if [[ "$3" != "nocheck" ]]; then
-        if ! chiModuleCheckToolStatusAndDepsMet "$fiberName"; then
+        if ! chiModuleCheckTools "$fiberName"; then
             chiLog "missing tool dependencies, not loading!" "$fiberName"
             return 1
         fi
@@ -207,7 +207,7 @@ function chiChainLoad() {
         return 1
     fi
 
-    if ! chiModuleCheckToolStatusAndDepsMet "$moduleName"; then
+    if ! chiModuleCheckTools "$moduleName"; then
         chiLog "missing tool dependencies, not loading!" "$moduleName"
         return 1
     fi

@@ -5,24 +5,33 @@ function chiToolsGetConfig() {
     echo "$CHI_TOOLS" | jq -ce --arg tool "$1" '.[$tool] // empty'
 }
 
-function chiToolsCheckAndUpdateStatus() {
-    requireArg "at least one tool name" "$1" || return 1
+function chiToolsLoad() {
+    requireJsonArg "at least one tool config entry" "$1" || return 1
 
-    local toolStatus=('{}')
-    for tool in $@; do
-        # echo "tool: $tool" >&2
-
-        local toolConfig="$(chiToolsGetConfig "$tool")"
-        [[ -z "$toolConfig" ]] && continue
+    echo "$1" | jq -c 'select(.value.artifact != null or .value.sourceScript != null)' | while read -r toolEntry; do
+        # local toolName="$(jsonReadPath "$toolEntry" key)"
+        local toolConfig="$(jsonReadPath "$toolEntry" value)"
 
         # if its an executable artifact, add its dir to the PATH
         local artifactConfig="$(jsonReadPath "$toolConfig" artifact 2>/dev/null)"
         if [[ -n "$artifactConfig" ]] && jsonCheckBool "$artifactConfig" isExec 2>/dev/null; then
             local targetDir="$(chiToolsArtifactMakeTargetDir "$artifactConfig")"
             chiToolsAddDirToPath "$targetDir"
+            continue
         fi
+    done
+}
 
-        local returnedStatus="$(chiToolsCheckStatus "$tool" "$toolConfig")"
+function chiToolsCheckAndUpdateStatus() {
+    requireJsonArg "at least one tool config entry" "$1" || return 1
+
+    local toolStatus=('{}')
+    for toolEntry in $@; do
+        local toolName="$(jsonReadPath "$toolEntry" key)"
+        local toolConfig="$(jsonReadPath "$toolEntry" value)"
+        local returnedStatus="$(chiToolsCheckStatus "$toolName" "$toolConfig")"
+        
+        chiLogDebug "tool status for '$toolName': $returnedStatus" "meta:tools"
         toolStatus+=("$returnedStatus")
     done
 
@@ -36,10 +45,10 @@ function chiToolsCheckStatus() {
     local toolName="$1"
     local toolConfig="$2"
 
-    local moduleName="$(jsonRead "$toolConfig" '.meta.definedIn // empty')"
+    local moduleName="$(jsonReadPath "$toolConfig" meta definedIn)"
     
-    local expectedVersion="$(jsonRead "$toolConfig" '.version // empty')"
-    local versionCommand="$(jsonRead "$toolConfig" '.versionCommand // empty')"
+    local expectedVersion="$(jsonReadPath "$toolConfig" version)"
+    local versionCommand="$(jsonReadPath "$toolConfig" versionCommand)"
 
     local installed="false"
     local validVersion="false"
