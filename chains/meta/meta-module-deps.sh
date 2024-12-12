@@ -49,7 +49,7 @@ function chiModuleCheckToolDepsMet() {
     local toolsToInstall=()
     
     while read -r toolDep; do
-        chiLogDebug "checking toolDep: $toolDep..." "meta:module"
+        chiLogDebug "checking toolDep: $toolDep..." "$moduleName"
 
         local toolDepStatus="$(chiToolsGetStatus "$toolDep")"
         if [[ -z "$toolDepStatus" ]]; then

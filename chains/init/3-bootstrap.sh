@@ -6,21 +6,29 @@ function chiInitBootstrapModule() {
 }
 
 if [[ -z "$CHI_LOG_LEVEL" ]]; then
-    export CHI_LOG_LEVEL="$CHI_LOG_LEVEL_INFO"
+    export CHI_LOG_LEVEL=INFO
 fi
 export CHI_LOG_LEVEL_INFO=1
 export CHI_LOG_LEVEL_DEBUG=2
 export CHI_LOG_LEVEL_TRACE=3
+
+function chiLogGetLevel() {
+    requireArgOptions "a known log level" "$1" INFO DEBUG TRACE || return 1
+
+    chiReadDynamicVariable "CHI_LOG_LEVEL_${1}"
+}
+
 export CHI_LOG_TIME="/tmp/chitin-prev-time-$(randomString 10)"
 function chiLog() {
     requireArg "a message" "$1" || return 1
   
-    local logMode="${3:-$CHI_LOG_LEVEL_INFO}"
-    [[ "$logMode" -ge "${CHI_LOG_LEVEL:-$CHI_LOG_LEVEL_INFO}" ]] || return 0
+    local logLevel="$(chiLogGetLevel "${3:-INFO}")"
+    local currentLogLevel="$(chiLogGetLevel "$CHI_LOG_LEVEL")"
+    [[ "$logLevel" -ge $currentLogLevel ]] || return 0
 
     local msg="chitin${2:+:}${2} - $1"
 
-    if [[ "$logMode" == "$CHI_LOG_LEVEL_DEBUG" ]]; then
+    if [[ "$currentLogLevel" -ge "$CHI_LOG_LEVEL_DEBUG" ]]; then
         local currentTime="$(gdate +%s%N)"
         local delta=$([[ -f "$CHI_LOG_TIME" ]] && echo $(( (currentTime - $(cat "$CHI_LOG_TIME")) / 1000000 )) || echo "0")
         echo "$currentTime" > "$CHI_LOG_TIME"
