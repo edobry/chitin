@@ -61,7 +61,7 @@ function chiModuleCheckToolDepsMet() {
             # TODO: rethink this
             if [[ -n "$toolConfig" ]]; then
                 # echo "checking status for $toolDep on-demand..." >&2
-                chiToolsCheckAndUpdateStatus "$toolConfig"
+                chiToolsCheckAndUpdateStatus "$(jsonToEntry "$toolDep" "$toolConfig")"
                 toolDepStatus="$(chiToolsGetStatus "$toolDep")"
             else
                 chiLog "no tool status found for '$toolDep'!" "$moduleName"
@@ -105,7 +105,7 @@ function chiModuleInstallTools() {
             continue
         fi
 
-        local toolEntry="$(echo "$toolConfig" | jq -c --arg name "$tool" '{ key: $name, value: . }')"
+        local toolEntry="$(jsonToEntry "$tool" "$toolConfig")"
         installedTools+=("$toolEntry")
 
         if jsonReadPath "$toolConfig" brew &>/dev/null; then
@@ -133,10 +133,12 @@ function chiModuleInstallTools() {
         chiToolsInstallBrew "$moduleName" "${brewToolsToInstall[@]}"
     fi
 
+    # check again after installing
     if [[ "${#installedTools[@]}" -gt 0 ]]; then
-        # check again after installing
-        chiLogDebug "checking: ${installedTools[*]}..." "$moduleName"
-        chiToolsCheckAndUpdateStatus "${installedTools[@]}"
+        chiLogDebug "checking post-install: ${installedTools[*]}..." "$moduleName"
+
+        chiToolsLoad "$moduleName" "$installedTools"
+        chiToolsCheckAndUpdateStatus "$installedTools"
         chiModuleCheckToolDepsMet "$moduleName"
     fi
 }

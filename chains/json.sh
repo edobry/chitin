@@ -310,3 +310,10 @@ function yamlFileSetFieldWrite() {
         "$1" "$newYamlFile" > "$tmpNew"
     mv "$tmpNew" "$1"
 }
+
+function jsonToEntry() {
+    requireArg "a key" "$1" || return 1
+    requireJsonArg "a JSON string" "$2" || return 1
+
+    echo "$2" | jq -c --arg name "$1" '{ key: $name, value: . }'
+}

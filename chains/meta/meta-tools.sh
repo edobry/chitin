@@ -14,21 +14,52 @@ function chiToolsLoad() {
     chiLogDebug "loading tools..." "$moduleName"
 
     echo "$*" | jq -sc '.[] | select(.value.artifact != null or .value.sourceScript != null)' | while read -r toolEntry; do
-        # local toolName="$(jsonReadPath "$toolEntry" key)"
+        local toolName="$(jsonReadPath "$toolEntry" key)"
         local toolConfig="$(jsonReadPath "$toolEntry" value)"
+
+        local toolStatus="$(chiToolsGetStatus "$toolName")"
+
+        if ! jsonCheckBool "$toolStatus" installed 2>/dev/null; then
+            continue
+        fi
+
+        chiLogDebug "loading tool '$toolName'..." "$moduleName"
+
+        local targetDir=''
 
         # if its an executable artifact, add its dir to the PATH
         local artifactConfig="$(jsonReadPath "$toolConfig" artifact 2>/dev/null)"
         if [[ -n "$artifactConfig" ]] && jsonCheckBool "$artifactConfig" isExec 2>/dev/null; then
-            local targetDir="$(chiToolsArtifactMakeTargetDir "$artifactConfig")"
+            targetDir="$(chiToolsArtifactMakeTargetDir "$artifactConfig")"
             chiToolsAddDirToPath "$targetDir"
             continue
+        fi
+
+        local gitConfig="$(jsonReadPath "$toolConfig" git 2>/dev/null)"
+        if [[ -n "$gitConfig" ]]; then
+            targetDir="$(chiToolsGitMakeTargetDir "$gitConfig")"
+        fi
+
+        # if it has a setEnv field set, set environment variables
+        local setEnv="$(jsonReadPath "$toolConfig" setEnv 2>/dev/null)"
+        if [[ -n "$setEnv" ]]; then
+            chiLogDebug "setting env $setEnv" "$moduleName"
+            echo "$setEnv" | jq -c 'to_entries[]' | while read -r envEntry; do
+                chiLogDebug "setting env $envEntry" "$moduleName"
+                local envName="$(jsonReadPath "$envEntry" key)"
+                local envValue="$(jsonReadPath "$envEntry" value)"
+
+                if [[ "$envValue" == "target" ]]; then
+                    envValue="$targetDir"
+                fi
+
+                export "$envName=$envValue"
+            done
         fi
 
         # if it has a sourceScript field set, source it
         local sourceScript="$(jsonReadPath "$toolConfig" sourceScript 2>/dev/null)"
         if [[ -n "$sourceScript" ]]; then
-            local targetDir="$(chiToolsGitMakeTargetDir "$(jsonReadPath "$toolConfig" git 2>/dev/null)")"
             source "$targetDir/$sourceScript"
         fi
     done
@@ -40,14 +71,15 @@ function chiToolsCheckAndUpdateStatus() {
     requireJsonArg "at least one tool config entry" "$1" || return 1
 
     local toolStatus=('{}')
-    for toolEntry in $@; do
+
+    while read -r toolEntry; do
         local toolName="$(jsonReadPath "$toolEntry" key)"
         local toolConfig="$(jsonReadPath "$toolEntry" value)"
         local returnedStatus="$(chiToolsCheckStatus "$toolName" "$toolConfig")"
         
         chiLogDebug "tool status for '$toolName': $returnedStatus" "meta:tools"
         toolStatus+=("$returnedStatus")
-    done
+    done <<< "$*"
 
     chiToolsUpdateStatus "${toolStatus[@]}"
 }
@@ -154,9 +186,6 @@ function chiToolsCheckInstalled() {
     local checkEvalValue
     checkEvalValue="$(jsonReadPath "$tool" checkEval 2>/dev/null)"
 
-    local checkPath
-    jsonCheckBool "$tool" checkPath &>/dev/null && checkPath=true || checkPath=false
-
     if [[ -n "$checkCommandValue" ]]; then
         if $checkBrew; then
             chiLog "both 'checkCommand' and 'checkBrew' set for '$toolName'!" "$moduleName"
@@ -168,11 +197,6 @@ function chiToolsCheckInstalled() {
             return 1
         fi
 
-        if $checkPath; then
-            chiLog "both 'checkCommand' and 'checkPath' set for '$toolName'!" "$moduleName"
-            return 1
-        fi
-
         if [[ -n "$checkPathValue" ]]; then
             chiLog "both 'checkCommand' and 'checkPath' set for '$toolName'!" "$moduleName"
             return 1
@@ -180,6 +204,13 @@ function chiToolsCheckInstalled() {
 
         if [[ -n "$checkEvalValue" ]]; then
             chiLog "both 'checkCommand' and 'checkEval' set for '$toolName'!" "$moduleName"
+            return 1
+        fi
+
+        chiLogDebug "$(jsonReadPath "$tool" sourceScript 2>/dev/null)" "$moduleName"
+
+        if [[ -n "$(jsonReadPath "$tool" sourceScript 2>/dev/null)" ]]; then
+            chiLog "cannot use 'checkCommand' when 'sourceScript' is set for '$toolName'!" "$moduleName"
             return 1
         fi
         

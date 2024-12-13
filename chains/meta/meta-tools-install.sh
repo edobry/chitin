@@ -67,10 +67,7 @@ function chiToolsInstallGit() {
 
     [[ -d "$target" ]] && return 0
 
-    GREEN="$(tput setaf 2)"
-    NC="$(tput sgr0)"
-
-    chiLog "${GREEN}==>${NC} Cloning '$toolName' from '$url' to '$target'...\n" "$1"
+    chiLog "$(chiColorGreen "Cloning '$toolName' from '$url' to '$target'...")" "$1"
     
     mkdir -p "$target"
     git clone "$url" "$target"
@@ -90,10 +87,7 @@ function chiToolsInstallCommand() {
     local installCommand="$(jsonReadPath "$3" command)"
     [[ $? -eq 0 ]] || return 1
 
-    GREEN="$(tput setaf 2)"
-    NC="$(tput sgr0)"
-
-    chiLog "${GREEN}==>${NC} Installing '$2' with command '$installCommand'...\n" "$1"
+    chiLog "$(chiColorGreen "Installing '$2' with command '$installCommand'...")" "$1"
     
     eval "$installCommand"
 }
@@ -106,10 +100,7 @@ function chiToolsInstallScript() {
     local installScript="$(jsonReadPath "$3" script)"
     [[ $? -eq 0 ]] || return 1
 
-    GREEN="$(tput setaf 2)"
-    NC="$(tput sgr0)"
-
-    chiLog "${GREEN}==>${NC} Installing '$2' from script at '$installScript'...\n" "$1"
+    chiLog "$(chiColorGreen "Installing '$2' from script at '$installScript'...")" "$1"
     
     /bin/bash -c "$(curl -fsSL "$installScript")"
 }
@@ -205,10 +196,7 @@ function chiToolsInstallPipx() {
         pipxPackage="$(jsonRead "$pipxConfig" '.package // empty')"
     fi
 
-    GREEN="$(tput setaf 2)"
-    NC="$(tput sgr0)"
-
-    chiLog "${GREEN}==>${NC} Installing '$2' with pipx...\n" "$1"
+    chiLog "$(chiColorGreen "Installing '$2' with pipx...")" "$1"
     
     pipx install "$pipxPackage"
 }
@@ -220,9 +208,6 @@ function chiToolsRunPostInstall() {
 
     local postInstall="$(jsonReadPath "$3" postInstall)"
     [[ -z "$postInstall" ]] && return 0
-
-    GREEN="$(tput setaf 2)"
-    NC="$(tput sgr0)"
 
     chiLog "$(chiColorGreen "Running post-install command for '$2'...")" "$1"
     
