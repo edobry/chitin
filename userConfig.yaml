@@ -2,5 +2,7 @@
 dotfilesDir:
 # directory you clone git repositories to (absolute path)
 projectDir:
+# whether to automatically install missing tool dependencies
+installToolDeps: false
 # custom configuration for modules
 moduleConfig:
