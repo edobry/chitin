@@ -95,6 +95,10 @@ function chiShell() {
     local endTime=$(gdate +%s)
     local duration=$((endTime - startTime))
     chiLog "$(chiColorGreen "initialized in $duration seconds")" "init"
+
+
+function chiShellDebug() {
+    CHI_LOG_LEVEL=DEBUG chiShell
 }
 
 function chiRunInitCommand() {
