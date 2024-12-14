@@ -108,6 +108,4 @@ function chiRunInitCommand() {
     # [[ -z "$initCommand" ]] && return 0
 }
 
-alias chiReinit=chiShell
-
 autoinitChi

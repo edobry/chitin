@@ -90,7 +90,7 @@ function chiConfigUserModify() {
     $EDITOR "$(chiConfigUserGetPath)"
 
     chiLog "updated user config, reinitializing..." "meta:config"
-    chiReinit
+    chiShell
 
 }
 
@@ -100,7 +100,7 @@ function chiConfigUserSet() {
     echo "$1" | prettyYaml > "$(chiConfigUserGetPath)"
 
     chiLog "updated user config, reinitializing..." "meta:config"
-    chiReinit
+    chiShell
 }
 
 function chiConfigUserSetField() {
