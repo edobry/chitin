@@ -13,7 +13,8 @@ function chiToolsLoad() {
 
     chiLogDebug "loading tools..." "$moduleName"
 
-    echo "$*" | jq -sc '.[] | select(.value.artifact != null or .value.sourceScript != null)' | while read -r toolEntry; do
+    echo "$*" | jq -sc '.[] | select(.value.artifact != null or .value.sourceScript != null)' |\
+    while read -r toolEntry; do
         local toolName="$(jsonReadPath "$toolEntry" key)"
         local toolConfig="$(jsonReadPath "$toolEntry" value)"
 
@@ -32,7 +33,6 @@ function chiToolsLoad() {
         if [[ -n "$artifactConfig" ]] && jsonCheckBool "$artifactConfig" isExec 2>/dev/null; then
             targetDir="$(chiToolsArtifactMakeTargetDir "$artifactConfig")"
             chiToolsAddDirToPath "$targetDir"
-            continue
         fi
 
         local gitConfig="$(jsonReadPath "$toolConfig" git 2>/dev/null)"
@@ -45,7 +45,6 @@ function chiToolsLoad() {
         if [[ -n "$setEnv" ]]; then
             chiLogDebug "setting env $setEnv" "$moduleName"
             echo "$setEnv" | jq -c 'to_entries[]' | while read -r envEntry; do
-                chiLogDebug "setting env $envEntry" "$moduleName"
                 local envName="$(jsonReadPath "$envEntry" key)"
                 local envValue="$(jsonReadPath "$envEntry" value)"
 
@@ -53,7 +52,18 @@ function chiToolsLoad() {
                     envValue="$targetDir"
                 fi
 
+                chiLogDebug "setting env: $envName=$envValue" "$moduleName"
+
                 export "$envName=$envValue"
+            done
+        fi
+
+        # if it has addToPath set, add the configued directories to the PATH
+        local addToPath="$(jsonReadPath "$toolConfig" addToPath 2>/dev/null)"
+        if [[ -n "$addToPath" ]]; then
+            echo "$addToPath" | jq -r '.[]' | while read -r dir; do
+                chiLogDebug "adding to PATH: $(expandPath "$dir")" "$moduleName"
+                # chiToolsAddDirToPath "$(expandPath "$dir")"
             done
         fi
 
@@ -61,6 +71,18 @@ function chiToolsLoad() {
         local sourceScript="$(jsonReadPath "$toolConfig" sourceScript 2>/dev/null)"
         if [[ -n "$sourceScript" ]]; then
             source "$targetDir/$sourceScript"
+        fi
+
+        # if it has completionCommand set, use it to generate and register completions
+        local completionCommand="$(jsonReadPath "$toolConfig" completionCommand 2>/dev/null)"
+        if [[ -n "$completionCommand" ]]; then
+            dotAddCompletion "$toolName" "$completionCommand"
+        fi
+
+        # if it has evalCommand set, run it and pass the output to eval
+        local evalCommand="$(jsonReadPath "$toolConfig" evalCommand 2>/dev/null)"
+        if [[ -n "$evalCommand" ]]; then
+            eval "$($evalCommand)"
         fi
     done
 
