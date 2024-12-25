@@ -127,6 +127,7 @@ function chiModuleInstallTools() {
         fi
 
         chiToolsRunPostInstall "$moduleName" "$tool" "$toolConfig"
+        chiGenerateCompletion "$tool" "$toolConfig"
     done
 
     if [[ "${#brewToolsToInstall[@]}" -gt 0 ]]; then

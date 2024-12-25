@@ -17,6 +17,7 @@ function chiToolsInstallBrew() {
         local toolConfig="$(jsonReadPath "$toolEntry" value)"
 
         chiToolsRunPostInstall "$moduleName" "$tool" "$toolConfig"
+        chiGenerateCompletion "$tool" "$toolConfig"
     done
 }
 

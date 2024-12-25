@@ -73,12 +73,6 @@ function chiToolsLoad() {
             source "$targetDir/$sourceScript"
         fi
 
-        # if it has completionCommand set, use it to generate and register completions
-        local completionCommand="$(jsonReadPath "$toolConfig" completionCommand 2>/dev/null)"
-        if [[ -n "$completionCommand" ]]; then
-            dotAddCompletion "$toolName" "$completionCommand"
-        fi
-
         # if it has evalCommand set, run it and pass the output to eval
         local evalCommand="$(jsonReadPath "$toolConfig" evalCommand 2>/dev/null)"
         if [[ -n "$evalCommand" ]]; then
@@ -87,6 +81,23 @@ function chiToolsLoad() {
     done
 
     chiLogDebug "tools loaded" "$moduleName"
+}
+
+function chiGenerateCompletion() {
+    requireArg "a tool name" "$1" || return 1
+    requireArg "a tool config JSON string" "$2" || return 1
+
+    # if it has completionCommand set, use it to generate and register completions
+    local completionCommand=($(jsonReadPath "$2" completionCommand 2>/dev/null))
+    if [[ -n "$completionCommand" ]]; then
+        mkdir -p "$CHI_COMPLETION_DIR"
+        local completionPath="$CHI_COMPLETION_DIR/_$1"
+
+        if [[ ! -f "$completionPath" ]]; then
+            chiLogDebug "generating completion for '$1'..." "meta:tools"
+            eval "${completionCommand[@]} $(basename $(echo $SHELL)) > $completionPath"
+        fi
+    fi
 }
 
 function chiToolsCheckAndUpdateStatus() {
@@ -228,8 +239,6 @@ function chiToolsCheckInstalled() {
             chiLog "both 'checkCommand' and 'checkEval' set for '$toolName'!" "$moduleName"
             return 1
         fi
-
-        chiLogDebug "$(jsonReadPath "$tool" sourceScript 2>/dev/null)" "$moduleName"
 
         if [[ -n "$(jsonReadPath "$tool" sourceScript 2>/dev/null)" ]]; then
             chiLog "cannot use 'checkCommand' when 'sourceScript' is set for '$toolName'!" "$moduleName"

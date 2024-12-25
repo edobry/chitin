@@ -58,12 +58,15 @@ function chiDebug() {
     awsShowEnvvars
 }
 
-
 function chiRegisterCompletion() {
     requireArg "\$0" "$1" || return 1
 
     checkCommand compdef && return 0
 
-    export fpath=($(dirname "$1") $fpath)
-    return 1
+    local dirName="$([[ -f "$1" ]] && dirname "$1" || echo "$1")"
+
+    export fpath=($dirName $fpath)
 }
+
+export CHI_COMPLETION_DIR="$CHI_SHARE/completions"
+chiRegisterCompletion "$CHI_COMPLETION_DIR"
