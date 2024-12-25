@@ -63,13 +63,17 @@ function chiFiberPathToName() {
 
 function chiFiberLoadExternal() {
     IFS=$'\n' fibers=($(find "$CHI_PROJECT_DIR" -maxdepth 1 -type d -not -path "$CHI_PROJECT_DIR" -name 'chitin-*'))
-
-    if [[ ${#fibers[@]} -gt 0 ]]; then
-        chiFiberLoadExternalLoop "${fibers[@]}"
-    fi
+    [[ ${#fibers[@]} -gt 0 ]] || return 0
+    
+    chiFiberLoadExternalLoop $* "${fibers[@]}"
 }
 
 function chiFiberLoadExternalLoop() {
+    local isNoCheck=''
+    if [[ "$1" == "nocheck" ]]; then
+        isNoCheck="$1"; shift
+    fi
+
     requireArg "at least one fiber" "$1" || return 1
 
     local fibers=("$@")
@@ -77,7 +81,7 @@ function chiFiberLoadExternalLoop() {
 
     for fiber in "${fibers[@]}"; do
         # echo "loading fiber: $fiber"
-        if ! chiFiberLoad "$fiber"; then
+        if ! chiFiberLoad "$fiber" "$isNoCheck"; then
         # echo "loading fiber failed, retrying"
             retryList+=("$fiber")
         else
@@ -88,7 +92,7 @@ function chiFiberLoadExternalLoop() {
     # if not all fibers loaded, retry
     if [[ ${#retryList[@]} -gt 0 ]]; then
         # echo "retrying: ${retryList[@]}"
-        chiFiberLoadExternalLoop "${retryList[@]}"
+        chiFiberLoadExternalLoop "$isNoCheck" "${retryList[@]}"
     fi
 }
 

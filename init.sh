@@ -65,16 +65,18 @@ function chiShell() {
         chiLog "tools status cache not found, rebuilding..." "meta:tools"
         export CHI_CACHE_TOOLS_REBUILD=true
     fi
+    
+    local isNoCheck="$([[ -n "$IS_DOCKER" ]] || [[ -n "$CHI_NOCHECK" ]] && echo "nocheck")"
 
     # load core chains
-    chiFiberLoad "$CHI_DIR" "core" "$([[ -n "$IS_DOCKER" ]] && echo "nocheck")"
+    chiFiberLoad "$CHI_DIR" "core" "$isNoCheck"
 
     # load dotfiles
     if [[ -n "$CHI_DOTFILES_DIR" ]]; then
-        chiFiberLoad "$CHI_DOTFILES_DIR" dotfiles
+        chiFiberLoad "$CHI_DOTFILES_DIR" dotfiles "$isNoCheck"
     fi
     
-    chiFiberLoadExternal
+    chiFiberLoadExternal "$isNoCheck"
     
     export CHI_ENV_INITIALIZED=true
     unset CHI_CACHE_TOOLS_REBUILD
