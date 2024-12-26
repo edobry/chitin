@@ -91,7 +91,7 @@ function chiExpandPath() {
     local localShare="localshare"
     local xdgHome="xdghome"
     
-    local expandedPath="$(chiExpandHome "$1")"
+    local expandedPath="$(chiExpandHome "$(echo $1 | envsubst)")"
     expandedPath="$(chiExpandPathSegmentStart "$xdgHome" "$(xdgHome)" "$expandedPath")"
     expandedPath="$(chiExpandPathSegmentStart "$localShare" "$(xdgData)" "$expandedPath")"
 
