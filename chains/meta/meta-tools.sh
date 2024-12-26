@@ -13,8 +13,7 @@ function chiToolsLoad() {
 
     chiLogDebug "loading tools..." "$moduleName"
 
-    echo "$*" | jq -sc '.[] | select(.value.artifact != null or .value.sourceScript != null)' |\
-    while read -r toolEntry; do
+    echo "$*" | while read -r toolEntry; do
         local toolName="$(jsonReadPath "$toolEntry" key)"
         local toolConfig="$(jsonReadPath "$toolEntry" value)"
 
