@@ -45,7 +45,7 @@ function chiToolsLoad() {
             chiLogDebug "setting env $setEnv" "$moduleName"
             echo "$setEnv" | jq -c 'to_entries[]' | while read -r envEntry; do
                 local envName="$(jsonReadPath "$envEntry" key)"
-                local envValue="$(jsonReadPath "$envEntry" value)"
+                local envValue="$(chiExpandPath "$(jsonReadPath "$envEntry" value)")"
 
                 if [[ "$envValue" == "target" ]]; then
                     envValue="$targetDir"
@@ -61,8 +61,8 @@ function chiToolsLoad() {
         local addToPath="$(jsonReadPath "$toolConfig" addToPath 2>/dev/null)"
         if [[ -n "$addToPath" ]]; then
             echo "$addToPath" | jq -r '.[]' | while read -r dir; do
-                chiLogDebug "adding to PATH: $(expandPath "$dir")" "$moduleName"
-                # chiToolsAddDirToPath "$(expandPath "$dir")"
+                chiLogDebug "adding to PATH: $(chiExpandPath "$dir")" "$moduleName"
+                chiToolsAddDirToPath "$(chiExpandPath "$dir")"
             done
         fi
 
@@ -75,7 +75,7 @@ function chiToolsLoad() {
         # if it has evalCommand set, run it and pass the output to eval
         local evalCommand="$(jsonReadPath "$toolConfig" evalCommand 2>/dev/null)"
         if [[ -n "$evalCommand" ]]; then
-            eval "$($evalCommand)"
+            eval "$(eval $evalCommand)"
         fi
     done
 
