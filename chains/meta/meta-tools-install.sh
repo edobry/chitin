@@ -8,7 +8,7 @@ function chiToolsInstallBrew() {
     local brewfile="$(chiToolsGenerateBrewfile $*)"
     echo "$brewfile" > $brewfilePath
 
-    chiLog "installing brew depenedencies..." "$moduleName"
+    chiLogInfo "installing brew depenedencies..." "$moduleName"
     brew bundle --file="$brewfilePath"
 
     # iterate over the rest args and run post install command for each
@@ -68,7 +68,7 @@ function chiToolsInstallGit() {
 
     [[ -d "$target" ]] && return 0
 
-    chiLog "$(chiColorGreen "Cloning '$toolName' from '$url' to '$target'...")" "$1"
+    chiLogGreen "Cloning '$toolName' from '$url' to '$target'..." "$1"
     
     mkdir -p "$target"
     git clone "$url" "$target"
@@ -88,7 +88,7 @@ function chiToolsInstallCommand() {
     local installCommand="$(jsonReadPath "$3" command)"
     [[ $? -eq 0 ]] || return 1
 
-    chiLog "$(chiColorGreen "Installing '$2' with command '$installCommand'...")" "$1"
+    chiLogGreen "Installing '$2' with command '$installCommand'..." "$1"
     
     eval "$installCommand"
 }
@@ -101,7 +101,7 @@ function chiToolsInstallScript() {
     local installScript="$(jsonReadPath "$3" script)"
     [[ $? -eq 0 ]] || return 1
 
-    chiLog "$(chiColorGreen "Installing '$2' from script at '$installScript'...")" "$1"
+    chiLogGreen "Installing '$2' from script at '$installScript'..." "$1"
     
     /bin/bash -c "$(curl -fsSL "$installScript")"
 }
@@ -197,7 +197,7 @@ function chiToolsInstallPipx() {
         pipxPackage="$(jsonRead "$pipxConfig" '.package // empty')"
     fi
 
-    chiLog "$(chiColorGreen "Installing '$2' with pipx...")" "$1"
+    chiLogGreen "Installing '$2' with pipx..." "$1"
     
     pipx install "$pipxPackage"
 }
@@ -210,7 +210,7 @@ function chiToolsRunPostInstall() {
     local postInstall="$(jsonReadPath "$3" postInstall)"
     [[ -z "$postInstall" ]] && return 0
 
-    chiLog "$(chiColorGreen "Running post-install command for '$2'...")" "$1"
+    chiLogGreen "Running post-install command for '$2'..." "$1"
     
     eval "$postInstall"
 }

@@ -19,14 +19,14 @@ function chiCheckVersion() {
     local installedVersion="$(chiGetVersion)"
 
     if ! checkVersion $minimumVersion $installedVersion; then
-        chiLog "Installed chitin version $installedVersion does not meet minimum of $minimumVersion!"
+        chiLogError "Installed chitin version $installedVersion does not meet minimum of $minimumVersion!" core
         return 1
     fi
 }
 
 function chiCheckEmbeddedVersion() {
     if [[ ! -d chitin ]]; then
-        chiLog "No embedded chitin found!"
+        chiLogError "No embedded chitin found!" core
         return 1
     fi
 
@@ -41,20 +41,20 @@ function chiShowEnvvars() {
 }
 
 function chiDebug() {
-    chiLog "configuration"
-    chiLog "version: $(chiGetVersion)"
+    chiLogInfo "configuration"
+    chiLogInfo "version: $(chiGetVersion)"
     chiConfigUserShow
 
-    chiLog "tool status:"
+    chiLogInfo "tool status:"
     chiToolsShowStatus
 
-    chiLog "envvars:"
+    chiLogInfo "envvars:"
     chiShowEnvvars
     
     echo
     hr
 
-    chiLog "configuration:" "aws"
+    chiLogInfo "configuration:" "aws"
     awsShowEnvvars
 }
 

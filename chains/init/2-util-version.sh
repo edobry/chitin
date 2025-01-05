@@ -22,7 +22,7 @@ function checkVersionAndFail() {
     local majorExpected="$(getMajorVersionComponent $minimumVersion)"
 
     if ! checkVersion "$2" "$3"; then
-        chiLog "invalid $1 version: expected $expectedVersion <= X < $(($majorExpected + 1)).0.0; found $currentVersion"
+        chiLogInfo "invalid $1 version: expected $expectedVersion <= X < $(($majorExpected + 1)).0.0; found $currentVersion"
         return 1
     fi
 }

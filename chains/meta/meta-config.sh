@@ -28,7 +28,7 @@ export CHI_CONFIG_VARIABLE_PREFIX="CHI_CONFIG"
 function chiConfigGetVariableValue() {
     requireArg "a module name" "$1" || return 1
 
-    chiModuleGetDynamicVariable "$CHI_CONFIG_VARIABLE_PREFIX" "$1"
+    chiReadDynamicVariable "$(chiMakeDynamicVariableName "$CHI_CONFIG_VARIABLE_PREFIX" "$1")"
 }
 
 function chiModuleConfigReadVariablePath() {
@@ -57,7 +57,7 @@ function chiConfigSetVariableValue() {
     requireArg "a module name" "$1" || return 1
     requireArg "a config JSON string" "$2" || return 1
 
-    chiModuleSetDynamicVariable "$CHI_CONFIG_VARIABLE_PREFIX" "$1" "$2"
+    chiSetDynamicVariable "$2" "$CHI_CONFIG_VARIABLE_PREFIX" "$1"
 }
 
 function chiConfigModuleMerge() {
@@ -76,4 +76,15 @@ function chiConfigModuleMerge() {
             chiConfigMergeVariableValue "${moduleNamePrefix}${moduleNamePrefix:+:}$moduleName" "$configValue"
         fi
     done <<< "$(jsonRead "$1" '(. // []) | to_entries[]')"
+}
+
+export CHI_CONFIG_MODULE_FIELD_NAME="moduleConfig"
+
+function chiConfigChainMerge() {
+    requireArg "a fiber config json string" "$1" || return 1
+
+    local fiberName="$2"
+
+    local moduleConfig="$(jsonReadPath "$1" "$CHI_CONFIG_MODULE_FIELD_NAME")"
+    [[ -n "$moduleConfig" ]] && chiConfigModuleMerge "$moduleConfig" "$fiberName"
 }

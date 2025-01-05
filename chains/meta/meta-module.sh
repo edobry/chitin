@@ -6,34 +6,19 @@ function chiModuleGetDynamicVariable() {
     requireArg "a variable prefix" "$1" || return 1
     requireArg "a module name" "$2" || return 1
     
-    echo $(chiReadDynamicVariable "$(chiModuleMakeDynamicVariableName "$1" "$2")")
+    chiReadDynamicVariable "$(chiMakeDynamicVariableName "$1" "$2")"
 }
 
-function chiModuleSetDynamicVariable() {
-    requireArg "a variable prefix" "$1" || return 1
-    requireArg "a module name" "$2" || return 1
-    requireArg "a variable value" "$3" || return 1
-    
-    export "$(chiModuleMakeDynamicVariableName "$1" "$2")=$3"
-}
+function chiModuleMakeModuleNameVariableName() {
+    requireArg "at least one module name segment" "$1" || return 1
 
-function chiModuleNameToVariableName() {
-    requireArg "a module name" "$1" || return 1
-
-    sed 's/[:\-]/_/g' <<< "$1"
+    chiMakeDynamicVariableName "$CHI_MODULE_NAME_PREFIX" $@
 }
 
 function chiModuleVariableNameToName() {
     requireArg "a module variable name" "$1" || return 1
 
     sed 's/_/-/g' <<< "$1"
-}
-
-function chiModuleMakeDynamicVariableName() {
-    requireArg "a variable prefix" "$1" || return 1
-    requireArg "a module name" "$2" || return 1
-    
-    echo "${1}_$(chiModuleNameToVariableName "$2")"
 }
 
 function chiModuleDependenciesGetRequiredTools() {
@@ -65,7 +50,7 @@ function chiFiberLoadExternal() {
     IFS=$'\n' fibers=($(find "$CHI_PROJECT_DIR" -maxdepth 1 -type d -not -path "$CHI_PROJECT_DIR" -name 'chitin-*'))
     [[ ${#fibers[@]} -gt 0 ]] || return 0
     
-    chiFiberLoadExternalLoop $* "${fibers[@]}"
+    chiFiberLoadExternalLoop $*"${fibers[@]}"
 }
 
 function chiFiberLoadExternalLoop() {
@@ -92,7 +77,7 @@ function chiFiberLoadExternalLoop() {
     # if not all fibers loaded, retry
     if [[ ${#retryList[@]} -gt 0 ]]; then
         # echo "retrying: ${retryList[@]}"
-        chiFiberLoadExternalLoop "$isNoCheck" "${retryList[@]}"
+        chiFiberLoadExternalLoop "$isNoCheck${retryList[@]}"
     fi
 }
 
@@ -104,7 +89,7 @@ function chiShellReload() {
         local fiberPath="$(chiModuleGetPath "$fiber")"
         [[ -z "$fiberPath" ]] && continue
 
-        unset "$(chiModuleMakeDynamicVariableName "$CHI_MODULE_LOADED_PREFIX" "$fiber")"
+        unset "$(chiMakeDynamicVariableName "$CHI_MODULE_LOADED_PREFIX" "$fiber")"
         for var in $(env | grep "^${CHI_MODULE_LOADED_PREFIX}_${fiber}_" | cut -d= -f1); do
             unset "$var"
         done
@@ -113,12 +98,16 @@ function chiShellReload() {
     done
 }
 
+export CHI_MODULE_NAME_PREFIX="CHI_MODULE_NAME"
+
 function chiFiberLoad() {
     requireDirectoryArg "fiber directory" "$1" || return 1
 
     local fiberName="${2:-$(chiFiberPathToName "$1")}"
 
     chiLogDebug "loading fiber..." "$fiberName"
+
+    chiSetDynamicVariable "$fiberName" "$CHI_MODULE_NAME_PREFIX" "$fiberName"
 
     # if already loaded, return
     [[ -n $(chiModuleGetDynamicVariable "$CHI_MODULE_LOADED_PREFIX" "$fiberName") ]] && return 0
@@ -146,21 +135,19 @@ function chiFiberLoad() {
         done <<< "$fiberDeps"
     fi
 
-    # read chain configs
-    local moduleConfig="$(jsonReadPath "$config" moduleConfig)"
-    [[ -n "$moduleConfig" ]] && chiConfigModuleMerge "$moduleConfig" "$fiberName"
+    chiConfigChainMerge "$config" "$fiberName"
 
     if [[ "$3" != "nocheck" ]]; then
         if ! chiModuleCheckTools "$fiberName"; then
-            chiLog "missing tool dependencies, not loading!" "$fiberName"
+            chiLogError "missing tool dependencies, not loading!" "$fiberName"
             return 1
         fi
     fi
 
     chiChainLoadNested "$fiberName" "$1"/chains
     
-    chiModuleSetDynamicVariable "$CHI_MODULE_PATH_PREFIX" "$fiberName" "$1"
-    chiModuleSetDynamicVariable "$CHI_MODULE_LOADED_PREFIX" "$fiberName" true
+    chiSetDynamicVariable "$1" "$CHI_MODULE_PATH_PREFIX" "$fiberName"
+    chiSetDynamicVariable true "$CHI_MODULE_LOADED_PREFIX" "$fiberName"
 }
 
 function chiChainLoadNested() {
@@ -188,6 +175,10 @@ function chiChainLoad() {
     local chainName="$($isNestedChain && basename "$chainPath" || fileStripExtension $(basename "$2"))"
     local moduleName="$fiberName:$chainName"
 
+    chiLogDebug "loading chain..." "$moduleName"
+
+    chiSetDynamicVariable "$moduleName" "$CHI_MODULE_NAME_PREFIX" "$fiberName" "$chainName"
+
     # if already loaded, return
     [[ -n $(chiModuleGetDynamicVariable "$CHI_MODULE_LOADED_PREFIX" "$moduleName") ]] && return 0
 
@@ -204,7 +195,7 @@ function chiChainLoad() {
 
     # only load if not disabled
     local enabledValue
-    enabledValue="$(chiConfigUserRead "$fiberName" moduleConfig "$chainName" enabled)"
+    enabledValue="$(chiConfigUserReadModule "$fiberName" "$chainName" enabled)"
 
     if [[ $? -eq 0 ]] && [[ "$enabledValue" == "false" ]]; then
         chiLogDebug "chain disabled, not loading!" "$moduleName"
@@ -212,7 +203,7 @@ function chiChainLoad() {
     fi
 
     if ! chiModuleCheckTools "$moduleName"; then
-        chiLog "missing tool dependencies, not loading!" "$moduleName"
+        chiLogError "missing tool dependencies, not loading!" "$moduleName"
         return 1
     fi
 
@@ -224,18 +215,18 @@ function chiChainLoad() {
         fi
 
         # load all scripts in chain directory
-        chiLoadDir "$moduleName" $(find "$chainPath" -type f -name '*.sh' -not -path "$chainInitScriptPath")
+        chiLoadDir $(find "$chainPath" -type f -name '*.sh' -not -path "$chainInitScriptPath")
       
         # zsh chains only loaded on zsh shells
         if [[ -n "$ZSH_VERSION" ]]; then
-            chiLoadDir "$moduleName" $(find "$chainPath" -type f -name '*.zsh' -not -path "$chainInitScriptPath")
+            chiLoadDir $(find "$chainPath" -type f -name '*.zsh' -not -path "$chainInitScriptPath")
         fi
     else
-        chiLoadDir "$moduleName" "$chainPath"
+        chiLoadDir "$chainPath"
     fi
 
-    chiModuleSetDynamicVariable "$CHI_MODULE_PATH_PREFIX" "$moduleName" "$2"
-    chiModuleSetDynamicVariable "$CHI_MODULE_LOADED_PREFIX" "$moduleName" true
+    chiSetDynamicVariable "$2" "$CHI_MODULE_PATH_PREFIX" "$moduleName"
+    chiSetDynamicVariable true "$CHI_MODULE_LOADED_PREFIX" "$moduleName"
 }
 
 function chiModuleGetName() {

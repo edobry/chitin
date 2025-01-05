@@ -1,5 +1,3 @@
-export CHI_SECRETS_CHAIN_NAME="core:secret"
-
 # retrieves a secret with the given name from the secret store
 function chiSecretGet() {
     requireArg "a secret name" "$1" || return 1
@@ -7,14 +5,14 @@ function chiSecretGet() {
     local commandField="tool"
 
     local secretCommand
-    secretCommand="$(chiConfigUserRead core secret "$commandField")"
+    secretCommand="$(chiConfigUserReadModule core secret "$commandField")"
     if [[ $? -ne 0 ]]; then
         echo "$secretCommand"
         return 1
     fi
     
     if [[ -z "$secretCommand" ]]; then
-        chiLog "config section not initialized, please set '$commandField' field!" "$CHI_SECRETS_CHAIN_NAME"
+        chiLogError "config section not initialized, please set '$commandField' field!" core secret
         return 1
     fi
 

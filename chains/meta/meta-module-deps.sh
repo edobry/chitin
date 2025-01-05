@@ -34,7 +34,7 @@ function chiModuleCheckToolStatus() {
     chiToolsLoad "$1" "$moduleTools"
 
     if [[ -n "$CHI_CACHE_TOOLS_REBUILD" ]]; then
-        chiLog "building tool status cache..." "$1"
+        chiLogInfo "building tool status cache..." "$1"
         chiToolsCheckAndUpdateStatus "$moduleTools"
     fi
 }
@@ -64,18 +64,18 @@ function chiModuleCheckToolDepsMet() {
                 chiToolsCheckAndUpdateStatus "$(jsonToEntry "$toolDep" "$toolConfig")"
                 toolDepStatus="$(chiToolsGetStatus "$toolDep")"
             else
-                chiLog "no tool status found for '$toolDep'!" "$moduleName"
+                chiLogInfo "no tool status found for '$toolDep'!" "$moduleName"
                 toolDepsMet=1
                 continue
             fi
         fi
 
         if ! jsonCheckBool "$toolDepStatus" installed; then
-            chiLog "$toolDep not installed!" "$moduleName"
+            chiLogInfo "$toolDep not installed!" "$moduleName"
 
             toolsToInstall+=("$toolDep")
         elif ! jsonCheckBool "$toolDepStatus" validVersion; then
-            chiLog "$toolDep version not valid!" "$moduleName"
+            chiLogInfo "$toolDep version not valid!" "$moduleName"
             toolDepsMet=1
         fi
     done < <(echo "$toolDepsList")
@@ -101,7 +101,7 @@ function chiModuleInstallTools() {
     for tool in "${toolsToInstall[@]}"; do
         local toolConfig="$(chiToolsGetConfig "$tool")"
         if [[ -z "$toolConfig" ]]; then
-            chiLog "tool config not found for '$tool'!" "$moduleName"
+            chiLogInfo "tool config not found for '$tool'!" "$moduleName"
             continue
         fi
 
@@ -122,7 +122,7 @@ function chiModuleInstallTools() {
         elif jsonReadPath "$toolConfig" artifact &>/dev/null; then
             chiToolsInstallArtifact "$moduleName" "$tool" "$toolConfig"
         else
-            chiLog "no install method found for '$tool'!" "$moduleName"
+            chiLogInfo "no install method found for '$tool'!" "$moduleName"
             continue
         fi
 

@@ -17,12 +17,26 @@ function chiConfigUserShow() {
 }
 
 function chiConfigUserRead() {
+    requireArg "at least one field name" "$1" || return 1
+
     jsonReadPath "$CHI_CONFIG_USER" $@
+}
+
+function chiConfigUserReadModule() {
+    requireArg "a fiber name" "$1" || return 1
+    requireArg "a chain name" "$2" || return 1
+
+    local fiberName="$1"; shift
+    local chainName="$1"; shift
+
+    chiConfigUserRead "$fiberName" "$CHI_CONFIG_MODULE_FIELD_NAME" "$chainName" $@
 }
 
 function chiConfigUserReadFile() {
     yamlFileToJson "$(chiConfigUserGetPath)"
 }
+
+export CHI_CONFIG_USER_PROJECT_DIR_FIELD_NAME="projectDir"
 
 function chiConfigUserLoad() {
     local configLocation="$(chiConfigUserGetDir)"
@@ -32,8 +46,8 @@ function chiConfigUserLoad() {
         mkdir -p "$configLocation"
         cp "$CHI_DIR/$CHI_CONFIG_USER_FILE_NAME" "$configFilePath"
 
-        chiLog "initialized config file at '$configFilePath'" "init"
-        chiLog 'please complete setup by running `chiConfigUserModify`' "init"
+        chiLogInfo "initialized user config file at '$configFilePath'" meta config user
+        chiLogInfo 'please complete setup by running `chiConfigUserModify`' meta config user
     fi
 
     local configFile
@@ -45,9 +59,9 @@ function chiConfigUserLoad() {
     export CHI_CONFIG_USER="$mergedConfig"
     local config="$mergedConfig"
 
-    local projectDir="$(chiConfigUserRead core projectDir)"
+    local projectDir="$(chiConfigUserRead core "$CHI_CONFIG_USER_PROJECT_DIR_FIELD_NAME")"
     if [[ -z "$projectDir" ]]; then
-        chiLog "projectDir not set!" "meta:config"
+        chiLogInfo "'$CHI_CONFIG_USER_PROJECT_DIR_FIELD_NAME' not set!" meta config user
         return 1
     fi
 
@@ -58,8 +72,7 @@ function chiConfigUserLoad() {
         export CHI_DOTFILES_DIR="$(chiExpandPath "$dotfilesDir")"
     fi
 
-    local moduleConfig="$(jsonReadPath "$config" moduleConfig)"
-    [[ -n "$moduleConfig" ]] && chiConfigModuleMerge "$moduleConfig"
+    chiConfigChainMerge "$config"
 }
 
 function chiModuleUserConfigMergeFromFile() {
@@ -75,13 +88,13 @@ function chiModuleUserConfigMergeFromFile() {
     local moduleConfigPath=("$moduleName")
 
     while [[ $# -gt 0 ]]; do
-        moduleConfigPath+=("moduleConfig" "$1")
+        moduleConfigPath+=("$CHI_CONFIG_MODULE_FIELD_NAME" "$1")
         shift
     done
 
     local existingModuleConfig="$(yamlReadFilePath "$(chiConfigUserGetPath)" "${moduleConfigPath[@]}")"
     if [[ -z "$existingModuleConfig" ]]; then
-        chiLog "initializing user config for module '$moduleName'" "meta:config"
+        chiLogInfo "initializing user config for module '$moduleName'" meta config user
         yamlFileSetFieldWrite "$(chiConfigUserGetPath)" "$userConfig" "${moduleConfigPath[@]}"
     fi
 }
@@ -89,7 +102,7 @@ function chiModuleUserConfigMergeFromFile() {
 function chiConfigUserModify() {
     $EDITOR "$(chiConfigUserGetPath)"
 
-    chiLog "updated user config, reinitializing..." "meta:config"
+    chiLogInfo "updated user config, reinitializing..." meta config user
     chiShell
 
 }
@@ -99,7 +112,7 @@ function chiConfigUserSet() {
 
     echo "$1" | prettyYaml > "$(chiConfigUserGetPath)"
 
-    chiLog "updated user config, reinitializing..." "meta:config"
+    chiLogInfo "updated user config, reinitializing..." meta config user
     chiShell
 }
 
@@ -111,4 +124,17 @@ function chiConfigUserSetField() {
     local newConfig="$(yamlFileSetField "$(chiConfigUserGetPath)" "$fieldValue" $*)"
 
     chiConfigUserSet "$newConfig"
+}
+
+function chiConfigUserSetModuleField() {
+    requireArg "a field value" "$1" || return 1
+    requireArg "a fiber name" "$2" || return 1
+    requireArg "a chain name" "$3" || return 1
+    requireArg "a field path" "$4" || return 1
+
+    local fieldValue="$1"; shift
+    local fiberName="$1"; shift
+    local chainName="$1"; shift
+
+    chiConfigUserSetField "$fieldValue" "$fiberName" "$CHI_CONFIG_MODULE_FIELD_NAME" "$chainName" $@
 }

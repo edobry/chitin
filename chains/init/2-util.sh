@@ -71,6 +71,15 @@ function splitOnSpaces() {
     splitOnChar ' '
 }
 
+function joinWith() {
+    requireArg "a character" "$1" || return 1
+    requireArg "a list of strings" "$2" || return 1
+
+    local delimiter="$1"; shift
+
+    printf "%s\n" "$@" | paste -sd "$delimiter" -
+}
+
 function sedStripRef() {
     sed 's/\?ref=.*$//g'
 }
@@ -97,6 +106,19 @@ function deleteFiles() {
     find . -type f -name "$1" -prune -print -exec rm -rf {} \;
 }
 
+function chiEncodeVariableName() {
+    requireArg "a module name" "$1" || return 1
+
+    sed 's/[:\-]/_/g' <<< "$1"
+}
+
+function chiMakeDynamicVariableName() {
+    requireArg "a variable prefix" "$1" || return 1
+    requireArg "at least one variable name segment" "$2" || return 1
+    
+    chiEncodeVariableName "$(joinWith '_' $@)"
+}
+
 function chiReadDynamicVariable() {
     requireArg "a variable name" "$1" || return 1
 
@@ -105,6 +127,16 @@ function chiReadDynamicVariable() {
     else
         echo "${(P)1}"
     fi
+}
+
+function chiSetDynamicVariable() {
+    requireArg "a variable value" "$1" || return 1
+    requireArg "a variable prefix" "$2" || return 1
+    requireArg "at least one variable name segment" "$3" || return 1
+
+    local value="$1"; shift
+    
+    export "$(chiMakeDynamicVariableName $@)=$value"
 }
 
 function chiShowColors() {

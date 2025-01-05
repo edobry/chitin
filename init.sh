@@ -16,8 +16,6 @@ if [[ -z "$IS_DOCKER" ]]; then
 fi
 
 function chiLoadDir() {
-    local moduleName="$1"; shift
-
     for file in "$@"; do
         source "$file"
     done
@@ -51,18 +49,18 @@ function chiShell() {
     fi
 
     # load init chain
-    chiLoadDir core:init $CHI_DIR/chains/init/**/*.sh
-    chiLog "initializing chitin..." "init"
+    chiLoadDir $CHI_DIR/chains/init/**/*.sh
+    chiLogInfo "initializing chitin..." init
 
     chiColorInit
     chiInitBootstrapDeps
 
     # load meta chain
-    chiLoadDir core:meta $CHI_DIR/chains/meta/**/*.sh
+    chiLoadDir $CHI_DIR/chains/meta/**/*.sh
     chiConfigUserLoad "$1"
 
     if ! chiToolsLoadFromCache; then
-        chiLog "tools status cache not found, rebuilding..." "meta:tools"
+        chiLogInfo "tools status cache not found, rebuilding..." meta tools
         export CHI_CACHE_TOOLS_REBUILD=true
     fi
     
@@ -88,7 +86,7 @@ function chiShell() {
     chiRunInitCommand
 
     if [[ -d "$CHI_INIT_TEMP_DIR" ]]; then
-        chiLog "cleaning up bootstrap deps" "init"
+        chiLogInfo "cleaning up bootstrap deps" init
         
         chiToolsRemoveDirFromPath "$CHI_INIT_TEMP_DIR"
         rm -rf "$CHI_INIT_TEMP_DIR"
@@ -96,7 +94,7 @@ function chiShell() {
 
     local endTime=$(gdate +%s)
     local duration=$((endTime - startTime))
-    chiLog "$(chiColorGreen "initialized in $duration seconds")" "init"
+    chiLogGreen "initialized in $duration seconds" init
 
     if [[ -f "$CHI_LOG_TIME" ]]; then
         rm "$CHI_LOG_TIME"

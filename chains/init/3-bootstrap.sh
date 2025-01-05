@@ -22,13 +22,16 @@ export CHI_LOG_IS_DEBUG=$([[ "$(chiLogGetLevel "$CHI_LOG_LEVEL")" -ge "$CHI_LOG_
 
 export CHI_LOG_TIME="/tmp/chitin-prev-time-$(randomString 10)"
 function chiLog() {
-    requireArg "a message" "$1" || return 1
+    requireArg "a log level" "$1" || return 1
+    requireArg "a message" "$2" || return 1
+
+    local logLevel="$(chiLogGetLevel "$1")"; shift
+    local message="$1"; shift
   
-    local logLevel="$(chiLogGetLevel "${3:-INFO}")"
     local currentLogLevel="$(chiLogGetLevel "$CHI_LOG_LEVEL")"
     [[ "$logLevel" -le $currentLogLevel ]] || return 0
 
-    local msg="chitin${2:+:}${2} - $1"
+    local msg="$(joinWith ':' chitin $@) - $message"
 
     if $CHI_LOG_IS_DEBUG; then
         local currentTime="$(gdate +%s%N)"
@@ -41,37 +44,69 @@ function chiLog() {
     echo "$msg" >&2
 }
 
+function chiLogInfo() {
+    requireArg "a message" "$1" || return 1
+    requireArg "a module name" "$2" || return 1
+
+    local message="$1"; shift
+
+    chiLog INFO "$message" $@
+}
+
+function chiLogGreen() {
+    requireArg "a message" "$1" || return 1
+    requireArg "a module name" "$2" || return 1
+
+    local message="$1"; shift
+
+    chiLogInfo "$(chiColorGreen "$message")" $@
+}
+
 function chiLogDebug() {
     requireArg "a message" "$1" || return 1
     requireArg "a module name" "$2" || return 1
 
-    chiLog "$1" "$2" DEBUG
+    local message="$1"; shift
+
+    chiLog DEBUG "$message" $@
 }
 
 function chiLogTrace() {
     requireArg "a message" "$1" || return 1
     requireArg "a module name" "$2" || return 1
 
-    chiLog "$1" "$2" TRACE
+    local message="$1"; shift
+
+    chiLog TRACE "$message" $@
+}
+
+function chiLogError() {
+    requireArg "a message" "$1" || return 1
+    requireArg "a module name" "$2" || return 1
+
+    local message="$1"; shift
+
+    chiLogInfo "$(chiColorRed "$message")" $@
 }
 
 function chiBail() {
-    chiLog "$(chiColorRed "${1:-"something went wrong"}!")"
-    chiLog "$(chiColorRed "exiting!")"
+    chiLogError "${1:-"something went wrong"}!"
+    chiLogError "exiting!"
+
     return 1
 }
 
 function chiInitBootstrapDeps() {
     # we need jq to bootstrap
     if ! checkCommand jq; then
-        chiLog "dep 'jq' missing!" "$(chiInitBootstrapModule)"
+        chiLogInfo "dep 'jq' missing!" init bootstrap
 
         chiToolsInstallJqTemporary
     fi
     
     # we need yq to bootstrap
     if ! checkCommand yq; then
-        chiLog "dep 'yq' missing!" "$(chiInitBootstrapModule)"
+        chiLogInfo "dep 'yq' missing!" init bootstrap
 
         chiToolsInstallYqTemporary
     fi
@@ -107,11 +142,11 @@ function chiToolsInstallTemporary() {
     local version="$2"
     local url="$(chiUrlExpand "$2" "$3") "
 
-    chiLog "installing '$toolName' temporarily..." "$(chiInitBootstrapModule)"
+    chiLogInfo "installing '$toolName' temporarily..." init bootstrap
     chiToolsInstallExecutableFromUrl "$toolName" "$url" "$CHI_INIT_TEMP_DIR"
     
     if ! checkCommand "$toolName"; then
-        chiBail "something went wrong installing '$toolName'" "$(chiInitBootstrapModule)"
+        chiBail "something went wrong installing '$toolName'" init bootstrap
         return 1
     fi
 }
@@ -128,10 +163,7 @@ function chiToolsInstallFromUrl() {
 
     local installPath="$installDir/$fileName"
 
-    GREEN="$(tput setaf 2)"
-    NC="$(tput sgr0)"
-
-    chiLog "${GREEN}==>${NC} Installing '$toolName' from '$url' to '$installPath'..." "$1"
+    chiLogGreen "Installing '$toolName' from '$url' to '$installPath'..." init bootstrap
 
     mkdir -p "$installDir"
 
