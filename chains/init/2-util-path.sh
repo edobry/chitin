@@ -10,6 +10,8 @@ function xdgCache() {
     echo "$(xdgHome)/.cache"
 }
 
+export CHI_CACHE="$(xdgCache)/chitin"
+
 function fileGetExtension() {
     requireArg "a file path" "$1" || return 1
 
@@ -50,7 +52,7 @@ function showPathVar() {
 function chiToolsAddDirToPath() {
     requireDirectoryArg "directory" "$1" || return 1
 
-    chiAddToPathVar PATH "$1"
+    chiAddToPathVar PATH "$(chiExpandPath "$1")"
 }
 
 function chiToolsRemoveDirFromPath() {

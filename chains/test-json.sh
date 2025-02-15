@@ -74,7 +74,7 @@ function test_jsonMergeDeep() {
     chiTestSetExitCode $?
 
     chiTestAssertStdoutEmpty
-    chiTestAssertStderrIs "Please supply another JSON string!"
+    chiTestAssertStderrIs "Please provide another JSON string!"
     chiTestAssertExitCodeIs 1
     
     chiTestCaseFinish

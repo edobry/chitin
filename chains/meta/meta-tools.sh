@@ -155,7 +155,6 @@ function chiToolsCheckStatus() {
     chiToolsMakeStatus "$toolName" "$installed" "$validVersion"
 }
 
-export CHI_CACHE="$(xdgCache)/chitin"
 export CHI_CACHE_TOOLS="$CHI_CACHE/tool-status.json"
 
 function chiToolsLoadFromCache() {

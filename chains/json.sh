@@ -183,13 +183,13 @@ function yamlConvert() {
 function yamlFileToJson() {
     requireYamlFileArg "filepath" "$1" || return 1
 
-    cat "$1" | yamlToJson | jq -c
+    cat "$1" | yamlToJson | jq -c '. // empty'
 }
 
 function tomlFileToJson() {
     requireFileArg "filepath" "$1" || return 1
 
-    yq "$1" -oj | jq -c
+    yq "$1" -oj | jq -c '. // empty'
 }
 
 function jsonToYamlConvert() {
