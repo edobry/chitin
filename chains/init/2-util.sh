@@ -179,3 +179,9 @@ function chiColorGreen() {
 
     chiColor "$CHI_COLOR_GREEN" "$1"
 }
+
+function cdFileDir() {
+    requireArg "a file path" "$1" || return 1
+
+    cd "$(dirname "$1")"
+}
