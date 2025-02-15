@@ -1,3 +1,7 @@
+function chiLogErrorRequire() {
+    chiLogError "$1" core:require
+}
+
 function checkNumeric() {
     [[ "$1" =~ '^[0-9]+$' ]]
 }
@@ -5,8 +9,8 @@ function checkNumeric() {
 function checkFileExists() {
     requireArg "a filepath" "$1" || return 1
 
-    if [[ ! -f "$1" ]]; then
-        echo "No file exists at the given path!" >&2
+    if [[ ! -e "$(chiExpandPath "$1")" ]]; then
+        chiLogErrorRequire "No file or directory exists at the given path '$1'!"
         return 1
     fi
 }
@@ -14,17 +18,8 @@ function checkFileExists() {
 function checkDirectoryExists() {
     requireArg "a filepath" "$1" || return 1
 
-    if [[ ! -d "$1" ]]; then
-        echo "No directory exists at the given path!" >&2
-        return 1
-    fi
-}
-
-function checkFileOrDirectoryExists() {
-    requireArg "a filepath" "$1" || return 1
-
-    if [[ ! -e "$1" ]]; then
-        echo "No directory exists at the given path!" >&2
+    if [[ ! -d "$(chiExpandPath "$1")" ]]; then
+        chiLogErrorRequire "No directory exists at the given path '$1'!"
         return 1
     fi
 }
@@ -37,7 +32,7 @@ function checkExtension() {
     local extension="$2"
 
     if [[ "$(fileGetExtension $filePath)" != "$extension" ]]; then
-        chiBail "extension must be '.$extension'!"
+        chiLogErrorRequire "extension must be '.$extension' for file '$filePath'!"
         return 1
     fi
 }
@@ -64,10 +59,16 @@ function requireArg() {
 # checks that an argument is supplied and that it passes the check, and prints a message if not
 # args: name of arg, arg value, validation command, (optional) validation failure prefix
 function requireArgWithCheck() {
-    if [[ -z "$2" ]] || ! eval "$3 '$2'"; then
-        echo "Please supply ${4}${1:-a value}!" >&2
-        return 1
+    if [[ -z "$2" ]]; then
+        chiLogError "Empty argument provided!" core:require
+    elif ! eval "$3 '$2'"; then
+        chiLogError "Provided argument '$2' is invalid!" core:require
+    else
+        return 0
     fi
+
+    chiLogError "Please provide ${4}${1:-a value}!" core:require
+    return 1
 }
 
 # checks that an argument is supplied and that it is numeric, and prints a message if not
@@ -108,12 +109,6 @@ function requireDirectoryArg() {
     requireArgWithCheck "$1" "$2" checkDirectoryExists "a path to an existing "
 }
 
-# checks that an argument is supplied and that points to an existing file or directory, and prints a message if not
-# args: name of arg, arg value
-function requireFileOrDirectoryArg() {
-    requireArgWithCheck "$1" "$2" checkFileOrDirectoryExists "a path to an existing "
-}
-
 # can be used to check arguments for a specific string
 # args: search target, args...
 # example: listContains "some string" $* || exit 1
@@ -139,9 +134,9 @@ function requireArgOptions() {
     local options="$(echo "$*" | tr '\n' ' ' | sort)"
 
     if [[ -z "$argValue" ]] || ! eval "listContains $argValue $options"; then
-        echo "Supplied argument '$argValue' is not a valid option for $argName!" >&2
-        echo "It must be one of the following:" >&2
-        echo "$options" | tr " " '\n' | sort >&2
+        chiLogErrorRequire "Supplied argument '$argValue' is not a valid option for $argName!"
+        chiLogErrorRequire "It must be one of the following:"
+        chiLogErrorRequire "$options" | tr " " '\n' | sort
         return 1
     fi
 }

@@ -165,7 +165,7 @@ function chiChainLoadNested() {
 
 function chiChainLoad() {
     requireArg "a fiber name" "$1" || return 1
-    requireFileOrDirectoryArg "chain path" "$2" || return 1
+    requireFileArg "chain path" "$2" || return 1
     requireArg "a boolean indicating whether this is a nested chain" "$3" || return 1
 
     local fiberName="$1"
