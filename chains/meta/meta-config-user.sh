@@ -88,15 +88,17 @@ function chiModuleUserConfigMergeFromFile() {
     local moduleConfigPath=("$moduleName")
 
     while [[ $# -gt 0 ]]; do
+        moduleName="$moduleName:$1"
         moduleConfigPath+=("$CHI_CONFIG_MODULE_FIELD_NAME" "$1")
         shift
     done
 
     local existingModuleConfig="$(yamlReadFilePath "$(chiConfigUserGetPath)" "${moduleConfigPath[@]}")"
-    if [[ -z "$existingModuleConfig" ]]; then
-        chiLogInfo "initializing user config for module '$moduleName'" meta config user
-        yamlFileSetFieldWrite "$(chiConfigUserGetPath)" "$userConfig" "${moduleConfigPath[@]}"
-    fi
+    [[ -n "$existingModuleConfig" ]] && return 0
+        
+    chiLogInfo "initializing user config for module '$moduleName'" meta config user
+    yamlFileSetFieldWrite "$(chiConfigUserGetPath)" "$userConfig" "${moduleConfigPath[@]}"
+    chiConfigUserLoad
 }
 
 function chiConfigUserModify() {

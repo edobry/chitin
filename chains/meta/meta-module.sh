@@ -175,15 +175,17 @@ function chiChainLoad() {
     local chainName="$($isNestedChain && basename "$chainPath" || fileStripExtension $(basename "$2"))"
     local moduleName="$fiberName:$chainName"
 
-    chiLogDebug "loading chain..." "$moduleName"
+    chiLogDebug "loading $($isNestedChain && echo "nested " || echo '')chain..." "$moduleName"
 
     chiSetDynamicVariable "$moduleName" "$CHI_MODULE_NAME_PREFIX" "$fiberName" "$chainName"
 
-    # if already loaded, return
-    [[ -n $(chiModuleGetDynamicVariable "$CHI_MODULE_LOADED_PREFIX" "$moduleName") ]] && return 0
+    if [[ -n $(chiModuleGetDynamicVariable "$CHI_MODULE_LOADED_PREFIX" "$moduleName") ]]; then
+        chiLogDebug "chain already loaded, skipping!" "$moduleName"
+        return 0
+    fi
 
     if $isNestedChain; then
-        chiModuleUserConfigMergeFromFile "$(dirname $chainPath)" "$fiberName" "$chainName"
+        chiModuleUserConfigMergeFromFile "$chainPath" "$fiberName" "$chainName"
     fi
 
     local chainConfig="$($isNested && chiConfigModuleReadFromFile "$chainPath" 2>/dev/null || echo "{}")"
