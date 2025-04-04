@@ -16,3 +16,11 @@ function brewCheckCask() {
 
     brewCheck "$1" --cask
 }
+
+function brewListInstalled() {
+    brew ls -1 --full-name
+}
+
+function brewChecksumInstalled() {
+    brewListInstalled | md5sum --quiet
+}

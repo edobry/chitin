@@ -17,7 +17,7 @@ function randomString() {
 
 #creates a randomly named temporary file
 function tempFile() {
-    echo /tmp/$(randomString 10)
+    echo /tmp/${1:+$1-}$(randomString 10)
 }
 
 function hr() {
