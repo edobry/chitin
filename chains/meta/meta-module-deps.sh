@@ -11,32 +11,28 @@ function chiModuleLoadToolConfigs() {
 
     [[ -z "$moduleTools" ]] || [[ "$moduleTools" == 'null' ]] || [[ "$moduleTools" == '{}' ]] && return 0
 
+    chiSetDynamicVariable "$(echo "$moduleTools" | jq -c 'to_entries[]')" "$CHI_MODULE_TOOLS_PREFIX" "$moduleName"
     export CHI_TOOLS="$(jsonMerge "${CHI_TOOLS:-"{}"}" "$moduleTools")"
 }
 
-function chiModuleCheckTools() {
+function chiModuleCheckToolsAndDeps() {
     requireArg "a module name" "$1" || return 1
+
+    [[ "$CHI_TOOLS_CHECK_ENABLED" == "true" ]] || return 0
 
     chiLogDebug "checking tools..."  "$1"
-
-    chiModuleCheckToolStatus "$1"
-    chiModuleCheckToolDepsMet "$1"
-
-    chiLogDebug "tools checked" "$1"
-}
-
-function chiModuleCheckToolStatus() {
-    requireArg "a module name" "$1" || return 1
-
-    local moduleTools="$(chiModuleConfigReadVariablePath "$1" tools | jq -c 'to_entries[]')"
-    [[ -z "$moduleTools" ]] && return 0
-
-    chiToolsLoad "$1" "$moduleTools"
-
+    
     if [[ -n "$CHI_CACHE_TOOLS_REBUILD" ]]; then
         chiLogInfo "building tool status cache..." "$1"
-        chiToolsCheckAndUpdateStatus "$moduleTools"
+        chiToolsCheckAndUpdateStatus "$(chiGetDynamicVariable "$CHI_MODULE_TOOLS_PREFIX" "$1")"
     fi
+
+    if ! chiModuleCheckToolDepsMet "$1"; then
+        chiLogError "missing tool dependencies, not loading!" "$1"
+        return 1
+    fi
+    
+    chiLogDebug "tools checked" "$1"
 }
 
 function chiModuleCheckToolDepsMet() {

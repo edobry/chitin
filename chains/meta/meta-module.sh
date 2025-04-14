@@ -1,5 +1,6 @@
 export CHI_MODULE_PREFIX="CHI_MODULE"
 export CHI_MODULE_PATH_PREFIX="${CHI_MODULE_PREFIX}_PATH"
+export CHI_MODULE_TOOLS_PREFIX="${CHI_MODULE_PREFIX}_TOOLS"
 export CHI_MODULE_LOADED_PREFIX="${CHI_MODULE_PREFIX}_LOADED"
 
 function chiModuleGetDynamicVariable() {
@@ -54,11 +55,6 @@ function chiFiberLoadExternal() {
 }
 
 function chiFiberLoadExternalLoop() {
-    local isNoCheck=''
-    if [[ "$1" == "nocheck" ]]; then
-        isNoCheck="$1"; shift
-    fi
-
     requireArg "at least one fiber" "$1" || return 1
 
     local fibers=("$@")
@@ -66,7 +62,7 @@ function chiFiberLoadExternalLoop() {
 
     for fiber in "${fibers[@]}"; do
         # echo "loading fiber: $fiber"
-        if ! chiFiberLoad "$fiber" "$isNoCheck"; then
+        if ! chiFiberLoad "$fiber"; then
         # echo "loading fiber failed, retrying"
             retryList+=("$fiber")
         else
@@ -77,7 +73,7 @@ function chiFiberLoadExternalLoop() {
     # if not all fibers loaded, retry
     if [[ ${#retryList[@]} -gt 0 ]]; then
         # echo "retrying: ${retryList[@]}"
-        chiFiberLoadExternalLoop "$isNoCheck${retryList[@]}"
+        chiFiberLoadExternalLoop "${retryList[@]}"
     fi
 }
 
@@ -137,12 +133,9 @@ function chiFiberLoad() {
 
     chiConfigChainMerge "$config" "$fiberName"
 
-    if [[ "$3" != "nocheck" ]]; then
-        if ! chiModuleCheckTools "$fiberName"; then
-            chiLogError "missing tool dependencies, not loading!" "$fiberName"
-            return 1
-        fi
-    fi
+    chiToolsLoad "$fiberName"
+
+    chiModuleCheckToolsAndDeps "$fiberName" || return 1
 
     chiChainLoadNested "$fiberName" "$1"/chains
     
@@ -204,10 +197,9 @@ function chiChainLoad() {
         return 1
     fi
 
-    if ! chiModuleCheckTools "$moduleName"; then
-        chiLogError "missing tool dependencies, not loading!" "$moduleName"
-        return 1
-    fi
+    chiToolsLoad "$moduleName"
+
+    chiModuleCheckToolsAndDeps "$moduleName" || return 1
 
     if $isNestedChain; then
         local chainInitScriptPath="$chainPath/$chainName-init.sh"

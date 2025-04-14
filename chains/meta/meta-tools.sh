@@ -7,21 +7,30 @@ function chiToolsGetConfig() {
 
 function chiToolsLoad() {
     requireArg "a module name" "$1" || return 1
-    requireJsonArg "at least one tool config entry" "$2" || return 1
 
     local moduleName="$1"; shift
 
     chiLogDebug "loading tools..." "$moduleName"
 
-    echo "$*" | while read -r toolEntry; do
+    local tools
+    
+    if [[ $# -gt 0 ]]; then
+        tools="$*"
+    else
+        tools="$(chiModuleGetDynamicVariable "$CHI_MODULE_TOOLS_PREFIX" "$moduleName")"
+        
+        [[ -z "$tools" ]] && return 0
+    fi
+
+    echo "$tools" | while read -r toolEntry; do
         local toolName="$(jsonReadPath "$toolEntry" key)"
         local toolConfig="$(jsonReadPath "$toolEntry" value)"
 
-        local toolStatus="$(chiToolsGetStatus "$toolName")"
+        # local toolStatus="$(chiToolsGetStatus "$toolName")"
 
-        if ! jsonCheckBool "$toolStatus" installed 2>/dev/null; then
-            continue
-        fi
+        # if ! jsonCheckBool "$toolStatus" installed 2>/dev/null; then
+        #     continue
+        # fi
 
         chiLogDebug "loading tool '$toolName'..." "$moduleName"
 

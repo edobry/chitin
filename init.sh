@@ -59,12 +59,18 @@ function chiShell() {
     chiLoadDir $CHI_DIR/chains/meta/**/*.sh
     chiConfigUserLoad "$1"
 
-    if ! chiToolsLoadFromCache; then
-        chiLogInfo "tools status cache not found, rebuilding..." meta tools
-        export CHI_CACHE_TOOLS_REBUILD=true
+    if [[ -z "$IS_DOCKER" ]]; then
+        local checkTools="$(chiConfigUserRead core checkTools)"
+
+        if [[ "$checkTools" != "false" ]]; then
+            export CHI_TOOLS_CHECK_ENABLED="true"
+
+            if ! chiToolsLoadFromCache; then
+                chiLogInfo "tools status cache not found, rebuilding..." meta tools
+                export CHI_CACHE_TOOLS_REBUILD=true
+            fi
+        fi
     fi
-    
-    local isNoCheck="$([[ -n "$IS_DOCKER" ]] || [[ -n "$CHI_NOCHECK" ]] && echo "nocheck")"
 
     # load core chains
     chiFiberLoad "$CHI_DIR" "core" "$isNoCheck"
