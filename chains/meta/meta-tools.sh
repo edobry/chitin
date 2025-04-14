@@ -5,6 +5,14 @@ function chiToolsGetConfig() {
     echo "$CHI_TOOLS" | jq -ce --arg tool "$1" '.[$tool] // empty'
 }
 
+export CHI_META_TOOLS_CONFIG_ARTIFACT_KEY="artifact"
+export CHI_META_TOOLS_CONFIG_ARTIFACT_ISEXEC_KEY="isExec"
+export CHI_META_TOOLS_CONFIG_GIT_KEY="git"
+export CHI_META_TOOLS_CONFIG_SETENV_KEY="setEnv"
+export CHI_META_TOOLS_CONFIG_ADDTOPATH_KEY="addToPath"
+export CHI_META_TOOLS_CONFIG_SOURCESCRIPT_KEY="sourceScript"
+export CHI_META_TOOLS_CONFIG_EVALCOMMAND_KEY="evalCommand"
+
 function chiToolsLoad() {
     requireArg "a module name" "$1" || return 1
 
@@ -22,7 +30,16 @@ function chiToolsLoad() {
         [[ -z "$tools" ]] && return 0
     fi
 
-    echo "$tools" | while read -r toolEntry; do
+    echo "$tools" | jq -c 'select(
+        (.value | to_entries | map(.key)) as $actualKeys
+        | $ARGS.positional | any(. as $k | $actualKeys | index($k))
+    )' --args \
+        $CHI_META_TOOLS_CONFIG_ARTIFACT_KEY \
+        $CHI_META_TOOLS_CONFIG_GIT_KEY \
+        $CHI_META_TOOLS_CONFIG_ADDTOPATH_KEY \
+        $CHI_META_TOOLS_CONFIG_SOURCESCRIPT_KEY \
+        $CHI_META_TOOLS_CONFIG_EVALCOMMAND_KEY |\
+    while read -r toolEntry; do
         local toolName="$(jsonReadPath "$toolEntry" key)"
         local toolConfig="$(jsonReadPath "$toolEntry" value)"
 
@@ -37,19 +54,19 @@ function chiToolsLoad() {
         local targetDir=''
 
         # if its an executable artifact, add its dir to the PATH
-        local artifactConfig="$(jsonReadPath "$toolConfig" artifact 2>/dev/null)"
-        if [[ -n "$artifactConfig" ]] && jsonCheckBool "$artifactConfig" isExec 2>/dev/null; then
+        local artifactConfig="$(jsonReadPath "$toolConfig" $CHI_META_TOOLS_CONFIG_ARTIFACT_KEY 2>/dev/null)"
+        if [[ -n "$artifactConfig" ]] && jsonCheckBool "$artifactConfig" $CHI_META_TOOLS_CONFIG_ARTIFACT_ISEXEC_KEY 2>/dev/null; then
             targetDir="$(chiToolsArtifactMakeTargetDir "$artifactConfig")"
             chiToolsAddDirToPath "$targetDir"
         fi
 
-        local gitConfig="$(jsonReadPath "$toolConfig" git 2>/dev/null)"
+        local gitConfig="$(jsonReadPath "$toolConfig" $CHI_META_TOOLS_CONFIG_GIT_KEY 2>/dev/null)"
         if [[ -n "$gitConfig" ]]; then
             targetDir="$(chiToolsGitMakeTargetDir "$gitConfig")"
         fi
 
         # if it has a setEnv field set, set environment variables
-        local setEnv="$(jsonReadPath "$toolConfig" setEnv 2>/dev/null)"
+        local setEnv="$(jsonReadPath "$toolConfig" $CHI_META_TOOLS_CONFIG_SETENV_KEY 2>/dev/null)"
         if [[ -n "$setEnv" ]]; then
             chiLogDebug "setting env $setEnv" "$moduleName"
             echo "$setEnv" | jq -c 'to_entries[]' | while read -r envEntry; do
@@ -67,7 +84,7 @@ function chiToolsLoad() {
         fi
 
         # if it has addToPath set, add the configued directories to the PATH
-        local addToPath="$(jsonReadPath "$toolConfig" addToPath 2>/dev/null)"
+        local addToPath="$(jsonReadPath "$toolConfig" $CHI_META_TOOLS_CONFIG_ADDTOPATH_KEY 2>/dev/null)"
         if [[ -n "$addToPath" ]]; then
             echo "$addToPath" | jq -r '.[]' | while read -r dir; do
                 chiLogDebug "adding to PATH: $(chiExpandPath "$dir")" "$moduleName"
@@ -76,13 +93,13 @@ function chiToolsLoad() {
         fi
 
         # if it has a sourceScript field set, source it
-        local sourceScript="$(jsonReadPath "$toolConfig" sourceScript 2>/dev/null)"
+        local sourceScript="$(jsonReadPath "$toolConfig" $CHI_META_TOOLS_CONFIG_SOURCESCRIPT_KEY 2>/dev/null)"
         if [[ -n "$sourceScript" ]]; then
             source "$targetDir/$sourceScript"
         fi
 
         # if it has evalCommand set, run it and pass the output to eval
-        local evalCommand="$(jsonReadPath "$toolConfig" evalCommand 2>/dev/null)"
+        local evalCommand="$(jsonReadPath "$toolConfig" $CHI_META_TOOLS_CONFIG_EVALCOMMAND_KEY 2>/dev/null)"
         if [[ -n "$evalCommand" ]]; then
             eval "$(eval $evalCommand)"
         fi
