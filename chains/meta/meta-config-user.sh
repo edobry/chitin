@@ -36,6 +36,7 @@ function chiConfigUserReadFile() {
     yamlFileToJson "$(chiConfigUserGetPath)"
 }
 
+export CHI_SHARE_INIT="$CHI_SHARE/init"
 export CHI_CONFIG_USER_PROJECT_DIR_FIELD_NAME="projectDir"
 
 function chiConfigUserLoad() {
@@ -44,6 +45,7 @@ function chiConfigUserLoad() {
 
     if [[ ! -f "$configFilePath" ]]; then
         mkdir -p "$configLocation"
+        mkdir -p "$CHI_SHARE_INIT"
         cp "$CHI_DIR/$CHI_CONFIG_USER_FILE_NAME" "$configFilePath"
 
         chiLogInfo "initialized user config file at '$configFilePath'" meta config user
@@ -82,9 +84,6 @@ function chiModuleUserConfigMergeFromFile() {
     local moduleDir="$1"; shift
     local moduleName="$1"; shift
 
-    local userConfig="$(yamlFileToJson "$moduleDir/$CHI_CONFIG_USER_FILE_NAME" 2>/dev/null)"
-    [[ -z "$userConfig" ]] && return 1
-
     local moduleConfigPath=("$moduleName")
 
     while [[ $# -gt 0 ]]; do
@@ -93,12 +92,19 @@ function chiModuleUserConfigMergeFromFile() {
         shift
     done
 
-    local existingModuleConfig="$(yamlReadFilePath "$(chiConfigUserGetPath)" "${moduleConfigPath[@]}")"
-    [[ -n "$existingModuleConfig" ]] && return 0
+    local userConfigPath="$(chiConfigUserGetPath)"
+
+    local moduleDefaultUserConfigFile="$moduleDir/$CHI_CONFIG_USER_FILE_NAME"
+    local existingModuleConfig="$(yamlReadFilePath "$userConfigPath" "${moduleConfigPath[@]}")"
+    if [[ -f "$moduleDefaultUserConfigFile" ]] && [[ -z "$existingModuleConfig" ]]; then
+        local userConfig="$(yamlFileToJson "$moduleDefaultUserConfigFile" 2>/dev/null)"
+        [[ -z "$userConfig" ]] && return 1
         
-    chiLogInfo "initializing user config for module '$moduleName'" meta config user
-    yamlFileSetFieldWrite "$(chiConfigUserGetPath)" "$userConfig" "${moduleConfigPath[@]}"
-    chiConfigUserLoad
+        chiLogInfo "initializing user config for module '$moduleName'" meta config user
+
+        jq -nc --argjson config "$userConfig" 'setpath($ARGS.positional; $config)' \
+            --args "${moduleConfigPath[@]}" > "$CHI_SHARE_INIT/$CHI_CONFIG_USER_FILE_NAME-diff-$moduleName"
+    fi
 }
 
 function chiConfigUserModify() {
@@ -106,7 +112,6 @@ function chiConfigUserModify() {
 
     chiLogInfo "updated user config, reinitializing..." meta config user
     chiShell
-
 }
 
 function chiConfigUserSet() {
