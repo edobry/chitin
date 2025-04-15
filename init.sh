@@ -52,9 +52,6 @@ function chiShell() {
     chiLoadDir $CHI_DIR/chains/init/**/*.sh
     chiLogInfo "initializing chitin..." init
 
-    chiColorInit
-    chiInitBootstrapDeps
-
     # load meta chain
     chiLoadDir $CHI_DIR/chains/meta/**/*.sh
     chiConfigUserLoad "$1"

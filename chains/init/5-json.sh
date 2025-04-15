@@ -1,3 +1,34 @@
+function chiJsonInstallJqTemporary() {
+    local jqVersion="1.7.1"
+    local jqUrl="https://github.com/jqlang/jq/releases/download/jq-{{version}}/jq-macos-arm64"
+    
+    chiJsonInstallTemporary "jq" "$jqVersion" "$jqUrl"
+}
+
+function chiJsonInstallYqTemporary() {
+    local yqVersion="4.44.3"
+    local yqUrl="https://github.com/mikefarah/yq/releases/download/v{{version}}/yq_darwin_arm64"
+
+    chiJsonInstallTemporary "yq" "$yqVersion" "$yqUrl"
+}
+
+function chiJsonInitBootstrapDeps() {
+    # we need jq and yq to bootstrap
+
+    if ! checkCommand jq; then
+        chiLogInfo "dep 'jq' missing!" init json
+
+        chiJsonInstallJqTemporary
+    fi
+    
+    if ! checkCommand yq; then
+        chiLogInfo "dep 'yq' missing!" init json
+
+        chiJsonInstallYqTemporary
+    fi
+}
+chiJsonInitBootstrapDeps
+
 function jsonParseStream() {
     jq . -c | jq .
 }

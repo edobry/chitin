@@ -35,11 +35,6 @@ function chiCheckEmbeddedVersion() {
     popd > /dev/null
 }
 
-
-function chiShowEnvvars() {
-    env | grep "CHI_"
-}
-
 function chiDebug() {
     chiLogInfo "configuration"
     chiLogInfo "version: $(chiGetVersion)"
