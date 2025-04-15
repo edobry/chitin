@@ -69,14 +69,8 @@ function chiShell() {
         fi
     fi
 
-    # load common chains
-    chiFiberLoad "$CHI_DIR" "common"
-
-    # load dotfiles
-    if [[ -n "$CHI_DOTFILES_DIR" ]]; then
-        chiFiberLoad "$CHI_DOTFILES_DIR" dotfiles
-    fi
-    
+    # load fibers
+    chiFiberLoad "$CHI_DIR"
     chiFiberLoadExternal
     
     export CHI_ENV_INITIALIZED=true

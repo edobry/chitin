@@ -48,6 +48,10 @@ function chiFiberPathToName() {
 }
 
 function chiFiberLoadExternal() {
+    if [[ -n "$CHI_DOTFILES_DIR" ]]; then
+        chiFiberLoad "$CHI_DOTFILES_DIR"
+    fi
+
     IFS=$'\n' fibers=($(find "$CHI_PROJECT_DIR" -maxdepth 1 -type d -not -path "$CHI_PROJECT_DIR" -name 'chitin-*'))
     [[ ${#fibers[@]} -gt 0 ]] || return 0
     
@@ -75,23 +79,6 @@ function chiFiberLoadExternalLoop() {
         # echo "retrying: ${retryList[@]}"
         chiFiberLoadExternalLoop "${retryList[@]}"
     fi
-}
-
-function chiShellReload() {
-    requireArg "at least one fiber name" "$1" || return 1
-
-    local fibers=("$@")
-    for fiber in "${fibers[@]}"; do
-        local fiberPath="$(chiModuleGetPath "$fiber")"
-        [[ -z "$fiberPath" ]] && continue
-
-        unset "$(chiMakeDynamicVariableName "$CHI_MODULE_LOADED_PREFIX" "$fiber")"
-        for var in $(env | grep "^${CHI_MODULE_LOADED_PREFIX}_${fiber}_" | cut -d= -f1); do
-            unset "$var"
-        done
-        
-        chiFiberLoad "$fiberPath" "$fiber" "nocheck"
-    done
 }
 
 export CHI_MODULE_NAME_PREFIX="CHI_MODULE_NAME"
@@ -241,5 +228,22 @@ function chiModuleGetName() {
         local chainVariableName="${fiberVariableName#"${fiberName}_"}"
         
         echo "${fiberName}:$(chiModuleVariableNameToName "$chainVariableName")"
+    done
+}
+
+function chiShellReload() {
+    requireArg "at least one fiber name" "$1" || return 1
+
+    local fibers=("$@")
+    for fiber in "${fibers[@]}"; do
+        local fiberPath="$(chiModuleGetPath "$fiber")"
+        [[ -z "$fiberPath" ]] && continue
+
+        unset "$(chiMakeDynamicVariableName "$CHI_MODULE_LOADED_PREFIX" "$fiber")"
+        for var in $(env | grep "^${CHI_MODULE_LOADED_PREFIX}_${fiber}_" | cut -d= -f1); do
+            unset "$var"
+        done
+        
+        chiFiberLoad "$fiberPath" "$fiber" "nocheck"
     done
 }
