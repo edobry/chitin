@@ -1,3 +1,7 @@
+function chiCd() {
+    cd "$CHI_DIR"
+}
+
 function chiGetVersion() {
     pushd $CHI_PROJECT_DIR/chitin > /dev/null
     git describe HEAD --tags

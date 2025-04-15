@@ -52,8 +52,8 @@ function chiShell() {
     chiLoadDir $CHI_DIR/chains/init/**/*.sh
     chiLogInfo "initializing chitin..." init
 
-    # load meta chain
-    chiLoadDir $CHI_DIR/chains/meta/**/*.sh
+    # load core chain
+    chiLoadDir $CHI_DIR/chains/core/**/*.sh
     chiConfigUserLoad "$1"
 
     if [[ -z "$IS_DOCKER" ]]; then
@@ -69,15 +69,15 @@ function chiShell() {
         fi
     fi
 
-    # load core chains
-    chiFiberLoad "$CHI_DIR" "core" "$isNoCheck"
+    # load common chains
+    chiFiberLoad "$CHI_DIR" "common"
 
     # load dotfiles
     if [[ -n "$CHI_DOTFILES_DIR" ]]; then
-        chiFiberLoad "$CHI_DOTFILES_DIR" dotfiles "$isNoCheck"
+        chiFiberLoad "$CHI_DOTFILES_DIR" dotfiles
     fi
     
-    chiFiberLoadExternal "$isNoCheck"
+    chiFiberLoadExternal
     
     export CHI_ENV_INITIALIZED=true
     unset CHI_CACHE_TOOLS_REBUILD

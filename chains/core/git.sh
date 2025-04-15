@@ -1,7 +1,3 @@
-function chiCd() {
-    cd "$CHI_DIR"
-}
-
 function chiGit() {
     git -C "$CHI_DIR" $*
 }
