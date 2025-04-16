@@ -2,6 +2,10 @@
 
 This document outlines the implementation plan for the Synthase TypeScript port of Chitin.
 
+## Development Principles
+
+Before beginning implementation, all contributors should review the [Development Principles](./development-principles.md) document, which outlines the core philosophies and standards for the project. These principles guide how we present and develop Synthase as a product, focusing on user experience, professionalism, and consistency.
+
 ## Implementation Rounds
 
 The implementation will proceed in multiple rounds, with each round producing a complete and working set of changes that can be tested before moving to the next round.
@@ -34,4 +38,4 @@ To improve collaboration throughout the implementation:
 2. Testing will occur between rounds before continuing to the next phase
 3. Regular feedback will be incorporated into subsequent rounds
 4. Progress will be tracked to maintain visibility
-5. Documentation will be kept current with implementation 
+5. Documentation will be kept current with implementation

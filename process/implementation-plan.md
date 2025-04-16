@@ -1,6 +1,15 @@
-# Synthase Implementation Plan with Iterative Testing
+# Synthase Implementation Plan
 
-This document outlines the concrete implementation plan for Synthase, the TypeScript port of Chitin, with a focus on iterative delivery and regular testing cycles.
+This document outlines the implementation plan for the Synthase project, which aims to create a TypeScript port of Chitin while preserving all functionality.
+
+## Important Guidelines
+
+Before beginning implementation, please review:
+- [Implementation Guidelines](./implementation-guidelines.md) - Contains technical approach, collaboration methods, and references to development principles
+
+## Implementation Approach
+
+The implementation will proceed in phases, with each phase delivering a functional increment that can be tested independently.
 
 ## Overview
 
