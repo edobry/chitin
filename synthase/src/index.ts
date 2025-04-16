@@ -85,8 +85,8 @@ export class Synthase {
       CHI_DIR: this.chitinDir || process.cwd(),
       CHI_PROJECT_DIR: getCoreConfigValue(config, 'projectDir'),
       CHI_DOTFILES_DIR: getCoreConfigValue(config, 'dotfilesDir'),
-      CHI_CHECK_TOOLS: getCoreConfigValue(config, 'checkTools') ? '1' : '0',
-      CHI_AUTOINIT_DISABLED: getCoreConfigValue(config, 'autoInitDisabled') ? '1' : '0',
+      CHI_CHECK_TOOLS: getCoreConfigValue(config, 'checkTools') ? 'true' : 'false',
+      CHI_AUTOINIT_DISABLED: getCoreConfigValue(config, 'autoInitDisabled') ? 'true' : 'false',
     };
     
     // Merge with current environment if requested

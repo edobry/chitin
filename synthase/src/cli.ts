@@ -10,7 +10,7 @@ const program = new Command();
 
 program
   .name('synthase')
-  .description('TypeScript port of Chitin initialization system')
+  .description('Configuration and environment management system for shell environments')
   .version('0.1.0');
 
 // Add load-config command
@@ -72,7 +72,7 @@ program
     }
   });
 
-// Add init command (minimal for Round 1)
+// Add init command
 program
   .command('init')
   .description('Initialize the Chitin environment')
@@ -101,15 +101,14 @@ program
         CHI_DIR: findChitinDir() || process.cwd(),
         CHI_PROJECT_DIR: getCoreConfigValue(fullConfig, 'projectDir'),
         CHI_DOTFILES_DIR: getCoreConfigValue(fullConfig, 'dotfilesDir'),
-        CHI_CHECK_TOOLS: options.tools && getCoreConfigValue(fullConfig, 'checkTools') ? '1' : '0',
-        CHI_AUTOINIT_DISABLED: getCoreConfigValue(fullConfig, 'autoInitDisabled') ? '1' : '0',
+        CHI_CHECK_TOOLS: (options.tools && getCoreConfigValue(fullConfig, 'checkTools')) ? 'true' : 'false',
+        CHI_AUTOINIT_DISABLED: getCoreConfigValue(fullConfig, 'autoInitDisabled') ? 'true' : 'false',
       };
       
       const exportPath = await exportEnvironmentToBash(env);
       console.log(`Configuration loaded and environment exported to ${exportPath}`);
-      
-      // The actual initialization will be implemented in Round 2-4
-      console.log('Basic initialization complete. Full initialization will be implemented in future rounds.');
+      console.log('Environment initialized. To apply settings to your current shell:');
+      console.log(`source ${exportPath}`);
     } catch (error) {
       console.error('Initialization error:', error instanceof Error ? error.message : String(error));
       process.exit(1);

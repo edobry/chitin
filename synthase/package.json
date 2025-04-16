@@ -1,7 +1,7 @@
 {
   "name": "synthase",
   "version": "0.1.0",
-  "description": "TypeScript port of Chitin initialization system",
+  "description": "Configuration and environment management system for shell environments",
   "type": "module",
   "module": "src/index.ts",
   "scripts": {
@@ -15,7 +15,7 @@
   "bin": {
     "synthase": "./src/cli.ts"
   },
-  "keywords": ["chitin", "shell", "initialization", "typescript", "bun"],
+  "keywords": ["configuration", "shell", "environment", "typescript", "bun"],
   "dependencies": {
     "commander": "^13.1.0",
     "js-yaml": "^4.1.0"

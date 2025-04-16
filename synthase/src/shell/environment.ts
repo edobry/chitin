@@ -1,6 +1,6 @@
-import { writeFile } from '../utils/file';
-import { join } from 'path';
-import { findChitinDir } from '../utils/path';
+import { writeFile, ensureDir } from '../utils/file';
+import { join, dirname } from 'path';
+import { findChitinDir, getChitinCacheDir } from '../utils/path';
 
 /**
  * Interface for environment variables
@@ -19,20 +19,41 @@ export async function exportEnvironmentToBash(
   env: Environment,
   filePath?: string
 ): Promise<string> {
-  const chitinDir = findChitinDir();
-  
-  if (!chitinDir) {
-    throw new Error('Could not determine Chitin directory for environment export');
+  if (filePath) {
+    // If a custom path is provided, use it
+    return await exportToPath(env, filePath);
   }
   
-  const exportPath = filePath || join(chitinDir, '.chitin_env_ts');
+  // Use the Chitin cache directory
+  const cacheDir = getChitinCacheDir();
+  const exportPath = join(cacheDir, '.chitin_env_ts');
+  
+  return await exportToPath(env, exportPath);
+}
+
+/**
+ * Helper function to export environment to a specific path
+ * @param env Environment variables to export
+ * @param exportPath Path to export to
+ * @returns The path where the environment was exported
+ */
+async function exportToPath(env: Environment, exportPath: string): Promise<string> {
+  // Ensure the directory exists
+  await ensureDir(dirname(exportPath));
   
   // Create the bash export statements
   const exportStatements = Object.entries(env)
     .filter(([_, value]) => value !== undefined)
     .map(([key, value]) => {
+      // Format the value based on its type
+      let formattedValue = value || '';
+      
+      // Convert numeric booleans to string booleans
+      if (formattedValue === '0') formattedValue = 'false';
+      if (formattedValue === '1') formattedValue = 'true';
+      
       // Properly escape the value for bash
-      const escapedValue = (value || '')
+      const escapedValue = formattedValue
         .replace(/'/g, "'\\''"); // Escape single quotes
       
       return `export ${key}='${escapedValue}'`;

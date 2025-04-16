@@ -25,6 +25,8 @@
   - Implemented file-based environment sourcing mechanism
   - Added utility functions for finding Chitin directory
   - Created environment merging capability
+  - Used XDG-compliant cache directory for environment exports
+  - Improved boolean environment variables ('true'/'false' format)
 
 - **CLI Implementation**
   - Created `load-config` command with JSON/YAML output options
@@ -66,4 +68,6 @@
 - Added support for fiber-based configuration structure
 - Preserved symbolic path representation (~/Projects, localshare/chezmoi)
 - Removed empty objects from configuration output
-- Fixed type safety issues with fiber interfaces 
+- Fixed type safety issues with fiber interfaces
+- Moved environment exports to XDG cache directory (~/.cache/chitin)
+- Changed boolean environment variables to use 'true'/'false' format

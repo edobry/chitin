@@ -82,6 +82,19 @@ export function getUserConfigDir(): string {
 }
 
 /**
+ * Gets the Chitin cache directory following XDG standards
+ * @returns The path to the Chitin cache directory
+ */
+export function getChitinCacheDir(): string {
+  const xdgCacheHome = Bun.env.XDG_CACHE_HOME;
+  const homeDir = homedir();
+  
+  // Follow XDG standards: use XDG_CACHE_HOME if set, otherwise ~/.cache
+  const cacheBase = xdgCacheHome || join(homeDir, '.cache');
+  return join(cacheBase, 'chitin');
+}
+
+/**
  * Gets the path to the user configuration file
  * @param filename Optional custom filename (defaults to userConfig.yaml)
  * @returns The full path to the user configuration file
