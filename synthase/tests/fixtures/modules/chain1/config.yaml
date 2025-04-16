@@ -1,0 +1,7 @@
+enabled: true
+toolDeps:
+  - git
+  - node
+tools:
+  test:
+    checkCommand: test --version

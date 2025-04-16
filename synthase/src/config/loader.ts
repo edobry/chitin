@@ -133,17 +133,27 @@ export async function loadModuleConfig<T extends FiberConfig | ChainConfig>(
  * Gets the default configuration
  * @returns Default configuration object
  */
-export function getDefaultConfig(): UserConfig {
+export function getDefaultConfig(): any {
   return {
+    projectDir: expandPath('~'),
+    dotfilesDir: expandPath('~'),
+    checkTools: false,
+    installToolDeps: false,
+    autoInitDisabled: false,
+    failOnError: false,
+    loadParallel: false,
+    fibers: {},
+    chains: {},
+    tools: {},
     core: {
       projectDir: expandPath('~'),
       dotfilesDir: expandPath('~'),
       checkTools: false,
       installToolDeps: false,
-    },
-    fibers: {},
-    chains: {},
-    tools: {},
+      autoInitDisabled: false,
+      failOnError: false,
+      loadParallel: false,
+    }
   };
 }
 
@@ -173,7 +183,7 @@ export function getCoreConfigValue(config: UserConfig, field: string): any {
  * @param userConfig User configuration
  * @returns Complete configuration
  */
-export function getFullConfig(userConfig: UserConfig | null): UserConfig {
+export function getFullConfig(userConfig: UserConfig | null): any {
   const defaultConfig = getDefaultConfig();
   
   if (!userConfig) {
@@ -183,16 +193,40 @@ export function getFullConfig(userConfig: UserConfig | null): UserConfig {
   // Start with default config
   const result = {...defaultConfig};
   
+  // Copy top-level properties from userConfig
+  for (const [key, value] of Object.entries(userConfig)) {
+    if (key !== 'core' && key !== 'fibers' && key !== 'chains' && key !== 'tools') {
+      result[key] = value;
+    }
+  }
+  
   // Merge core fiber configuration
   result.core = {
     ...defaultConfig.core,
     ...userConfig.core,
   };
   
+  // Copy top-level properties from core for backward compatibility
+  if (userConfig.core) {
+    if (userConfig.core.projectDir) result.projectDir = userConfig.core.projectDir;
+    if (userConfig.core.dotfilesDir) result.dotfilesDir = userConfig.core.dotfilesDir;
+    if (userConfig.core.checkTools !== undefined) result.checkTools = userConfig.core.checkTools;
+    if (userConfig.core.installToolDeps !== undefined) result.installToolDeps = userConfig.core.installToolDeps;
+    if (userConfig.core.autoInitDisabled !== undefined) result.autoInitDisabled = userConfig.core.autoInitDisabled;
+    if (userConfig.core.failOnError !== undefined) result.failOnError = userConfig.core.failOnError;
+    if (userConfig.core.loadParallel !== undefined) result.loadParallel = userConfig.core.loadParallel;
+  }
+  
   // Copy all other fiber configurations
   for (const [fiberName, fiberConfig] of Object.entries(userConfig)) {
     if (fiberName !== 'core') {
-      result[fiberName] = fiberConfig;
+      if (fiberName === 'fibers' || fiberName === 'chains' || fiberName === 'tools') {
+        result[fiberName] = {...defaultConfig[fiberName], ...fiberConfig};
+      } else {
+        // Add to fibers object
+        if (!result.fibers) result.fibers = {};
+        result.fibers[fiberName] = fiberConfig;
+      }
     }
   }
   

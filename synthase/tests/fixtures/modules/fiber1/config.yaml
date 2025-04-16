@@ -1,0 +1,9 @@
+enabled: true
+fiberDeps:
+  - core
+moduleConfig:
+  test:
+    enabled: true
+    tools:
+      git:
+        checkCommand: git --version 

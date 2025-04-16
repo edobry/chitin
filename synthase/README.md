@@ -24,6 +24,10 @@ The project brings the reliability of static typing, better tooling, and improve
 
 - **Configuration Validation** - Catch configuration errors early with automatic validation, preventing frustrating runtime errors and mysterious tool failures.
 
+- **Module System** - Discover, validate, and load modules with intelligent dependency resolution, ensuring modules are loaded in the correct order.
+
+- **Fiber Management** - Activate and deactivate specific fibers to create focused environments for different contexts or projects.
+
 ## Installation
 
 ```bash
@@ -92,6 +96,53 @@ bun run src/cli.ts init --config /path/to/userConfig.yaml
 bun run src/cli.ts init --no-tools
 ```
 
+#### Module System Commands
+
+```bash
+# discover-modules
+# Discovers and lists available modules
+bun run src/cli.ts discover-modules
+
+# Display options:
+#   --json, -j         Output as JSON
+#   --yaml, -y         Output as YAML
+
+# validate-modules
+# Validates discovered modules
+bun run src/cli.ts validate-modules
+
+# Display options:
+#   --json, -j         Output as JSON
+#   --yaml, -y         Output as YAML
+```
+
+#### Fiber Management Commands
+
+```bash
+# fibers
+# List all fibers
+bun run src/cli.ts fibers
+
+# Options:
+#   --list, -l              List all fibers (default)
+#   --active, -a            List only active fibers
+#   --activate <fiber>      Activate a specific fiber
+#   --deactivate <fiber>    Deactivate a specific fiber
+
+# Examples:
+# List all fibers
+bun run src/cli.ts fibers
+
+# List active fibers
+bun run src/cli.ts fibers --active
+
+# Activate a fiber
+bun run src/cli.ts fibers --activate dev
+
+# Deactivate a fiber
+bun run src/cli.ts fibers --deactivate dev
+```
+
 ### Configuration Format
 
 Synthase uses a structured YAML format with fibers and chains:
@@ -146,6 +197,66 @@ main().catch(console.error);
 - `getCoreValue(field)` - Get a value from the core configuration section
 - `exportEnvironment(includeCurrentEnv?)` - Export config as environment variables
 
+#### Module System API
+
+```typescript
+import { discoverModulesFromConfig, loadModule, validateModule } from './synthase';
+
+async function main() {
+  // Load configuration
+  const userConfig = await loadUserConfig();
+  const fullConfig = getFullConfig(userConfig);
+  
+  // Discover modules
+  const result = await discoverModulesFromConfig(fullConfig);
+  console.log(`Discovered ${result.modules.length} modules`);
+  
+  // Validate modules
+  const validationResults = validateModules(result.modules);
+  
+  // Load a module with its dependencies
+  for (const module of result.modules) {
+    const loadResult = await loadModule(module, { 
+      loadDependencies: true 
+    });
+    
+    if (loadResult.success) {
+      console.log(`Loaded module ${module.id}`);
+    } else {
+      console.error(`Failed to load module ${module.id}: ${loadResult.error}`);
+    }
+  }
+}
+```
+
+#### Fiber Management API
+
+```typescript
+import { createFiberManager } from './synthase';
+
+async function main() {
+  // Create a fiber manager
+  const fiberManager = createFiberManager();
+  
+  // Load saved fiber state
+  await fiberManager.loadFiberState();
+  
+  // Register fibers
+  fiberManager.registerFiber('dev', ['web-dev', 'db-tools']);
+  fiberManager.registerFiber('ops', ['docker', 'kubernetes']);
+  
+  // Activate a fiber
+  fiberManager.activateFiber('dev');
+  
+  // Get active fibers
+  const activefibers = fiberManager.getActiveFibers();
+  console.log('Active fibers:', activefibers.map(f => f.id).join(', '));
+  
+  // Save fiber state
+  await fiberManager.persistFiberState();
+}
+```
+
 ## Development
 
 ### Requirements
@@ -159,6 +270,13 @@ main().catch(console.error);
 synthase/
 ├── src/
 │   ├── config/           # Configuration management
+│   ├── modules/          # Module system
+│   │   ├── discovery.ts  # Module discovery
+│   │   ├── dependency.ts # Dependency resolution
+│   │   ├── loader.ts     # Module loading
+│   │   ├── validator.ts  # Module validation
+│   │   └── state.ts      # Module state tracking
+│   ├── fiber/            # Fiber management
 │   ├── types/            # TypeScript definitions
 │   ├── utils/            # Utility functions 
 │   ├── shell/            # Shell integration
