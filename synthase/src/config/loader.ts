@@ -1,7 +1,7 @@
 import { join } from 'path';
 import { findChitinDir, getUserConfigPath } from '../utils/path';
 import { loadYamlFile } from '../utils/yaml';
-import { UserConfig, FiberConfig, ChainConfig } from '../types';
+import { UserConfig, FiberConfig, ChainConfig, CoreConfig } from '../types';
 import { expandPath, fileExists, ensureDir, writeFile } from '../utils/file';
 
 /**
@@ -94,13 +94,17 @@ export async function loadUserConfig(
     return null;
   }
   
-  // Expand paths in the core fiber configuration
+  // Instead of modifying the paths in place, we'll only expand them when needed
+  // but keep the original values in the config object
+  // This preserves the original representation for display purposes
+  
+  // Save expanded paths for internal use
   if (userConfig.core && userConfig.core.projectDir) {
-    userConfig.core.projectDir = expandPath(userConfig.core.projectDir);
+    expandPath(userConfig.core.projectDir);
   }
   
   if (userConfig.core && userConfig.core.dotfilesDir) {
-    userConfig.core.dotfilesDir = expandPath(userConfig.core.dotfilesDir);
+    expandPath(userConfig.core.dotfilesDir);
   }
   
   return userConfig;
@@ -154,7 +158,14 @@ export function getCoreConfigValue(config: UserConfig, field: string): any {
     return undefined;
   }
   
-  return config.core[field];
+  const value = config.core[field as keyof CoreConfig];
+  
+  // Expand paths on-demand for fields we know are paths
+  if (value && typeof value === 'string' && (field === 'projectDir' || field === 'dotfilesDir')) {
+    return expandPath(value);
+  }
+  
+  return value;
 }
 
 /**

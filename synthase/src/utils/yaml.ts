@@ -15,13 +15,24 @@ export function parseYaml<T = Record<string, unknown>>(yamlStr: string): T {
 }
 
 /**
- * Serializes an object to YAML
+ * Serializes an object to YAML, removing empty objects
  * @param obj Object to serialize
  * @returns YAML string
  */
 export function serializeToYaml(obj: Record<string, unknown>): string {
   try {
-    return dump(obj, {
+    // Make a copy to modify
+    const cleaned = {...obj};
+    
+    // Filter out empty top-level objects
+    for (const key of Object.keys(cleaned)) {
+      const value = cleaned[key];
+      if (value && typeof value === 'object' && Object.keys(value).length === 0) {
+        delete cleaned[key];
+      }
+    }
+    
+    return dump(cleaned, {
       indent: 2,
       lineWidth: 100,
       noRefs: true,

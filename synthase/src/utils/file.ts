@@ -2,7 +2,12 @@ import { join, dirname, resolve } from 'path';
 import { PathExpansionOptions } from '../types';
 
 /**
- * Expands special paths in a path string
+ * Stores mappings between expanded and original paths
+ */
+const pathMappings = new Map<string, string>();
+
+/**
+ * Expands special paths in a path string and saves the original
  * @param path The path to expand
  * @param options Path expansion options
  * @returns Expanded path
@@ -13,9 +18,25 @@ export function expandPath(path: string, options?: PathExpansionOptions): string
   const homeDir = options?.homeDir || Bun.env.HOME || '~';
   const localShareDir = options?.localShareDir || join(homeDir, '.local', 'share');
   
-  return path
+  const expandedPath = path
     .replace(/^~(?=$|\/|\\)/, homeDir)
     .replace(/^localshare(?=$|\/|\\)/, localShareDir);
+  
+  // Store the mapping between expanded and original path
+  if (expandedPath !== path) {
+    pathMappings.set(expandedPath, path);
+  }
+  
+  return expandedPath;
+}
+
+/**
+ * Gets the original, unexpanded form of a path if available
+ * @param expandedPath The expanded path
+ * @returns The original path or the expanded path if no original is found
+ */
+export function getOriginalPath(expandedPath: string): string {
+  return pathMappings.get(expandedPath) || expandedPath;
 }
 
 /**

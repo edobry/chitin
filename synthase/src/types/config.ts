@@ -80,7 +80,7 @@ export interface FiberConfig extends BaseConfig {
  */
 export interface UserConfig {
   core: CoreConfig;
-  [fiberName: string]: FiberConfig;
+  [fiberName: string]: FiberConfig | CoreConfig | Record<string, any>;
 }
 
 /**
