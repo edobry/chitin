@@ -25,6 +25,11 @@ This document explains how Chitin manages configuration at different levels, wit
    - `*Dir` fields support path expansions
    - Tool configurations include installation methods and checks
 
+5. JSON/YAML Utilities:
+   - YAML to JSON conversion
+   - Configuration validation
+   - Path-based access to configuration values
+
 ---
 
 ## Key Scripts and Functions
@@ -45,6 +50,13 @@ Below is an overview of the relevant scripts and functions:
   - `chiModuleLoadToolConfigs`: Loads tool configurations from module config
   - `chiModuleCheckToolDepsMet`: Verifies tool dependencies are met
 
+- chains/init/5-json.sh
+  - `yamlFileToJson`: Converts YAML file to JSON object
+  - `jsonRead`: Reads values from JSON objects using jq queries
+  - `jsonReadPath`: Reads values at specific paths from JSON objects
+  - `jsonMergeDeep`: Performs deep merges of JSON objects
+  - `yamlFileSetField`: Updates fields in YAML files
+
 ---
 
 ## Common Usage Examples
@@ -59,35 +71,54 @@ chiConfigUserLoad
 projectDir=$(chiConfigUserRead "core" "projectDir")
 
 # Modify user configuration
-chiConfigUserModify "core.projectDir" "/new/path"
+chiConfigUserModify # Opens editor with the config file
 ```
 
 ### 2. Module Configuration
 
 ```bash
-# Load module configuration
-chiConfigModuleMergeFromFile "core" "/path/to/config.yaml"
+# Load module configuration from file
+chiConfigModuleMergeFromFile "/path/to/module" "core"
 
 # Read module-specific config
-toolVersion=$(chiConfigGetVariableValue "core:tools" "version")
+toolConfig=$(chiConfigGetVariableValue "core:tools")
 
-# Merge chain configuration
-chiConfigChainMerge "core" "tools"
+# Read a specific path in config
+gitVersion=$(chiModuleConfigReadVariablePath "core:tools" "git" "version")
 ```
 
 ### 3. Tool Configuration
 
 ```bash
-# Load tool configurations
+# Load tool configurations for a module
 chiModuleLoadToolConfigs "core:tools"
 
 # Check tool dependencies
 if chiModuleCheckToolDepsMet "core:tools"; then
-    chiLogInfo "All tool dependencies are met"
+    chiLogInfo "All tool dependencies are met" "core:tools"
 fi
 ```
 
-### 4. Configuration Examples
+### 4. JSON/YAML Utilities
+
+```bash
+# Convert YAML file to JSON
+configJson=$(yamlFileToJson "config.yaml")
+
+# Read a value using jq query
+jqValue=$(jsonRead "$configJson" '.tools | keys[]')
+
+# Read a value at a specific path
+pathValue=$(jsonReadPath "$configJson" "tools" "git" "version")
+
+# Merge configurations deeply
+mergedConfig=$(jsonMergeDeep "$defaultConfig" "$userConfig")
+
+# Update a field in a YAML file
+yamlFileSetField "config.yaml" "1.0.0" "version"
+```
+
+### 5. Configuration Examples
 
 #### User Config (userConfig.yaml)
 ```yaml
@@ -142,6 +173,51 @@ core:
    b. Use `chiModuleCheckToolDepsMet` to verify tool deps
    c. Use `chiConfigGetVariableValue` to retrieve tool configs
 
+4. JSON/YAML Handling:
+   a. Use `yamlFileToJson` to load YAML files into JSON objects
+   b. Use `jsonReadPath` to access nested configuration values
+   c. Use `jsonMergeDeep` to merge configuration objects
+   d. Use `yamlFileSetField` to update configuration files
+
+---
+
+## JSON Processing Flow
+
+The configuration system relies heavily on JSON processing to read, manipulate, and merge configurations:
+
+1. **Loading Configuration**:
+   ```bash
+   # YAML file is read and converted to JSON
+   configJson=$(yamlFileToJson "config.yaml")
+   
+   # JSON is validated
+   validateJson "$configJson"
+   ```
+
+2. **Reading Values**:
+   ```bash
+   # Using jq path lookup
+   configValue=$(jsonReadPath "$configJson" "section" "subsection" "key")
+   
+   # Using jq query
+   configValues=$(jsonRead "$configJson" '.section.subsection | keys[]')
+   ```
+
+3. **Merging Configurations**:
+   ```bash
+   # Deep merge preserves nested structure
+   mergedConfig=$(jsonMergeDeep "$defaultConfig" "$userConfig")
+   ```
+
+4. **Writing Values**:
+   ```bash
+   # Update a field at a specific path
+   updatedConfig=$(jsonRead "$configJson" 'setpath(["section","subsection","key"]; "new-value")')
+   
+   # Write back to YAML
+   echo "$updatedConfig" | prettyYaml > "config.yaml"
+   ```
+
 ---
 
 ## Common Pitfalls
@@ -160,6 +236,11 @@ core:
    - Check tool dependencies before loading
    - Handle tool version mismatches
    - Validate tool configurations
+
+4. JSON/YAML Handling:
+   - Check for valid JSON/YAML before processing
+   - Handle missing keys gracefully
+   - Ensure proper type handling (strings vs numbers vs booleans)
 
 ---
 
@@ -184,6 +265,11 @@ core:
 5. Configuration Merging:
    - Create a type-safe deep merge implementation
    - Handle conflicts between different config levels
+
+6. JSON Processing:
+   - Use native JavaScript object handling instead of jq
+   - Implement type-safe path access
+   - Create structured validation tools
 
 ---
 

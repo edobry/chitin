@@ -26,16 +26,19 @@ This document explains how Chitin handles performance optimization, focusing on 
    - Logging of performance bottlenecks
    - Resource usage tracking
 
+5. Initialization Timing:
+   - Measuring initialization duration
+   - Step-by-step timing of operations
+   - Identifying performance bottlenecks
+
 ---
 
 ## Key Scripts and Functions
 
 Below is an overview of the relevant scripts and functions:
 
-- chains/core/tools-cache.sh  
-  - `chiPathChecksum`: Generates checksums for PATH contents
-  - `chiPathContentsChecksum`: Checksums executable files in PATH
-  - `chiMakePathChecksum`: Creates a combined checksum object
+- chains/core/tools-cache.sh
+  - Path checksum functions
 
 - chains/core/tools.sh  
   - `chiToolsLoadFromCache`: Loads tool status from cache
@@ -45,6 +48,7 @@ Below is an overview of the relevant scripts and functions:
 - chains/init/3-log.sh  
   - Debug timing functionality
   - Performance logging utilities
+  - `chiLog`: Logs messages with timing information
 
 ---
 
@@ -53,24 +57,76 @@ Below is an overview of the relevant scripts and functions:
 1. Caching:
    a. Use `chiToolsLoadFromCache` to load cached tool statuses
    b. Use `chiToolsUpdateStatus` to update and cache tool statuses
-   c. Use `chiPathChecksum` to track PATH changes
+   c. Use PATH checksum functions to track PATH changes
 
 2. Lazy Loading:
-   a. Load modules only when required
-   b. Check tools only when needed
+   a. Load modules only when required (in `chiFiberLoad`)
+   b. Check tools only when needed (`CHI_TOOLS_CHECK_ENABLED`)
    c. Generate completions on demand
 
 3. Resource Management:
-   a. Clean up temporary files after use
+   a. Clean up temporary files after use (`CHI_INIT_TEMP_DIR`)
    b. Optimize PATH modifications
    c. Monitor memory usage
 
 4. Performance Monitoring:
-   a. Use debug timing for critical operations
+   a. Use debug timing for critical operations (in `chiLog`)
    b. Log performance bottlenecks
    c. Track resource usage
 
+5. Timing System:
+   a. Record start time of operations
+   b. Measure duration between operations
+   c. Log timing information for debugging
+
 ---
+
+## Timing System Details
+
+Chitin includes a timing system to measure and optimize initialization performance:
+
+```bash
+# In init.sh - Starting the timer
+local startTime=$(date +%s)
+
+# Performing initialization tasks...
+
+# In init.sh - Calculating duration at the end
+local endTime=$(gdate +%s)
+local duration=$((endTime - startTime))
+chiLogGreen "initialized in $duration seconds" init
+```
+
+For more detailed timing during initialization, Chitin includes a step-by-step timing system in `chiLog`:
+
+```bash
+# In 3-log.sh
+export CHI_LOG_TIME="/tmp/chitin-prev-time-$(randomString 10)"
+
+function chiLog() {
+    # ... logging setup ...
+
+    if $CHI_LOG_IS_DEBUG; then
+        local currentTime="$(gdate +%s%N)"
+        local delta=$([[ -f "$CHI_LOG_TIME" ]] && echo $(( (currentTime - $(cat "$CHI_LOG_TIME")) / 1000000 )) || echo "0")
+        echo "$currentTime" > "$CHI_LOG_TIME"
+        
+        msg="[$delta ms] $msg"
+    fi
+
+    echo "$msg" >&2
+}
+```
+
+This enables:
+1. Recording the overall initialization time in seconds
+2. Detailed millisecond-level timing for each operation when in debug mode
+3. Identifying specific operations that take the longest
+
+The timing data is particularly useful for:
+- Identifying performance bottlenecks during initialization
+- Comparing performance changes between versions
+- Optimizing startup time for large configurations
 
 ## Considerations for TypeScript Port
 
@@ -93,6 +149,11 @@ Below is an overview of the relevant scripts and functions:
    - Integrate with Node.js performance hooks
    - Provide detailed performance metrics
    - Implement profiling tools
+
+5. Timing System:
+   - Use `performance.now()` for high-resolution timing
+   - Create structured timing data for analysis
+   - Provide visualization of timing information
 
 ---
 
