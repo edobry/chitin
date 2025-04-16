@@ -40,7 +40,15 @@ program
       // Output format handling
       if (options.json) {
         // Output as JSON
-        console.log(JSON.stringify(fullConfig, null, 2));
+        // Filter out empty objects first
+        const cleanedConfig = {...fullConfig};
+        for (const key of Object.keys(cleanedConfig)) {
+          const value = cleanedConfig[key];
+          if (value && typeof value === 'object' && Object.keys(value).length === 0) {
+            delete cleanedConfig[key];
+          }
+        }
+        console.log(JSON.stringify(cleanedConfig, null, 2));
       } else if (options.exportEnv) {
         // Export as environment variables
         const env = {
@@ -89,7 +97,7 @@ program
       
       // Export configuration as environment variables
       const env = {
-        CHITIN_CONFIG: JSON.stringify(fullConfig),
+        CHITIN_CONFIG: JSON.stringify(cleanConfigForEnv(fullConfig)),
         CHI_DIR: findChitinDir() || process.cwd(),
         CHI_PROJECT_DIR: getCoreConfigValue(fullConfig, 'projectDir'),
         CHI_DOTFILES_DIR: getCoreConfigValue(fullConfig, 'dotfilesDir'),
@@ -114,4 +122,20 @@ program.parse();
 // If no arguments provided, show help
 if (process.argv.length <= 2) {
   program.help();
+}
+
+/**
+ * Removes empty objects from a configuration object
+ * @param config Configuration object
+ * @returns Cleaned configuration object
+ */
+function cleanConfigForEnv(config: Record<string, any>): Record<string, any> {
+  const cleaned = {...config};
+  for (const key of Object.keys(cleaned)) {
+    const value = cleaned[key];
+    if (value && typeof value === 'object' && Object.keys(value).length === 0) {
+      delete cleaned[key];
+    }
+  }
+  return cleaned;
 } 

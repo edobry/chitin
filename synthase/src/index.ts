@@ -71,8 +71,17 @@ export class Synthase {
     
     const config = getFullConfig(this.config);
     
+    // Clean configuration by removing empty objects
+    const cleanedConfig = {...config};
+    for (const key of Object.keys(cleanedConfig)) {
+      const value = cleanedConfig[key];
+      if (value && typeof value === 'object' && Object.keys(value).length === 0) {
+        delete cleanedConfig[key];
+      }
+    }
+    
     let env = {
-      CHITIN_CONFIG: JSON.stringify(config),
+      CHITIN_CONFIG: JSON.stringify(cleanedConfig),
       CHI_DIR: this.chitinDir || process.cwd(),
       CHI_PROJECT_DIR: getCoreConfigValue(config, 'projectDir'),
       CHI_DOTFILES_DIR: getCoreConfigValue(config, 'dotfilesDir'),
