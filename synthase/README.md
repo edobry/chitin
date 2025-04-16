@@ -1,54 +1,28 @@
 # Synthase
 
-Synthase is a TypeScript-based configuration and initialization system for shell environments. It loads, validates, and manages configurations from YAML files to set up your development environment consistently across machines.
+## Overview
 
-Named after the enzyme that catalyzes chitin polymerization in nature, Synthase works alongside [Chitin](https://github.com/edobry/chitin) to provide a robust shell environment.
+Synthase is a TypeScript-based configuration and initialization system for shell environments, part of the [Chitin](https://github.com/edobry/chitin) ecosystem. Named after the enzyme that catalyzes chitin polymerization in nature, it provides a modern approach to managing your development environment.
 
-## Relationship with Chitin
+Synthase helps you:
+- Maintain consistent shell environments across different machines
+- Define your development setup in structured, version-controlled configuration files
+- Access configuration through both command-line and programmatic interfaces
+- Benefit from TypeScript's type safety and modern tooling in shell environment management
 
-### Current Role
-
-Synthase currently functions as a TypeScript-powered configuration loader for Chitin:
-
-- Loads and validates user configuration from YAML files
-- Handles path expansion and environment variable integration
-- Provides a modern, type-safe API for accessing configuration
-- Can be invoked by Chitin's bash scripts to handle configuration loading
-
-### Target Role
-
-Synthase is designed to eventually take over core initialization functions from Chitin's shell scripts:
-
-- Provide a complete TypeScript implementation of Chitin's initialization system
-- Handle module loading, dependency resolution, and lifecycle management
-- Manage tool dependencies, installation, and validation 
-- Offer improved performance through parallelization and caching
-- Enable better cross-platform support and extensibility
-
-The goal is to have Synthase become the primary entry point for Chitin initialization while maintaining compatibility with existing configuration files and shells.
+The project brings the reliability of static typing, better tooling, and improved cross-platform support to shell environment management while maintaining compatibility with existing Chitin configurations.
 
 ## Features
 
-- **Powerful Configuration System**
-  - Loads configuration from structured YAML files
-  - Supports XDG standards (`~/.config/chitin`)
-  - Validates configuration structure and values
-  - Expands special paths (`~` and `localshare`)
+- **Version-Controlled Environment** - Define your development setup in code, allowing you to track changes, share configurations between machines, and onboard new team members faster.
 
-- **Environment Management**
-  - Exports configuration to environment variables
-  - Interfaces with Bash for environment synchronization
-  - Maintains consistent development environments
+- **Modular Organization** - Group related tools and settings into functional modules that can be enabled or disabled as needed, keeping your environment lean and purpose-specific.
 
-- **Type-Safe Implementation**
-  - Built with TypeScript for reliability and IDE support
-  - Provides programmatic API with full type definitions
-  - Ensures configuration integrity through validation
+- **Cross-Machine Consistency** - Write your configuration once and use it everywhere, with automatic path handling ensuring your setup works on any system without modifications.
 
-- **Bun Runtime**
-  - Fast execution with Bun's optimized JavaScript runtime
-  - Compact package with minimal dependencies
-  - First-class TypeScript support
+- **Shell Integration** - Seamlessly export settings to any shell environment, making your configuration immediately available to all your tools and scripts.
+
+- **Configuration Validation** - Catch configuration errors early with automatic validation, preventing frustrating runtime errors and mysterious tool failures.
 
 ## Installation
 
