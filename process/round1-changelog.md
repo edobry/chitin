@@ -37,6 +37,13 @@
   - Added configuration loader tests
   - Created test fixtures and helpers
 
+- **Documentation**
+  - Created comprehensive README with usage examples
+  - Documented current and target relationship with Chitin
+  - Added detailed CLI command documentation
+  - Provided programmatic API reference
+  - Included configuration format examples
+
 ## Files Created
 - `src/types/config.ts` - Configuration type definitions
 - `src/utils/{file.ts, yaml.ts, path.ts}` - Utility functions
