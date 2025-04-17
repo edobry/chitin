@@ -1,0 +1,6 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+Whenever making a change, make sure to record it in a CHANGELOG file, either in the directory the edits are localized to, or at the root directory of the project.
