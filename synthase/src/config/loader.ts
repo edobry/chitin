@@ -179,6 +179,32 @@ export function getCoreConfigValue(config: UserConfig, field: string): any {
 }
 
 /**
+ * Gets the expanded project directory from config
+ * @param config User configuration
+ * @returns Expanded project directory path or undefined
+ */
+export function getProjectDir(config: UserConfig): string | undefined {
+  if (!config?.core?.projectDir) {
+    return undefined;
+  }
+  
+  return expandPath(config.core.projectDir);
+}
+
+/**
+ * Gets the expanded dotfiles directory from config
+ * @param config User configuration
+ * @returns Expanded dotfiles directory path or undefined
+ */
+export function getDotfilesDir(config: UserConfig): string | undefined {
+  if (!config?.core?.dotfilesDir) {
+    return undefined;
+  }
+  
+  return expandPath(config.core.dotfilesDir);
+}
+
+/**
  * Gets full configuration including defaults
  * @param userConfig User configuration
  * @returns Complete configuration

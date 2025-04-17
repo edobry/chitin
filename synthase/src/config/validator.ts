@@ -1,4 +1,33 @@
 import { UserConfig, ChainConfig, FiberConfig, ToolConfig, ConfigValidationResult } from '../types';
+import { expandPath, fileExists, isDirectory } from '../utils/file';
+import { statSync } from 'fs';
+
+/**
+ * Synchronously checks if a file exists
+ * @param path File path
+ * @returns Whether the file exists
+ */
+function fileExistsSync(path: string): boolean {
+  try {
+    return statSync(path).isFile() || statSync(path).isDirectory();
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
+ * Synchronously checks if a path is a directory
+ * @param path Path to check
+ * @returns Whether the path is a directory
+ */
+function isDirectorySync(path: string): boolean {
+  try {
+    const stats = statSync(path);
+    return stats.isDirectory();
+  } catch (e) {
+    return false;
+  }
+}
 
 /**
  * Validates the user configuration
@@ -20,6 +49,24 @@ export function validateUserConfig(config: UserConfig): ConfigValidationResult {
   // Check if core.projectDir field is present
   if (config.core.projectDir === undefined) {
     errors.push('Missing required field: core.projectDir');
+  } else {
+    // Validate projectDir exists
+    const expandedProjectDir = expandPath(config.core.projectDir);
+    if (!fileExistsSync(expandedProjectDir)) {
+      errors.push(`Project directory does not exist: ${expandedProjectDir} (${config.core.projectDir})`);
+    } else if (!isDirectorySync(expandedProjectDir)) {
+      errors.push(`Project directory is not a directory: ${expandedProjectDir} (${config.core.projectDir})`);
+    }
+  }
+  
+  // Check if dotfilesDir exists
+  if (config.core.dotfilesDir !== undefined) {
+    const expandedDotfilesDir = expandPath(config.core.dotfilesDir);
+    if (!fileExistsSync(expandedDotfilesDir)) {
+      errors.push(`Dotfiles directory does not exist: ${expandedDotfilesDir} (${config.core.dotfilesDir})`);
+    } else if (!isDirectorySync(expandedDotfilesDir)) {
+      errors.push(`Dotfiles directory is not a directory: ${expandedDotfilesDir} (${config.core.dotfilesDir})`);
+    }
   }
   
   // Validate core fiber
@@ -80,7 +127,7 @@ export function validateFiberConfig(config: FiberConfig): ConfigValidationResult
       errors.push('tools must be an object');
     } else {
       for (const [toolName, toolConfig] of Object.entries(config.tools)) {
-        const toolValidation = validateToolConfig(toolConfig);
+        const toolValidation = validateToolConfig(toolConfig, toolName);
         if (!toolValidation.valid) {
           errors.push(`Invalid tool configuration for ${toolName}:`);
           errors.push(...toolValidation.errors.map(err => `  - ${err}`));
@@ -119,7 +166,7 @@ export function validateChainConfig(config: ChainConfig): ConfigValidationResult
       errors.push('tools must be an object');
     } else {
       for (const [toolName, toolConfig] of Object.entries(config.tools)) {
-        const toolValidation = validateToolConfig(toolConfig);
+        const toolValidation = validateToolConfig(toolConfig, toolName);
         if (!toolValidation.valid) {
           errors.push(`Invalid tool configuration for ${toolName}:`);
           errors.push(...toolValidation.errors.map(err => `  - ${err}`));
@@ -137,9 +184,10 @@ export function validateChainConfig(config: ChainConfig): ConfigValidationResult
 /**
  * Validates a tool configuration
  * @param config Tool configuration to validate
+ * @param toolName Name of the tool being validated
  * @returns Validation result
  */
-export function validateToolConfig(config: ToolConfig): ConfigValidationResult {
+export function validateToolConfig(config: ToolConfig, toolName?: string): ConfigValidationResult {
   const errors: string[] = [];
   
   // Check that at least one check method is defined unless optional is true
@@ -149,8 +197,18 @@ export function validateToolConfig(config: ToolConfig): ConfigValidationResult {
     config.checkPath !== undefined || 
     config.checkEval !== undefined;
   
+  // If no check method is specified, use the tool name as a default check command
+  // This matches the behavior of the original Chitin implementation
   if (!hasCheckMethod && config.optional !== true) {
-    errors.push('Tool must have at least one check method or be marked as optional');
+    if (toolName) {
+      // Apply the default check method (command -v toolName)
+      const defaultCheck = `command -v ${toolName}`;
+      // Actually modify the config to set the default check method
+      config.checkCommand = defaultCheck;
+    } else {
+      // If toolName is not provided, we can't create a default check
+      errors.push('Tool must have at least one check method or be marked as optional');
+    }
   }
   
   // If version is defined, versionCommand should also be defined

@@ -1,15 +1,7 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
-import { createFiberManager, addFiberEventListener, removeFiberEventListener, createFiberFilter } from '../../src/fiber';
-import { FiberEvent } from '../../src/types';
+import { createFiberManager, createFiberFilter } from '../../src/fiber';
 
 describe('Fiber Manager', () => {
-  beforeEach(() => {
-    // Clear event listeners between tests
-    const listeners = [] as any[];
-    addFiberEventListener(listeners[0]);
-    removeFiberEventListener(listeners[0]);
-  });
-  
   test('should register and retrieve fibers', () => {
     const manager = createFiberManager();
     
@@ -62,43 +54,6 @@ describe('Fiber Manager', () => {
     // Check active fibers list again
     const activefibersAfterDeactivate = manager.getActiveFibers();
     expect(activefibersAfterDeactivate.length).toBe(0);
-  });
-  
-  test('should fire events when fiber state changes', async () => {
-    const manager = createFiberManager();
-    
-    // Create event tracking variables
-    let activatedEventFired = false;
-    let deactivatedEventFired = false;
-    let registeredEventFired = false;
-    
-    // Add event listener
-    const listener = (event: FiberEvent, fiberId: string) => {
-      if (event === FiberEvent.ACTIVATED && fiberId === 'fiber1') {
-        activatedEventFired = true;
-      } else if (event === FiberEvent.DEACTIVATED && fiberId === 'fiber1') {
-        deactivatedEventFired = true;
-      } else if (event === FiberEvent.REGISTERED && fiberId === 'fiber1') {
-        registeredEventFired = true;
-      }
-    };
-    
-    addFiberEventListener(listener);
-    
-    // Register a fiber
-    manager.registerFiber('fiber1', ['module1']);
-    expect(registeredEventFired).toBe(true);
-    
-    // Activate the fiber
-    manager.activateFiber('fiber1');
-    expect(activatedEventFired).toBe(true);
-    
-    // Deactivate the fiber
-    manager.deactivateFiber('fiber1');
-    expect(deactivatedEventFired).toBe(true);
-    
-    // Remove the listener
-    removeFiberEventListener(listener);
   });
   
   test('should filter modules based on fiber state', () => {

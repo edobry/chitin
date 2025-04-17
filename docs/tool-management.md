@@ -158,6 +158,16 @@ tool:
   checkEval: command -v tool > /dev/null
 ```
 
+#### Default Check Behavior
+
+When no check method is specified, Chitin checks for tool existence:
+
+- **Shell Implementation**: By default, if no check method is specified, Chitin will fall back to using `command -v <toolname>` (via the `checkCommand` function) to check if the tool exists in the PATH.
+
+- **TypeScript Implementation (Synthase)**: If no check method is specified and the tool is not marked as optional, Synthase will also use `command -v <toolname>` as the default check command, maintaining full compatibility with the original Chitin implementation.
+
+This consistent behavior across implementations ensures that tool validation works the same way regardless of which implementation is used.
+
 ### 2. Installation Methods
 
 ```yaml

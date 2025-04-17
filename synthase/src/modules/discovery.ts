@@ -1,7 +1,7 @@
 import { join, basename } from 'path';
 import { UserConfig, Module, ModuleDiscoveryOptions, ModuleDiscoveryResult, ModuleDependency } from '../types';
-import { loadModuleConfig } from '../config/loader';
-import { fileExists, isDirectory, readDirectory } from '../utils/file';
+import { loadModuleConfig, getProjectDir, getDotfilesDir } from '../config/loader';
+import { fileExists, isDirectory, readDirectory, expandPath } from '../utils/file';
 
 /**
  * Discovers modules in the specified directories
@@ -218,13 +218,15 @@ export async function discoverModulesFromConfig(userConfig: UserConfig): Promise
   }
   
   // Add project directory from config
-  if (userConfig.core.projectDir) {
-    baseDirs.push(userConfig.core.projectDir);
+  const projectDir = getProjectDir(userConfig);
+  if (projectDir && await fileExists(projectDir) && await isDirectory(projectDir)) {
+    baseDirs.push(projectDir);
   }
   
   // Add dotfiles directory from config
-  if (userConfig.core.dotfilesDir) {
-    baseDirs.push(userConfig.core.dotfilesDir);
+  const dotfilesDir = getDotfilesDir(userConfig);
+  if (dotfilesDir && await fileExists(dotfilesDir) && await isDirectory(dotfilesDir)) {
+    baseDirs.push(dotfilesDir);
   }
   
   return discoverModules({

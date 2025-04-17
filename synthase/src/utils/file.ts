@@ -19,9 +19,17 @@ export function expandPath(path: string, options?: PathExpansionOptions): string
   const homeDir = options?.homeDir || Bun.env.HOME || '~';
   const localShareDir = options?.localShareDir || join(homeDir, '.local', 'share');
   
-  const expandedPath = path
-    .replace(/^~(?=$|\/|\\)/, homeDir)
-    .replace(/^localshare(?=$|\/|\\)/, localShareDir);
+  let expandedPath = path;
+  
+  // Handle tilde at the start of the path
+  if (expandedPath.startsWith('~')) {
+    expandedPath = expandedPath.replace(/^~(?=$|\/|\\)/, homeDir);
+  }
+  
+  // Handle localshare
+  if (expandedPath.startsWith('localshare')) {
+    expandedPath = expandedPath.replace(/^localshare(?=$|\/|\\)/, localShareDir);
+  }
   
   // Store the mapping between expanded and original path
   if (expandedPath !== path) {

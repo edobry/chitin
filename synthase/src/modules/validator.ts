@@ -86,11 +86,9 @@ export function validateModulesAgainstConfig(
     const errors = [...validationResult.errors];
     const warnings = [...validationResult.warnings];
     
-    // Check if module is configured in user config
+    // Check if module is disabled in user config
     const userConfig = configModules[module.id];
-    if (!userConfig) {
-      warnings.push('Module not configured in user configuration');
-    } else if (userConfig.enabled === false) {
+    if (userConfig && userConfig.enabled === false) {
       warnings.push('Module is disabled in user configuration');
     }
     

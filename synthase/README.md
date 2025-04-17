@@ -99,17 +99,9 @@ bun run src/cli.ts init --no-tools
 #### Module System Commands
 
 ```bash
-# discover-modules
-# Discovers and lists available modules
-bun run src/cli.ts discover-modules
-
-# Display options:
-#   --json, -j         Output as JSON
-#   --yaml, -y         Output as YAML
-
-# validate-modules
-# Validates discovered modules
-bun run src/cli.ts validate-modules
+# validate
+# Validates module configurations
+bun run src/cli.ts validate
 
 # Display options:
 #   --json, -j         Output as JSON
@@ -120,48 +112,123 @@ bun run src/cli.ts validate-modules
 
 ```bash
 # fibers
-# List all fibers
+# List fibers and their modules in load order
 bun run src/cli.ts fibers
 
 # Options:
 #   --list, -l              List all fibers (default)
-#   --active, -a            List only active fibers
-#   --activate <fiber>      Activate a specific fiber
-#   --deactivate <fiber>    Deactivate a specific fiber
+#   --available, -a         List only available fibers (enabled with satisfied dependencies)
+#   --check-dependencies, -c Check dependencies for all fibers
+#   --detailed, -d          Show detailed information for fibers and chains
 
 # Examples:
-# List all fibers
+# List all fibers and their chains
 bun run src/cli.ts fibers
 
-# List active fibers
-bun run src/cli.ts fibers --active
+# List only available fibers
+bun run src/cli.ts fibers --available
 
-# Activate a fiber
-bun run src/cli.ts fibers --activate dev
+# Check fiber dependencies
+bun run src/cli.ts fibers --check-dependencies
 
-# Deactivate a fiber
-bun run src/cli.ts fibers --deactivate dev
+# Show detailed information
+bun run src/cli.ts fibers --detailed
 ```
+
+Fibers determine which chains (modules) get loaded. The core fiber is always loaded, while other fibers are loaded based on their enabled status and tool dependencies.
 
 ### Configuration Format
 
 Synthase uses a structured YAML format with fibers and chains:
 
 ```yaml
-# Example configuration
+# Core fiber - has special treatment during initialization
 core:
   projectDir: ~/Projects
   dotfilesDir: localshare/chezmoi
   checkTools: true
-  moduleConfig:
+  moduleConfig:        # These are chains within the core fiber
     secret:
       tool: pass
+    auth:
+      enabled: true
 
+# Other fibers
 dev:
-  moduleConfig:
+  moduleConfig:        # These are chains within the dev fiber
     docker:
       enabled: true
+    web:
+      enabled: true
+
+ops:
+  enabled: true
+  toolDeps: [docker, kubectl]
+  moduleConfig:        # These are chains within the ops fiber
+    kubernetes:
+      enabled: true
 ```
+
+In this configuration:
+- `core` is a special fiber that's always enabled and loaded first
+- `dev` and `ops` are additional fibers - separate functional groups that can be enabled or disabled
+- Each fiber contains one or more chains (under `moduleConfig`)
+- Fibers control which chains are loaded based on:
+  1. Whether the fiber is enabled in configuration (enabled: true/false)
+  2. Whether the fiber's tool dependencies are satisfied
+
+### Tool Configuration
+
+Tools are dependencies that chains and fibers may require. Each tool configuration can specify how to check for its presence and how to install it if missing:
+
+```yaml
+tools:
+  # Simple tool with default check (will use 'git --version')
+  git: {}
+  
+  # Tool with explicit check command
+  node:
+    checkCommand: node --version
+  
+  # Tool with alternative check methods
+  homebrew:
+    checkPath: /opt/homebrew/bin/brew
+    
+  # Tool with installation method
+  jq:
+    checkCommand: jq --version
+    brew: true
+    
+  # Optional tool
+  fancy-tool:
+    optional: true
+```
+
+#### Tool Check Methods
+
+Tools can be checked for existence in several ways:
+
+1. **Default Check**: 
+   - If no check method is specified and the tool is not marked as optional, Synthase will automatically use `command -v <toolname>` as the check command, matching the behavior of the original Chitin implementation.
+
+2. **Check Command**: `checkCommand: "command-to-run"` - Specify a command that should return zero exit code if the tool exists
+3. **Check Brew**: `checkBrew: true` - Check if the tool is installed via Homebrew
+4. **Check Path**: `checkPath: "/path/to/tool"` - Check if a specific file path exists
+5. **Check Eval**: `checkEval: "command -v tool"` - Evaluate a shell expression
+
+If no check method is provided and the tool is not marked as optional, Synthase will use `command -v <toolname>` to verify the tool's existence in PATH, exactly matching the behavior of the original Chitin implementation.
+
+#### Tool Installation Methods
+
+Synthase supports several ways to install missing tools:
+
+1. **Homebrew**: `brew: true` - Install via Homebrew
+2. **Git**: Clone a git repository
+3. **Script**: Run a custom installation script
+4. **Artifact**: Download and extract an archive
+5. **Command**: Run a specified installation command
+
+For complex tools, you can also specify version requirements and post-installation steps.
 
 ### Programmatic API
 

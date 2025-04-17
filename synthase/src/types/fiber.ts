@@ -1,69 +1,41 @@
 /**
- * Represents the state of a fiber
+ * Represents a fiber state
  */
 export interface FiberState {
   /** Fiber ID */
   id: string;
-  /** Whether the fiber is activated */
-  active: boolean;
+  /** Whether the fiber is enabled in configuration */
+  enabled?: boolean;
   /** Associated modules */
   modules: string[];
-  /** Last activation timestamp */
-  lastActivated?: Date;
-  /** Additional fiber state data */
-  data?: Record<string, any>;
+  /** Required tools for this fiber */
+  requiredTools?: string[];
+  /** Additional fiber configuration data */
+  config?: Record<string, any>;
 }
 
 /**
- * Fiber manager for controlling active fibers
+ * Fiber manager for handling fiber configurations
  */
 export interface FiberManager {
   /** Get all registered fibers */
   getAllFibers: () => FiberState[];
-  /** Get active fibers */
-  getActiveFibers: () => FiberState[];
-  /** Activate a fiber */
-  activateFiber: (id: string) => boolean;
-  /** Deactivate a fiber */
-  deactivateFiber: (id: string) => boolean;
-  /** Check if a fiber is active */
-  isFiberActive: (id: string) => boolean;
-  /** Register a new fiber */
-  registerFiber: (id: string, modules?: string[]) => void;
-  /** Persist fiber states */
-  persistFiberState: () => Promise<void>;
-  /** Load fiber states */
-  loadFiberState: () => Promise<void>;
+  /** Get enabled fibers with satisfied dependencies */
+  getLoadableFibers: () => FiberState[];
+  /** Check if a fiber is enabled in configuration */
+  isFiberEnabled: (id: string) => boolean;
+  /** Check if a fiber's tool dependencies are satisfied */
+  areDependenciesSatisfied: (id: string) => boolean;
+  /** Register a new fiber from configuration */
+  registerFiber: (id: string, config: Partial<FiberState>) => void;
 }
 
 /**
- * Filter function for filtering modules based on fiber state
+ * Tool dependency checker function
  */
-export type FiberFilter = (moduleId: string, fiberStates: FiberState[]) => boolean;
+export type ToolDependencyChecker = (tool: string) => boolean;
 
 /**
- * Options for fiber activation/deactivation
+ * Filter function for filtering modules based on fiber configs
  */
-export interface FiberActivationOptions {
-  /** Whether to persist the state change */
-  persist?: boolean;
-  /** Whether to reload affected modules */
-  reloadModules?: boolean;
-  /** Whether to notify listeners of the state change */
-  notifyListeners?: boolean;
-}
-
-/**
- * Events emitted by the fiber manager
- */
-export enum FiberEvent {
-  ACTIVATED = 'fiber:activated',
-  DEACTIVATED = 'fiber:deactivated',
-  REGISTERED = 'fiber:registered',
-  STATE_CHANGED = 'fiber:state-changed'
-}
-
-/**
- * Listener function for fiber events
- */
-export type FiberEventListener = (event: FiberEvent, fiberId: string) => void; 
+export type ModuleFilter = (moduleId: string) => boolean; 

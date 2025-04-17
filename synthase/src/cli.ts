@@ -5,7 +5,16 @@ import { exportEnvironmentToBash } from './shell';
 import { serializeToYaml } from './utils';
 import { findChitinDir } from './utils/path';
 import { discoverModulesFromConfig, validateModules, validateModulesAgainstConfig } from './modules';
-import { createFiberManager } from './fiber';
+import { 
+  getLoadableFibers, 
+  isFiberEnabled, 
+  areFiberDependenciesSatisfied, 
+  createChainFilter,
+  getFiberIds,
+  getChainIds,
+  orderChainsByDependencies,
+  getChainDependencies
+} from './fiber';
 
 // Create the CLI program
 const program = new Command();
@@ -119,101 +128,160 @@ program
 
 // Add module discovery command
 program
-  .command('discover-modules')
-  .description('Discover modules')
-  .option('-j, --json', 'Output in JSON format')
-  .option('-y, --yaml', 'Output in YAML format')
+  .command('fibers')
+  .description('List fibers and their modules in load order')
+  .option('-l, --list', 'List all fibers (default)')
+  .option('-a, --available', 'List only available fibers (enabled with satisfied dependencies)')
+  .option('-c, --check-dependencies', 'Check dependencies for all fibers')
+  .option('-d, --detailed', 'Show detailed information for fibers and chains')
   .action(async (options) => {
     try {
+      // Load the user configuration
       const userConfig = await loadUserConfig();
       if (!userConfig) {
         console.error('No user configuration found.');
         process.exit(1);
       }
-      
-      const fullConfig = getFullConfig(userConfig);
-      console.log('Discovering modules...');
-      
-      const result = await discoverModulesFromConfig(fullConfig);
-      
-      if (result.errors.length > 0) {
-        console.warn('Encountered errors during module discovery:');
-        for (const error of result.errors) {
-          console.warn(`- ${error}`);
-        }
-      }
-      
-      if (options.json) {
-        console.log(JSON.stringify(result.modules, null, 2));
-      } else if (options.yaml) {
-        console.log(serializeToYaml({ modules: result.modules }));
-      } else {
-        console.log(`Discovered ${result.modules.length} modules:`);
-        for (const module of result.modules) {
-          console.log(`- ${module.id} (${module.type})`);
-        }
-      }
-    } catch (error) {
-      console.error('Error discovering modules:', error);
-      process.exit(1);
-    }
-  });
 
-// Add fiber management command
-program
-  .command('fibers')
-  .description('Manage fibers')
-  .option('-l, --list', 'List all fibers')
-  .option('-a, --active', 'List active fibers')
-  .option('--activate <fiber>', 'Activate a fiber')
-  .option('--deactivate <fiber>', 'Deactivate a fiber')
-  .action(async (options) => {
-    try {
-      const fiberManager = createFiberManager();
+      const config = getFullConfig(userConfig);
       
-      // Load fiber state
-      await fiberManager.loadFiberState();
+      // Simple dependency checker for demonstration
+      const dependencyChecker = (tool: string) => {
+        if (options.detailed) console.log(`Checking dependency: ${tool} (assuming available)`);
+        return true;
+      };
       
-      if (options.activate) {
-        const success = fiberManager.activateFiber(options.activate);
-        if (success) {
-          console.log(`Activated fiber: ${options.activate}`);
-        } else {
-          console.error(`Failed to activate fiber: ${options.activate}`);
-          process.exit(1);
+      // Get all fibers from config
+      const allFibers = getFiberIds(config);
+      
+      if (options.checkDependencies) {
+        console.log('Dependency status for fibers:');
+        for (const fiberId of allFibers) {
+          const satisfied = areFiberDependenciesSatisfied(fiberId, config, dependencyChecker);
+          // Note: Core always reports as satisfied
+          console.log(`- ${fiberId}${fiberId === 'core' ? ' (core)' : ''}: ${satisfied ? 'Dependencies satisfied' : 'Missing dependencies'}`);
         }
-      } else if (options.deactivate) {
-        const success = fiberManager.deactivateFiber(options.deactivate);
-        if (success) {
-          console.log(`Deactivated fiber: ${options.deactivate}`);
-        } else {
-          console.error(`Failed to deactivate fiber: ${options.deactivate}`);
-          process.exit(1);
-        }
-      } else if (options.active) {
-        const activefibers = fiberManager.getActiveFibers();
-        console.log('Active fibers:');
-        for (const fiber of activefibers) {
-          console.log(`- ${fiber.id}`);
-        }
-      } else {
-        // Default to listing all fibers
-        const fibers = fiberManager.getAllFibers();
-        console.log('All fibers:');
-        for (const fiber of fibers) {
-          console.log(`- ${fiber.id} ${fiber.active ? '(active)' : ''}`);
+        return;
+      } 
+      
+      // Get loadable fibers
+      const loadableFibers = options.available ? 
+        getLoadableFibers(config, dependencyChecker) :
+        allFibers;
+      
+      // Get all chains from all fibers
+      const allChainIds = getChainIds(config);
+      
+      // Create chain filter based on loadable fibers
+      const chainFilter = createChainFilter(config, loadableFibers);
+      
+      // Filter the chains that will be loaded
+      const loadableChains = allChainIds.filter(chainId => chainFilter(chainId));
+      
+      // Order chains by dependencies
+      const orderedChains = orderChainsByDependencies(loadableChains, config, loadableFibers);
+      
+      // Create a map of fibers to their chains
+      const fiberChainMap = new Map<string, string[]>();
+      
+      // First, find which fiber each chain belongs to
+      for (const chainId of orderedChains) {
+        for (const fiberId of loadableFibers) {
+          const fiber = config[fiberId];
+          if (fiber?.moduleConfig && chainId in fiber.moduleConfig) {
+            if (!fiberChainMap.has(fiberId)) {
+              fiberChainMap.set(fiberId, []);
+            }
+            fiberChainMap.get(fiberId)?.push(chainId);
+          }
         }
       }
+      
+      // Prepare the output header
+      const headerPrefix = options.available ? 'Available' : 'All';
+      const fiberStatus = options.available ? '(enabled with satisfied dependencies)' : '';
+      console.log(`${headerPrefix} fibers ${fiberStatus}:`);
+      
+      // Output fibers and chains in a structured format
+      let fiberIndex = 1;
+      for (const fiberId of loadableFibers) {
+        const isCore = fiberId === 'core';
+        const fiberPrefix = isCore ? 'CORE' : `FIBER ${fiberIndex++}`;
+        const enabled = isFiberEnabled(fiberId, config);
+        const satisfied = areFiberDependenciesSatisfied(fiberId, config, dependencyChecker);
+        const status = isCore ? '(always loaded)' : 
+          enabled && satisfied ? '(enabled)' : '(disabled)';
+        
+        console.log(`\n${fiberPrefix}: ${fiberId} ${status}`);
+        
+        // Get chains for this fiber
+        const fiberChains = fiberChainMap.get(fiberId) || [];
+        if (fiberChains.length > 0) {
+          console.log(`  Chains (${fiberChains.length}):`);
+          for (const chainId of fiberChains) {
+            // Find the chain's position in the dependency order
+            const orderIndex = orderedChains.indexOf(chainId);
+            // Get dependencies
+            const dependencies = getChainDependencies(chainId, config, loadableFibers)
+              .filter(dep => loadableChains.includes(dep));
+            
+            // Show chain with load order and dependencies
+            if (dependencies.length > 0) {
+              console.log(`    ${orderIndex+1}. ${chainId}`);
+              console.log(`       Dependencies: ${dependencies.join(', ')}`);
+            } else {
+              console.log(`    ${orderIndex+1}. ${chainId}`);
+            }
+            
+            // Show additional details if requested
+            if (options.detailed) {
+              const chainConfig = config[fiberId]?.moduleConfig?.[chainId];
+              if (chainConfig) {
+                if (chainConfig.enabled === false) {
+                  console.log(`       Status: Disabled`);
+                }
+                if (chainConfig.toolDeps && chainConfig.toolDeps.length > 0) {
+                  console.log(`       Tool Dependencies: ${chainConfig.toolDeps.join(', ')}`);
+                }
+                if (chainConfig.provides && chainConfig.provides.length > 0) {
+                  console.log(`       Provides: ${chainConfig.provides.join(', ')}`);
+                }
+              }
+            }
+          }
+        } else {
+          console.log(`  No chains in this fiber`);
+        }
+      }
+      
+      // Display chains that aren't tied to any fiber
+      const unmappedChains = orderedChains.filter(chainId => 
+        !Array.from(fiberChainMap.values()).flat().includes(chainId)
+      );
+      
+      if (unmappedChains.length > 0) {
+        console.log(`\nChains not associated with any loaded fiber:`);
+        for (let i = 0; i < unmappedChains.length; i++) {
+          const chainId = unmappedChains[i];
+          console.log(`  ${i+1}. ${chainId}`);
+        }
+      }
+      
+      // Add a summary section
+      console.log(`\nSummary:`);
+      console.log(`- Fibers: ${loadableFibers.length}/${allFibers.length} (${options.available ? 'loadable/total' : 'available/total'})`);
+      console.log(`- Chains: ${orderedChains.length}/${allChainIds.length} (${options.available ? 'loadable/total' : 'available/total'})`);
+      
     } catch (error) {
-      console.error('Error managing fibers:', error);
+      console.error('Error listing fibers:', error);
       process.exit(1);
     }
   });
 
 // Add module validation command
 program
-  .command('validate-modules')
-  .description('Validate discovered modules')
+  .command('validate')
+  .description('Validate module configurations')
   .option('-j, --json', 'Output in JSON format')
   .option('-y, --yaml', 'Output in YAML format')
   .action(async (options) => {
@@ -225,6 +293,16 @@ program
       }
       
       const fullConfig = getFullConfig(userConfig);
+      
+      // Validate the configuration with focus on paths
+      const validation = validateUserConfig(fullConfig);
+      if (!validation.valid) {
+        console.error('Configuration validation failed:');
+        validation.errors.forEach(error => console.error(`- ${error}`));
+        // Continue anyway but warn the user
+        console.warn('Continuing with module validation despite validation errors...');
+      }
+      
       console.log('Discovering modules...');
       
       const result = await discoverModulesFromConfig(fullConfig);

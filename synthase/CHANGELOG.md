@@ -1,5 +1,68 @@
 # Synthase Changelog
 
+## Tool Validation Compatibility Update
+
+### Fixed
+- **Tool Check Method Compatibility**
+  - Changed default tool check method from `<toolname> --version` to `command -v <toolname>` to match original Chitin implementation
+  - Updated documentation to correctly reflect the default check behavior in both implementations
+  - Maintained backward compatibility with existing tool configurations
+
+### Files Modified
+- `src/config/validator.ts` - Modified default tool check method logic
+- `README.md` - Updated tool check methods documentation
+- `docs/tool-management.md` - Clarified default check behavior section
+
+## Round 3 - Path Validation and Fiber Command Improvements
+
+### Added
+- **Path Validation**
+  - Added validation for projectDir and dotfilesDir during config loading
+  - Created synchronous file existence and directory checking utilities
+  - Added clear error messages for missing or invalid directory paths
+
+- **Fiber Management Improvements**
+  - Redesigned fiber management to use a functional approach without state persistence
+  - Implemented dependency-based chain ordering using topological sorting
+  - Added chain dependency detection from both explicit deps and tool requirements
+  - Created utilities to correctly identify actual fibers in the configuration
+
+- **CLI Enhancements**
+  - Improved `fibers` command with structured output and dependency ordering
+  - Grouped chains under parent fibers for better visual organization
+  - Added visual indicators of dependency relationships between chains
+  - Enhanced error handling with more informative messages
+  - Simplified CLI by consolidating `discover-modules` functionality into `fibers`
+  - Renamed `validate-modules` to `validate` for better ergonomics
+  - Added detailed mode to `fibers` command for more comprehensive output
+
+- **Tool Configuration Improvements**
+  - Added default check method for tools when no check method is specified
+  - Enhanced documentation with detailed tool configuration examples
+  - Improved validation to use tool name for the default check command
+
+### Fixed
+- Removed misleading warning for modules not configured in user configuration
+- Fixed path expansion to properly handle tilde and localshare directories
+- Corrected the display of fibers and chains in CLI output
+- Fixed dependency ordering in chain loading sequence
+
+### Files Modified
+- `src/config/validator.ts` - Added path validation to configuration validation, implemented default tool check method
+- `src/fiber/manager.ts` - Redesigned fiber management to use a functional approach
+- `src/cli.ts` - Enhanced fiber command with improved display formatting
+- `src/modules/discovery.ts` - Improved path handling in module discovery
+- `src/modules/validator.ts` - Fixed unnecessary warning for unconfigured modules
+- `README.md` - Updated documentation with detailed tool configuration section
+
+### Improved
+- Enhanced configuration validation to prevent late failures during module discovery
+- Simplified fiber management by removing unnecessary state persistence
+- Made path expansion more robust with better error handling
+- Improved CLI output formatting for better usability
+- Fixed error reporting to provide more actionable feedback
+- Streamlined CLI interface by reducing command redundancy
+
 ## Round 2 - Module System and Fiber Management
 
 ### Added
@@ -14,7 +77,6 @@
 - **Fiber Management**
   - Created fiber activation/deactivation functionality with state management
   - Implemented fiber state persistence to XDG cache directory
-  - Added event system for fiber state changes (activation, deactivation, registration)
   - Implemented filtering modules based on fiber state for selective loading
   - Added support for fiber-based module organization
 
@@ -27,7 +89,7 @@
 - **Testing Infrastructure**
   - Added module discovery tests with fixture generation
   - Created dependency resolution tests for graph operations and cycle detection
-  - Implemented fiber management tests for state operations and event handling
+  - Implemented fiber management tests for state operations
   - Added fixtures for testing with realistic module configurations
 
 ### Files Created
@@ -59,7 +121,7 @@
 ### Technical Details
 - Implemented a generic dependency graph with topological sorting algorithm
 - Added circular dependency detection using depth-first search
-- Created event-based module lifecycle with proper state transitions
+- Created module lifecycle with proper state transitions
 - Implemented persistent state storage using JSON serialization
 - Added file system abstraction layer to handle platform differences
 - Created module type detection based on directory structure and config
