@@ -1,4 +1,16 @@
 # Synthase Changelog
+## Configuration Output Fix
+
+### Fixed
+- **Configuration Display Issue**
+  - Fixed duplication of fibers in configuration output
+  - Removed redundant `fibers` section that was showing the same fibers that were already present at the top level
+  - Fixed duplication of core properties appearing both at the top level and inside the core object
+  - Improved configuration output formatting for better readability and clarity
+
+### Files Modified
+- `src/config/loader.ts` - Updated `getFullConfig` function to prevent duplication of fibers
+- `src/utils/yaml.ts` - Enhanced serialization to remove duplicated core properties from output
 
 ## Tool Validation Compatibility Update
 

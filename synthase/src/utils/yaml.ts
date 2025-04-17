@@ -15,7 +15,7 @@ export function parseYaml<T = Record<string, unknown>>(yamlStr: string): T {
 }
 
 /**
- * Serializes an object to YAML, removing empty objects
+ * Serializes an object to YAML, removing empty objects and duplicated properties
  * @param obj Object to serialize
  * @returns YAML string
  */
@@ -29,6 +29,25 @@ export function serializeToYaml(obj: Record<string, unknown>): string {
       const value = cleaned[key];
       if (value && typeof value === 'object' && Object.keys(value).length === 0) {
         delete cleaned[key];
+      }
+    }
+    
+    // Remove duplicated core properties from top level
+    if (cleaned.core && typeof cleaned.core === 'object') {
+      const coreProps = [
+        'projectDir', 
+        'dotfilesDir', 
+        'checkTools', 
+        'installToolDeps', 
+        'autoInitDisabled', 
+        'loadParallel'
+      ];
+      
+      for (const prop of coreProps) {
+        if (prop in cleaned && prop in cleaned.core) {
+          // Remove duplicated property from top level
+          delete cleaned[prop];
+        }
       }
     }
     
