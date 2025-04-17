@@ -1,4 +1,17 @@
 # Synthase Changelog
+
+## Configuration Compatibility Fix
+
+### Fixed
+- **Configuration Compatibility Issue**
+  - Removed non-standard `failOnError` property which is not part of the original Chitin implementation
+  - Ensured strict compatibility with original Chitin configuration structure
+  - Prevented inadvertent introduction of new configuration features
+
+### Files Modified
+- `src/config/loader.ts` - Removed `failOnError` from default configuration
+- `src/utils/yaml.ts` - Removed `failOnError` from core properties list
+
 ## Configuration Output Fix
 
 ### Fixed

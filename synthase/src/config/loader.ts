@@ -140,7 +140,6 @@ export function getDefaultConfig(): any {
     checkTools: false,
     installToolDeps: false,
     autoInitDisabled: false,
-    failOnError: false,
     loadParallel: false,
     fibers: {},
     chains: {},
@@ -151,7 +150,6 @@ export function getDefaultConfig(): any {
       checkTools: false,
       installToolDeps: false,
       autoInitDisabled: false,
-      failOnError: false,
       loadParallel: false,
     }
   };
@@ -239,7 +237,6 @@ export function getFullConfig(userConfig: UserConfig | null): any {
     if (userConfig.core.checkTools !== undefined) result.checkTools = userConfig.core.checkTools;
     if (userConfig.core.installToolDeps !== undefined) result.installToolDeps = userConfig.core.installToolDeps;
     if (userConfig.core.autoInitDisabled !== undefined) result.autoInitDisabled = userConfig.core.autoInitDisabled;
-    if (userConfig.core.failOnError !== undefined) result.failOnError = userConfig.core.failOnError;
     if (userConfig.core.loadParallel !== undefined) result.loadParallel = userConfig.core.loadParallel;
   }
   
@@ -249,11 +246,15 @@ export function getFullConfig(userConfig: UserConfig | null): any {
       if (fiberName === 'fibers' || fiberName === 'chains' || fiberName === 'tools') {
         result[fiberName] = {...defaultConfig[fiberName], ...fiberConfig};
       } else {
-        // Add to fibers object
-        if (!result.fibers) result.fibers = {};
-        result.fibers[fiberName] = fiberConfig;
+        // Don't add to fibers object to avoid duplication
+        // Just keep the fiber configs at the top level
       }
     }
+  }
+  
+  // Remove the empty fibers object if it exists to avoid duplication in output
+  if (result.fibers && Object.keys(result.fibers).length === 0) {
+    delete result.fibers;
   }
   
   return result;
