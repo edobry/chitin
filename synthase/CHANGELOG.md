@@ -1,5 +1,56 @@
 # Synthase Changelog
 
+## Fiber Display Emoji Enhancement
+
+### Changed
+- **Added Emoji Indicators**
+  - Replaced "Location:" label with folder emoji 📂 for cleaner visual display
+  - Replaced "Chains (N):" with chain emoji ⛓️ followed by the count
+  - Enhanced visual appeal and reduced text clutter
+  - Maintained consistent emoji theme with the status indicators
+
+## Fiber Display Dependency Indicator Enhancement
+
+### Changed
+- **Improved Dependency Visualization**
+  - Replaced "Depends on:" text with ⬆️ (up arrow) emoji for more visual representation of dependencies
+  - Maintained consistent emoji usage throughout the interface
+  - Further reduced text clutter in favor of visual indicators
+  - Made dependency relationships easier to identify at a glance
+
+### Files Modified
+- `src/commands/fibers/display.ts` - Updated dependency display to use emoji
+
+## Fiber Display Visual Layout Improvement
+
+### Changed
+- **Enhanced Visual Layout**
+  - Moved status indicators before fiber and chain names for easier visual scanning
+  - Added full-width separator lines around fiber sections for clearer visual grouping
+  - Created more distinct visual hierarchy between fiber sections and their content
+  - Improved overall readability and information density
+  - Maintained special handling for core fiber status
+
+### Files Modified
+- `src/commands/fibers/display.ts` - Restructured display functions
+- `src/commands/fibers/index.ts` - Added bottom separator line for fiber sections
+
+## Fiber Display Status Improvement
+
+### Changed
+- **Enhanced Status Indicators**
+  - Replaced "(disabled)" text with 🔴 emoji for better visual distinction
+  - Added 🟢 emoji for enabled fibers and chains
+  - Color-coded status indicators show enabled/disabled state at a glance
+  - Only shows status indicators when not filtering out disabled modules
+  - Improved readability of fibers and chains with visual indicators
+  - Made status indicators more concise and visually appealing
+  - Enhanced the overall aesthetics of the fibers command output
+
+### Files Modified
+- `src/commands/fibers/display.ts` - Updated status indicator functions to use emojis
+- `src/commands/fibers/index.ts` - Modified caller code to pass display options
+
 ## Fiber Display Formatting Improvement
 
 ### Changed
@@ -473,3 +524,75 @@
 ### Files Modified
 - `src/modules/discovery.ts` - Completely reworked module discovery process
 - `src/types/module.ts` - Added dotfilesDir to ModuleDiscoveryOptions interface
+
+## Fiber Display Layout Further Refinement
+
+### Changed
+- **Enhanced Visual Spacing and Organization**
+  - Added empty line after fiber name before location for better separation
+  - Moved chain count before the chain emoji for more natural reading order
+  - Further improved vertical spacing for better visual segmentation
+  - Continued refinement of visual hierarchy in fiber display
+
+### Files Modified
+- `src/commands/fibers/index.ts` - Updated display layout with improved spacing and organization
+
+## Fiber DNA Indicator Enhancement
+
+### Changed
+- **Added Fiber Type Indicator**
+  - Added DNA emoji 🧬 to mark fibers, providing clear visual distinction
+  - Further improved the visual classification system with consistent emoji indicators
+  - Enhanced the identification of fiber components at a glance
+  - Continued building on the consistent emoji-based visual language
+
+### Files Modified
+- `src/commands/fibers/display.ts` - Added DNA emoji to fiber display header
+
+## Fiber Core Display Fix
+
+### Fixed
+- **Core Fiber Display**
+  - Fixed core fiber display to show just "core" instead of redundant "core (core)"
+  - Maintained the DNA emoji 🧬 indicator for consistent styling
+  - Ensured proper visual hierarchy and readability
+  - Simplified the core fiber representation while preserving clear identification
+
+### Files Modified
+- `src/commands/fibers/display.ts` - Updated displayFiberHeader function to handle core fiber specially
+
+## Empty Fiber Display Enhancement
+
+### Changed
+- **Improved Empty Fibers Visualization**
+  - Added "0 ⛓️s" indicator for fibers that have no chains
+  - Ensured consistent display behavior across all fibers regardless of chain count
+  - Made empty fibers explicitly visible instead of silently omitting chain information
+  - Improved completeness of information in the output display
+
+### Files Modified
+- `src/commands/fibers/index.ts` - Updated to display "0 ⛓️s" for fibers with no chains
+
+## Fiber Command Legend Addition
+
+### Added
+- **Emoji Legend**
+  - Added concise legend at the beginning of the output explaining all emoji indicators
+  - Included explanations for fiber, chain, enabled/disabled status, and dependency indicators
+  - Improved first-time user experience and readability
+  - Enhanced discoverability of the visual language used throughout the interface
+
+### Files Modified
+- `src/commands/fibers/index.ts` - Added legend display at the beginning of the output
+
+## Chain Count Pluralization
+
+### Changed
+- **Improved Grammar in Chain Counts**
+  - Added proper pluralization for chain counts: "1 ⛓️:" remains singular while "0 ⛓️s" and "21 ⛓️s:" use plural form
+  - Made the display text grammatically correct for all cases
+  - Enhanced readability with proper linguistic conventions
+  - Maintained consistency with the empty fiber display enhancement
+
+### Files Modified
+- `src/commands/fibers/index.ts` - Added conditional plural "s" to chain count display

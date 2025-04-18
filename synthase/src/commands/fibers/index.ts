@@ -188,6 +188,9 @@ export function createFibersCommand(): Command {
           console.log('Hiding disabled fibers and chains\n');
         }
 
+        // Display legend at the beginning
+        console.log('Legend: 🧬 = fiber   ⛓️ = chain   🟢 = enabled   🔴 = disabled   ⬆️ = depends on\n');
+
         // Output fibers and chains in a structured format
         for (const fiberId of displayFiberIds) {
           // Skip standalone fiber if it's empty
@@ -207,11 +210,14 @@ export function createFibersCommand(): Command {
           }
           
           // Get status and validation indicators
-          const statusIndicator = getFiberStatus(fiberId, enabled, satisfied, inConfig);
+          const statusIndicator = getFiberStatus(fiberId, enabled, satisfied, inConfig, options.hideDisabled);
           const fiberValidation = validationResults[fiberId] && !validationResults[fiberId].valid ? '✗' : '';
           
           // Display fiber header
           displayFiberHeader(fiberId, statusIndicator, fiberValidation);
+          
+          // Add an empty line after fiber name
+          console.log('');
           
           // Find the fiber's path from the module result
           const fiberModule = inConfig 
@@ -221,7 +227,7 @@ export function createFibersCommand(): Command {
           // Get and display fiber path
           const fiberPath = getFiberPath(fiberId, fiberModule, config);
           if (fiberId !== 'standalone') {
-            console.log(`  Location: ${fiberPath}`);
+            console.log(`  📂 ${fiberPath}`);
           }
           
           // Display validation results
@@ -233,11 +239,16 @@ export function createFibersCommand(): Command {
             hideDisabled: options.hideDisabled 
           }, moduleResult.modules);
           
+          // Add a bottom separator line
+          console.log(`  ───────────────────────────────────────────`);
+          
           // Get chains for this fiber
           const fiberChains = fiberChainMap.get(fiberId) || [];
           
           if (fiberChains.length > 0) {
-            console.log(`  Chains (${fiberChains.length}):`);
+            // Add plural "s" when count is not 1
+            const pluralS = fiberChains.length === 1 ? '' : 's';
+            console.log(`  ${fiberChains.length} ⛓️${pluralS}:`);
             
             for (const chainId of fiberChains) {
               const chainConfig = config[fiberId]?.moduleConfig?.[chainId];
@@ -256,8 +267,10 @@ export function createFibersCommand(): Command {
                 }
               );
             }
+          } else {
+            // Show "0 ⛓️s" for empty fibers
+            console.log(`  0 ⛓️s`);
           }
-          // Empty fibers will have no chains section displayed
         }
         
         // Display summary information

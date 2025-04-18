@@ -36,7 +36,24 @@ export function displayFiberHeader(
   status: string, 
   validation: string
 ): void {
-  console.log(`\n━━━ ${fiberId} ${status} ${validation} ━━━`);
+  // Display a line above the fiber section with padding after
+  console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+  console.log(''); // Add padding line after separator
+  
+  // Display fiber name with status indicator before the name
+  let displayName = fiberId;
+  
+  // For core fiber, just display "core" without the DNA emoji or "(core)" text
+  if (status === '(core)') {
+    console.log(`  🧬 ${fiberId}`);
+    return; // Exit early as we've already displayed the core fiber
+  }
+  
+  // Create status prefix, trimming extra space if no status
+  const statusPrefix = status || validation ? `${status}${validation ? ' ' + validation : ''} ` : '';
+  
+  // Display with status and validation indicators before the name
+  console.log(`  ${statusPrefix}🧬 ${displayName}`);
 }
 
 /**
@@ -45,22 +62,26 @@ export function displayFiberHeader(
  * @param isEnabled Whether the fiber is enabled
  * @param isSatisfied Whether dependencies are satisfied
  * @param inConfig Whether the fiber is in config
+ * @param options Display options
  * @returns Status text to display
  */
 export function getFiberStatus(
   fiberId: string,
   isEnabled: boolean,
   isSatisfied: boolean,
-  inConfig: boolean
+  inConfig: boolean,
+  hideDisabled: boolean = false
 ): string {
   if (fiberId === 'core') {
     return '(core)';
   } else if (!isEnabled) {
-    return '(disabled)';
+    return '🔴';  // Red circle emoji for disabled
   } else if (!isSatisfied) {
     return '(unsatisfied dependencies)';
   } else if (!inConfig) {
     return '(unconfigured)';
+  } else if (!hideDisabled) {
+    return '🟢';  // Green circle emoji for enabled (only when not hiding disabled)
   }
   return '';
 }
@@ -101,9 +122,16 @@ export function displayValidationResults(validationResult: ExtendedValidationRes
   }
   
   if (validationResult.warnings && validationResult.warnings.length > 0) {
-    console.log(`  Warnings:`);
-    for (const warning of validationResult.warnings) {
-      console.log(`    ⚠️  ${warning}`);
+    // Filter out warnings about disabled modules
+    const filteredWarnings = validationResult.warnings.filter(
+      warning => !warning.includes("Module is disabled in user configuration")
+    );
+    
+    if (filteredWarnings.length > 0) {
+      console.log(`  Warnings:`);
+      for (const warning of filteredWarnings) {
+        console.log(`    ⚠️  ${warning}`);
+      }
     }
   }
 }
@@ -138,7 +166,7 @@ export function displayFiberDependencies(
   }
   
   if (fiberDeps.length > 0) {
-    console.log(`  Depends on: ${fiberDeps.join(', ')}`);
+    console.log(`  ⬆️ ${fiberDeps.join(', ')}`);
   }
   
   // Show fibers that depend on this fiber
@@ -165,16 +193,20 @@ export function displayFiberDependencies(
  * Gets chain status text
  * @param isEnabled Whether the chain is enabled
  * @param isConfigured Whether the chain is configured
+ * @param hideDisabled Whether disabled chains are hidden
  * @returns Status text
  */
 export function getChainStatus(
   isEnabled: boolean,
-  isConfigured: boolean
+  isConfigured: boolean,
+  hideDisabled: boolean = false
 ): string {
   if (!isEnabled) {
-    return ' (disabled)';
+    return '🔴';  // Red circle emoji for disabled, no space
   } else if (!isConfigured) {
-    return ' (unconfigured)';
+    return '(unconfigured)';
+  } else if (!hideDisabled) {
+    return '🟢';  // Green circle emoji for enabled, no space
   }
   return '';
 }
@@ -211,13 +243,14 @@ export function displayChain(
   const chainValidation = validationResults[chainId] && !validationResults[chainId].valid ? '✗' : '';
   
   // Create status indicator for chains
-  const chainStatus = getChainStatus(isChainEnabled, isChainConfigured);
+  const chainStatus = getChainStatus(isChainEnabled, isChainConfigured, options.hideDisabled);
   
   // Get dependencies for this chain
   const dependencies = getChainDependencies(chainId, config[fiberId]?.moduleConfig || {});
   
-  // Show chain without sequential numbering, just the validation status
-  console.log(`    ${chainId}${chainStatus} ${chainValidation}`);
+  // Show chain with status indicator before the name, trimming extra space if no status
+  const statusPrefix = chainStatus || chainValidation ? `${chainStatus} ${chainValidation ? chainValidation + ' ' : ''}` : '';
+  console.log(`    ${statusPrefix}${chainId}`);
   
   // Show global load order in detailed mode
   if (options.detailed) {
