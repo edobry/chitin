@@ -35,18 +35,38 @@ export function associateChainsByFiber(
     const chainId = chainModule.id;
     const chainPath = chainModule.path;
     
-    // Skip if this chain is already associated with a fiber
+    // Skip if this chain is already associated with a fiber through configuration
     if (Array.from(fiberChainMap.values()).some(chains => chains.includes(chainId))) {
       continue;
     }
     
-    // Try to find the fiber this chain belongs to based on path
+    // Try to find the fiber this chain belongs to based on path,
+    // but with more precise matching to avoid incorrect associations
     let foundFiber = false;
-    for (const fiberId of displayFiberIds) {
-      const fiberModule = discoveredFiberMap.get(fiberId) || 
+    
+    // Sort fibers by path length (descending) to find the most specific match first
+    // This ensures we match to the most specific fiber path rather than a parent
+    const fiberModulesWithPath = displayFiberIds
+      .map(fiberId => {
+        const fiberModule = discoveredFiberMap.get(fiberId) || 
                          moduleResult.modules.find((m) => m.id === fiberId);
-      
+        return { fiberId, fiberModule };
+      })
+      .filter(item => item.fiberModule && item.fiberModule.path)
+      .sort((a, b) => {
+        // Sort by path length (longest first) for more precise matching
+        return (b.fiberModule?.path?.length || 0) - (a.fiberModule?.path?.length || 0);
+      });
+    
+    for (const { fiberId, fiberModule } of fiberModulesWithPath) {
       if (fiberModule && fiberModule.path && chainPath.includes(fiberModule.path)) {
+        // Make sure we're not associating with 'core' if another more specific fiber matches
+        // This prevents the issue with chains being incorrectly associated with 'core'
+        if (fiberId === 'core' && fiberModulesWithPath.length > 1) {
+          // Skip for now, we might find a better match
+          continue;
+        }
+        
         // Add this chain to the fiber
         if (!fiberChainMap.has(fiberId)) {
           fiberChainMap.set(fiberId, []);

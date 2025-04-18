@@ -174,7 +174,9 @@ async function createModule(
   // For fibers in special directories, use the chitin naming convention
   if (moduleType === 'fiber') {
     // Check if this is the core chitin directory
-    if (modulePath.includes('/chitin/')) {
+    if (modulePath.includes('/chitin/') && !modulePath.includes('/chitin-')) {
+      // If the path exactly matches the main chitin directory, always name it 'core'
+      // This prevents duplicate discovery as both 'core' and 'chitin'
       moduleName = 'core';
     } 
     // Check if this is the dotfiles directory as defined in config
@@ -245,8 +247,17 @@ async function findChitinExternalDirs(projectDir: string): Promise<string[]> {
   try {
     // Use glob to find chitin-* directories, exactly as Chitin does
     const pattern = join(projectDir, 'chitin-*');
-    const matches = await glob(pattern, { onlyDirectories: true });
-    return matches;
+    // Find all matches, then filter to directories only
+    const matches = await glob(pattern);
+    const dirMatches = [];
+    
+    for (const match of matches) {
+      if (await isDirectory(match)) {
+        dirMatches.push(match);
+      }
+    }
+    
+    return dirMatches;
   } catch (error) {
     console.error('Error finding chitin-* directories:', error);
     return [];

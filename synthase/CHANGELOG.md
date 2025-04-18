@@ -596,3 +596,17 @@
 
 ### Files Modified
 - `src/commands/fibers/index.ts` - Added conditional plural "s" to chain count display
+
+## Module Discovery and Association Fixes
+
+### Fixed
+- **Module Discovery and Association Issues**
+  - Fixed duplicate "chitin" fiber being discovered as both "core" and "chitin"
+  - Improved chain-to-fiber association logic to prevent chains from being incorrectly associated with the wrong fiber
+  - Added better path-based matching that prioritizes more specific paths to avoid incorrect associations
+  - Made "core" fiber detection more precise to prevent duplicate module discovery
+  - Enhanced glob pattern handling for chitin-* directories with more robust directory checking
+
+### Files Modified
+- `src/modules/discovery.ts` - Added more precise fiber detection and improved external directory handling
+- `src/commands/fibers/organization.ts` - Improved chain-to-fiber association logic with path length prioritization
