@@ -1,0 +1,56 @@
+core:
+  projectDir: ~/Projects
+  dotfilesDir: localshare/chezmoi
+  checkTools: true
+  installToolDeps: true
+  tools:
+    key-tool:
+      check: command -v key-tool
+      install: apt install -y key-tool
+    dep1:
+      check: command -v dep1
+      install: apt install -y dep1
+    dep2:
+      check: command -v dep2
+      install: apt install -y dep2
+
+dev:
+  fiberDeps:
+    - dotfiles
+    - core
+  moduleConfig:
+    module1:
+      priority: 10
+    module2:
+      enabled: false
+      priority: 20
+    module3:
+      dependencies:
+        - module1
+        - module2
+
+dotfiles:
+  fiberDeps:
+    - core
+  moduleConfig:
+    shared:
+      enableCache: true
+      configValue: test
+    private:
+      enableLogging: false
+
+cloud:
+  fiberDeps:
+    - dev
+  moduleConfig:
+    aws:
+      region: us-west-2
+      profile: default
+    platform:
+      default: local
+
+# This fiber depends on dotfiles and cloud, creating a dependency chain
+test-fiber:
+  fiberDeps:
+    - dotfiles
+    - cloud 

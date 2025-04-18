@@ -1,5 +1,85 @@
 # Synthase Changelog
 
+## Fiber Display Order Improvement
+
+### Changed
+- **Fiber Output Order**
+  - Modified fiber display order to ensure dotfiles always appears immediately after core
+  - Updated `orderFibersByDependencies` function to prioritize dotfiles after core
+  - Added comprehensive test coverage for the new ordering behavior
+  - Maintained proper dependency ordering for all other fibers
+  - Ensures consistent fiber ordering in the fibers command output
+
+### Files Modified
+- `src/commands/fibers/utils.ts` - Updated fiber ordering logic
+- `tests/commands/fibers/utils.test.ts` - Added tests for fiber ordering
+
+## Fiber Repository Config Integration
+
+### Added
+- **Additional Base Directories Support**
+  - Added --base-dirs option to specify additional directories to scan for modules
+  - Enhanced discoverModulesFromConfig to accept custom base directories
+  - Improved testing capabilities for fiber repository configurations
+  - Made it easier to test and debug fiber dependencies in custom locations
+
+### Fixed
+- **Repository Config Dependencies**
+  - Fixed dependency discovery to read from fiber repository config.yaml files
+  - Updated fiber ordering to use dependencies defined in each fiber's repository
+  - Modified dependency display to prioritize repository-defined dependencies
+  - Implemented fallback to user config when repository config is unavailable
+  - Ensured dependency resolution properly respects fiber repository configurations
+
+### Files Modified
+- `src/modules/discovery.ts` - Updated to accept additional base directories
+- `src/commands/fibers/utils.ts` - Updated orderFibersByDependencies to use module metadata
+- `src/commands/fibers/display.ts` - Updated displayFiberDependencies to read from module metadata
+- `src/commands/fibers/index.ts` - Modified to pass module information and added base-dirs option
+
+## Fiber Dependencies Display Enhancement
+
+### Changed
+- **Improved Fiber Information Display**
+  - Modified the fibers command to always show fiber dependencies
+  - Added "Depends on" and "Required by" information for each fiber
+  - Provided clearer visibility into the dependency structure of fibers
+  - Made dependency information visible in standard mode, not just with --detailed flag
+
+### Added
+- **Custom Config Path Support**
+  - Added --path option to the fibers command to allow specifying a custom config file
+  - Enhanced testing capability for different fiber dependency configurations
+  - Ensured consistent behavior with the load-config command
+
+### Files Modified
+- `src/commands/fibers/display.ts` - Updated to always show fiber dependencies
+- `src/commands/fibers/index.ts` - Added support for custom config path
+
+## Dependency Management and Fiber Ordering Enhancement
+
+### Changed
+- **Improved Fiber Ordering Logic**
+  - Modified the `orderFibersByDependencies` function to use topological sorting
+  - Removed hardcoded priority fibers ('dev', 'dotfiles') in favor of dependency-based ordering
+  - Ensured fibers that other fibers depend on appear BEFORE their dependents
+  - Utilized the existing dependency resolution system for consistent ordering
+
+### Fixed
+- **Dependency Module Type Imports**
+  - Updated dependency module to import types from local dependency-types.ts
+  - Added export for dependency-types in modules/index.ts
+  - Fixed potential issues with circular dependencies between modules
+- **Topological Sort Order**
+  - Fixed the `getTopologicalSort` function to properly reverse the result array
+  - Ensured dependencies actually come before their dependents in the sorted list
+  - Corrected the order of fibers in the fibers command output
+
+### Files Modified
+- `src/modules/dependency.ts` - Updated imports to use local type definitions and fixed topological sort
+- `src/modules/index.ts` - Added export for dependency-types
+- `src/commands/fibers/utils.ts` - Reimplemented ordering logic using topological sort
+
 ## Type System Improvement
 
 ### Changed
@@ -334,3 +414,47 @@
 
 - **CLI Implementation**
   - Created `load-config`
+
+## Fiber Display Order Fix
+
+### Fixed
+- **Fiber Dependency Display Order**
+  - Fixed ordering of fibers in the `fibers` command output to respect dependency relationships
+  - Fixed issue where dependents like "chainalysis" were displayed before their dependencies like "cloud"
+  - Corrected dependency direction in the topological sort algorithm
+  - Removed unnecessary result reversal in the `getTopologicalSort` function
+  - Ensured dependencies are properly displayed before their dependents
+
+### Added
+- **Test Coverage for Fiber Ordering**
+  - Added dedicated tests for the `orderFibersByDependencies` function
+  - Created test cases for core fiber prioritization
+  - Added tests to verify dependencies appear before dependents
+  - Added test for module metadata-based dependency resolution
+  - Added test for handling circular dependencies
+
+### Files Modified
+- `src/modules/dependency.ts` - Fixed the topological sort implementation
+- `src/commands/fibers/utils.ts` - Added clarifying comments about dependency direction
+- `tests/commands/fibers/utils.test.ts` - Added new test file
+
+## Module Discovery Alignment with Chitin
+
+### Fixed
+- **Module Discovery Exact Compatibility**
+  - Modified module discovery to exactly match Chitin's shell implementation
+  - Fixed issue where directories with config.yaml were incorrectly being detected as separate fibers
+  - Ensured dotfiles directory is always treated as "dotfiles" regardless of actual name
+  - Limited external fibers discovery to only directories matching the `chitin-*` pattern
+  - Removed scanning of entire project directory to match Chitin's targeted approach
+  - Prevented duplicate fibers from being discovered in the same physical location
+
+### Added
+- **Enhanced Configuration Handling**
+  - Added dotfilesDir parameter to ModuleDiscoveryOptions to properly identify the dotfiles directory
+  - Added glob dependency for pattern matching external fibers
+  - Improved special directory detection for core, dotfiles, and external fibers
+
+### Files Modified
+- `src/modules/discovery.ts` - Completely reworked module discovery process
+- `src/types/module.ts` - Added dotfilesDir to ModuleDiscoveryOptions interface

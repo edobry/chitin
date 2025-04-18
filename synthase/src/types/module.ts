@@ -100,6 +100,8 @@ export interface ModuleDiscoveryOptions {
   modulePattern?: RegExp;
   /** Maximum depth to scan */
   maxDepth?: number;
+  /** The path to the dotfiles directory */
+  dotfilesDir?: string;
 }
 
 /**

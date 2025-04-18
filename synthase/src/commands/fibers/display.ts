@@ -113,23 +113,50 @@ export function displayValidationResults(validationResult: ExtendedValidationRes
  * @param fiberId Fiber ID
  * @param config Configuration object
  * @param options Display options
+ * @param modules Array of discovered modules
  */
 export function displayFiberDependencies(
   fiberId: string,
   config: UserConfig,
-  options: DisplayOptions
+  options: DisplayOptions,
+  modules: Module[] = []
 ): void {
-  if (!options.detailed || fiberId === 'standalone') return;
+  if (fiberId === 'standalone') return;
   
-  const fiberConfig = config[fiberId] as FiberConfig;
-  const fiberDeps = fiberConfig?.fiberDeps || [];
+  // First try to find the fiber in the modules
+  const fiberModule = modules.find(m => m.id === fiberId && m.type === 'fiber');
+  
+  // Get dependencies from the module metadata if available
+  let fiberDeps: string[] = [];
+  if (fiberModule && fiberModule.metadata.dependencies) {
+    fiberDeps = fiberModule.metadata.dependencies.map(dep => dep.moduleId);
+  }
+  // Fallback to user config if no metadata
+  if (fiberDeps.length === 0) {
+    const fiberConfig = config[fiberId] as FiberConfig;
+    fiberDeps = fiberConfig?.fiberDeps || [];
+  }
+  
   if (fiberDeps.length > 0) {
     console.log(`  Depends on: ${fiberDeps.join(', ')}`);
   }
   
   // Show fibers that depend on this fiber
-  const dependentFibers = getDependentFibers(fiberId, config);
-  if (dependentFibers.length > 0) {
+  // Get dependent fibers from module metadata
+  const dependentFibers = modules
+    .filter(m => 
+      m.type === 'fiber' && 
+      m.metadata.dependencies?.some(dep => dep.moduleId === fiberId)
+    )
+    .map(m => m.id);
+  
+  // If no dependents found in metadata, fall back to config
+  if (dependentFibers.length === 0) {
+    const configDependents = getDependentFibers(fiberId, config);
+    if (configDependents.length > 0) {
+      console.log(`  Required by: ${configDependents.join(', ')}`);
+    }
+  } else {
     console.log(`  Required by: ${dependentFibers.join(', ')}`);
   }
 }

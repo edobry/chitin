@@ -2,6 +2,7 @@ import { join, basename, dirname } from 'path';
 import { UserConfig, Module, ModuleDiscoveryOptions, ModuleDiscoveryResult, ModuleDependency } from '../types';
 import { loadModuleConfig, getProjectDir, getDotfilesDir } from '../config/loader';
 import { fileExists, isDirectory, readDirectory, expandPath } from '../utils/file';
+import { glob } from 'glob';
 
 /**
  * Discovers modules in the specified directories using Chitin's directory structure
@@ -28,7 +29,7 @@ export async function discoverModules(
       }
       
       // Find and process fibers (following chitin's approach)
-      await discoverFibers(baseDir, modules, errors);
+      await discoverFibers(baseDir, modules, errors, options.dotfilesDir);
     } catch (error) {
       errors.push(`Error scanning ${baseDir}: ${error instanceof Error ? error.message : String(error)}`);
     }
@@ -42,20 +43,31 @@ export async function discoverModules(
  * @param baseDir Base directory for discovery
  * @param modules Array to populate with modules
  * @param errors Array to collect errors
+ * @param dotfilesDir The configured dotfiles directory
  */
 async function discoverFibers(
   baseDir: string,
   modules: Module[],
-  errors: string[]
+  errors: string[],
+  dotfilesDir?: string
 ): Promise<void> {
   try {
+    // If this is the dotfiles directory, special handling is needed
+    const isDotfilesDir = dotfilesDir && (baseDir === dotfilesDir || baseDir.includes(dotfilesDir));
+    
     // Check if this directory itself is a fiber
     const fiberConfigPath = join(baseDir, 'config.yaml');
     if (await fileExists(fiberConfigPath)) {
       try {
-        const module = await createModule(baseDir, 'fiber');
+        const module = await createModule(baseDir, 'fiber', dotfilesDir);
         if (module) {
-          modules.push(module);
+          // If we have a module with the same path as dotfilesDir but not named 'dotfiles',
+          // we should skip it to prevent duplicates
+          if (isDotfilesDir && module.name !== 'dotfiles') {
+            // Skip this module as it's the same as dotfiles
+          } else {
+            modules.push(module);
+          }
         }
       } catch (error) {
         errors.push(`Error loading fiber at ${baseDir}: ${error instanceof Error ? error.message : String(error)}`);
@@ -66,7 +78,7 @@ async function discoverFibers(
     const chainsDir = join(baseDir, 'chains');
     if (await fileExists(chainsDir) && await isDirectory(chainsDir)) {
       // Process chains in this fiber
-      await discoverChains(chainsDir, baseDir, modules, errors);
+      await discoverChains(chainsDir, baseDir, modules, errors, dotfilesDir);
     }
     
     // Special case for core directory which has subdirectories that aren't fibers
@@ -77,38 +89,7 @@ async function discoverFibers(
         const entryPath = join(baseDir, entry);
         if (await isDirectory(entryPath)) {
           // This might be a chain category directory (like init, core, etc.)
-          await discoverChains(entryPath, dirname(baseDir), modules, errors);
-        }
-      }
-    } else {
-      // Check direct subdirectories for fibers (only one level - like chitin)
-      const entries = await readDirectory(baseDir);
-      for (const entry of entries) {
-        // Skip chains directory, already processed above
-        if (entry === 'chains') continue;
-        
-        const entryPath = join(baseDir, entry);
-        if (await isDirectory(entryPath)) {
-          // Check if it's a fiber (has config.yaml or chains subdir)
-          const hasFiberConfig = await fileExists(join(entryPath, 'config.yaml'));
-          const hasChainsDir = await fileExists(join(entryPath, 'chains')) && 
-                             await isDirectory(join(entryPath, 'chains'));
-          
-          if (hasFiberConfig || hasChainsDir) {
-            try {
-              const module = await createModule(entryPath, 'fiber');
-              if (module) {
-                modules.push(module);
-              }
-              
-              // Process its chains if it has a chains directory
-              if (hasChainsDir) {
-                await discoverChains(join(entryPath, 'chains'), entryPath, modules, errors);
-              }
-            } catch (error) {
-              errors.push(`Error loading fiber at ${entryPath}: ${error instanceof Error ? error.message : String(error)}`);
-            }
-          }
+          await discoverChains(entryPath, dirname(baseDir), modules, errors, dotfilesDir);
         }
       }
     }
@@ -123,12 +104,14 @@ async function discoverFibers(
  * @param fiberDir Parent fiber directory
  * @param modules Array to populate with modules
  * @param errors Array to collect errors
+ * @param dotfilesDir The configured dotfiles directory
  */
 async function discoverChains(
   chainsDir: string,
   fiberDir: string,
   modules: Module[],
-  errors: string[]
+  errors: string[],
+  dotfilesDir?: string
 ): Promise<void> {
   try {
     // Process files directly in chains dir (simple chains)
@@ -139,7 +122,7 @@ async function discoverChains(
       const entryPath = join(chainsDir, entry);
       if (!await isDirectory(entryPath) && (entry.endsWith('.sh') || entry.endsWith('.zsh'))) {
         try {
-          const module = await createModule(entryPath, 'chain');
+          const module = await createModule(entryPath, 'chain', dotfilesDir);
           if (module) {
             modules.push(module);
           }
@@ -154,7 +137,7 @@ async function discoverChains(
       const entryPath = join(chainsDir, entry);
       if (await isDirectory(entryPath)) {
         try {
-          const module = await createModule(entryPath, 'chain');
+          const module = await createModule(entryPath, 'chain', dotfilesDir);
           if (module) {
             modules.push(module);
           }
@@ -172,9 +155,14 @@ async function discoverChains(
  * Creates a Module object from a directory or file
  * @param modulePath Path to the module directory or file
  * @param moduleType Type of the module (fiber or chain)
+ * @param dotfilesDir The configured dotfiles directory
  * @returns Module object or null if invalid
  */
-async function createModule(modulePath: string, moduleType: 'fiber' | 'chain'): Promise<Module | null> {
+async function createModule(
+  modulePath: string, 
+  moduleType: 'fiber' | 'chain', 
+  dotfilesDir?: string
+): Promise<Module | null> {
   // For files, use the file name without extension as module name
   let moduleName = '';
   if (await isDirectory(modulePath)) {
@@ -185,16 +173,17 @@ async function createModule(modulePath: string, moduleType: 'fiber' | 'chain'): 
   
   // For fibers in special directories, use the chitin naming convention
   if (moduleType === 'fiber') {
+    // Check if this is the core chitin directory
     if (modulePath.includes('/chitin/')) {
       moduleName = 'core';
-    } else if (modulePath.includes('/.config/chitin/') || modulePath.includes('/.local/share/chitin/')) {
+    } 
+    // Check if this is the dotfiles directory as defined in config
+    else if (dotfilesDir && (modulePath === dotfilesDir || modulePath.includes(dotfilesDir))) {
       moduleName = 'dotfiles';
-    } else if (moduleName.startsWith('chitin-')) {
-      // Remove the 'chitin-' prefix for external fibers
+    } 
+    // For external chitin modules, strip the chitin- prefix
+    else if (moduleName.startsWith('chitin-')) {
       moduleName = moduleName.replace(/^chitin-/, '');
-    } else if (basename(dirname(modulePath)) === 'chitin-external') {
-      // Handle the test case where the parent directory is chitin-external
-      moduleName = 'external';
     }
   }
   
@@ -248,34 +237,60 @@ async function createModule(modulePath: string, moduleType: 'fiber' | 'chain'): 
 }
 
 /**
+ * Gets chitin-* directories in the project directory
+ * @param projectDir The project directory
+ * @returns Array of chitin-* directories
+ */
+async function findChitinExternalDirs(projectDir: string): Promise<string[]> {
+  try {
+    // Use glob to find chitin-* directories, exactly as Chitin does
+    const pattern = join(projectDir, 'chitin-*');
+    const matches = await glob(pattern, { onlyDirectories: true });
+    return matches;
+  } catch (error) {
+    console.error('Error finding chitin-* directories:', error);
+    return [];
+  }
+}
+
+/**
  * Discovers modules based on user configuration
  * @param userConfig User configuration
+ * @param additionalDirs Additional directories to scan
  * @returns Discovery result containing modules and errors
  */
-export async function discoverModulesFromConfig(userConfig: UserConfig): Promise<ModuleDiscoveryResult> {
-  const baseDirs: string[] = [];
+export async function discoverModulesFromConfig(
+  userConfig: UserConfig,
+  additionalDirs: string[] = []
+): Promise<ModuleDiscoveryResult> {
+  const baseDirs: string[] = [...additionalDirs];
   
-  // Add primary chitin directory (focus on chains subdirectory)
+  // Add primary chitin directory (Chitin always loads this)
   const chitinDir = process.env.CHI_DIR || '';
   if (chitinDir) {
     baseDirs.push(chitinDir);
   }
   
-  // Add project directory from config
-  const projectDir = getProjectDir(userConfig);
-  if (projectDir && await fileExists(projectDir) && await isDirectory(projectDir)) {
-    baseDirs.push(projectDir);
-  }
-  
-  // Add dotfiles directory from config
+  // Get dotfiles directory from config
   const dotfilesDir = getDotfilesDir(userConfig);
+  
+  // Add dotfiles directory from config (if it exists)
   if (dotfilesDir && await fileExists(dotfilesDir) && await isDirectory(dotfilesDir)) {
     baseDirs.push(dotfilesDir);
+  }
+  
+  // Instead of adding the entire project directory, we only want to add chitin-* directories
+  // This exactly matches Chitin's behavior in chiFiberLoadExternal
+  const projectDir = getProjectDir(userConfig);
+  if (projectDir && await fileExists(projectDir) && await isDirectory(projectDir)) {
+    const chitinExternalDirs = await findChitinExternalDirs(projectDir);
+    baseDirs.push(...chitinExternalDirs);
   }
   
   // Perform discovery using chitin's approach
   return discoverModules({
     baseDirs,
-    recursive: false // Not needed anymore since we handle nesting specifically
+    recursive: false, // Not needed anymore since we handle nesting specifically
+    dotfilesDir     // Pass the dotfiles directory so we can identify it accurately
   });
 } 

@@ -1,48 +1,71 @@
+import { createDependencyGraph } from '../../modules/dependency';
+import { Module } from '../../types';
+
 /**
  * Orders fibers by their dependencies with foundational fibers first
  * @param fibers Fiber IDs to order
  * @param config Configuration object
+ * @param modules Array of discovered modules
  * @returns Ordered list of fiber IDs
  */
-export function orderFibersByDependencies(fibers: string[], config: Record<string, any>): string[] {
-  // Always put core fiber first
+export function orderFibersByDependencies(
+  fibers: string[], 
+  config: Record<string, any>,
+  modules: Module[] = []
+): string[] {
+  // Always put core and dotfiles first in that order
   const orderedFibers: string[] = [];
+  
+  // Handle core fiber first
   if (fibers.includes('core')) {
     orderedFibers.push('core');
     fibers = fibers.filter(id => id !== 'core');
   }
-
-  // These are the "foundational" fibers that should appear high in the list
-  const priorityFibers = ['dev', 'dotfiles'];
   
-  // Sort the fibers based on priority, then by dependency count
-  const sortedFibers = [...fibers].sort((a, b) => {
-    // 1. Check if either fiber is a priority fiber
-    const aIsPriority = priorityFibers.includes(a);
-    const bIsPriority = priorityFibers.includes(b);
+  // Always place dotfiles immediately after core if it exists
+  if (fibers.includes('dotfiles')) {
+    orderedFibers.push('dotfiles');
+    fibers = fibers.filter(id => id !== 'dotfiles');
+  }
+
+  // Use dependency resolution to create proper topological order
+  // Create a dependency graph
+  const graph = createDependencyGraph<string>();
+  
+  // Add all fibers to the graph
+  for (const fiberId of fibers) {
+    graph.addNode(fiberId, fiberId);
+  }
+  
+  // Add dependency relationships
+  for (const fiberId of fibers) {
+    // First try to get dependencies from module metadata
+    const fiberModule = modules.find(m => m.id === fiberId && m.type === 'fiber');
+    let fiberDeps: string[] = [];
     
-    if (aIsPriority && !bIsPriority) return -1;
-    if (!aIsPriority && bIsPriority) return 1;
-    
-    // 2. Sort by dependency count - fibers with fewer dependencies are more foundational
-    const aDeps = config[a]?.fiberDeps?.length || 0;
-    const bDeps = config[b]?.fiberDeps?.length || 0;
-    
-    if (aDeps !== bDeps) {
-      return aDeps - bDeps; // Fewer dependencies first
+    if (fiberModule && fiberModule.metadata.dependencies) {
+      fiberDeps = fiberModule.metadata.dependencies.map(dep => dep.moduleId);
     }
     
-    // 3. If tied, sort by how many modules the fiber has - more modules = more important
-    const aModules = Object.keys(config[a]?.moduleConfig || {}).length;
-    const bModules = Object.keys(config[b]?.moduleConfig || {}).length;
-    
-    if (aModules !== bModules) {
-      return bModules - aModules; // More modules first
+    // Fallback to config if no metadata dependencies
+    if (fiberDeps.length === 0) {
+      fiberDeps = config[fiberId]?.fiberDeps || [];
     }
     
-    // 4. As a last resort, sort alphabetically for stable ordering
-    return a.localeCompare(b);
-  });
+    for (const depId of fiberDeps) {
+      // Only add the dependency if it's in our fiber list
+      if (fibers.includes(depId)) {
+        // IMPORTANT: The dependency relationship is from dependent to dependency
+        // For proper sorting, the dependent should depend on dependency
+        // For example, if cloud depends on dev, then cloud should come AFTER dev
+        graph.addDependency(fiberId, depId);
+      }
+    }
+  }
+  
+  // Get topologically sorted fibers
+  // This ensures dependencies come BEFORE dependents
+  const sortedFibers = graph.getTopologicalSort();
   
   return [...orderedFibers, ...sortedFibers];
 }

@@ -50,10 +50,13 @@ export function createFibersCommand(): Command {
     .option('-H, --hide-disabled', 'Hide disabled fibers and chains')
     .option('-j, --json', 'Output validation results in JSON format')
     .option('-y, --yaml', 'Output validation results in YAML format')
+    .option('-p, --path <path>', 'Custom path to user config file')
+    .option('-b, --base-dirs <dirs...>', 'Additional base directories to scan for modules')
     .action(async (options) => {
       try {
         // Load and validate configuration
         const { config, validation } = await loadAndValidateConfig({
+          userConfigPath: options.path,
           exitOnError: false
         });
         
@@ -64,7 +67,10 @@ export function createFibersCommand(): Command {
         }
         
         // Discover and validate modules (silently)
-        const moduleResult = await discoverModulesFromConfig(config);
+        const moduleResult = await discoverModulesFromConfig(
+          config, 
+          options.baseDirs || []
+        );
         
         if (moduleResult.errors.length > 0) {
           console.warn('Encountered errors during module discovery:');
@@ -113,7 +119,7 @@ export function createFibersCommand(): Command {
           allFibers;
         
         // Order fibers by dependency (foundational first, dependent last)
-        const orderedFibers = orderFibersByDependencies(loadableFibers, config);
+        const orderedFibers = orderFibersByDependencies(loadableFibers, config, moduleResult.modules);
         
         // Get all chains from all fibers
         const allChainIds = getChainIds(config);
@@ -149,12 +155,15 @@ export function createFibersCommand(): Command {
           ...discoveredFiberModules.map(m => m.id)
         ]);
         
-        // Create a list of all fiber IDs to display and sort them
-        let displayFiberIds = orderFibersByConfigAndName(
-          allFiberModuleIds,
-          allFibers,
-          orderedFibers
-        );
+        // Create a list of all fiber IDs to display ensuring proper dependency order
+        // First, use the orderedFibers array to maintain dependency relationships
+        let displayFiberIds = [...orderedFibers];
+        
+        // Add any discovered fibers that weren't in the ordered list
+        Array.from(allFiberModuleIds)
+          .filter(id => !displayFiberIds.includes(id))
+          .sort((a, b) => a.localeCompare(b))
+          .forEach(id => displayFiberIds.push(id));
         
         // Apply hide-disabled option if selected
         if (options.hideDisabled) {
@@ -218,11 +227,11 @@ export function createFibersCommand(): Command {
           // Display validation results
           displayValidationResults(validationResults[fiberId]);
           
-          // Show fiber dependencies if detailed mode is enabled
+          // Show fiber dependencies using the discovered modules
           displayFiberDependencies(fiberId, config, { 
             detailed: options.detailed, 
             hideDisabled: options.hideDisabled 
-          });
+          }, moduleResult.modules);
           
           // Get chains for this fiber
           const fiberChains = fiberChainMap.get(fiberId) || [];

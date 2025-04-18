@@ -98,7 +98,8 @@ export function filterDisabledFibers(
 }
 
 /**
- * Orders fibers with configured ones first, followed by discovered ones
+ * Orders fibers with configured ones first, followed by discovered ones,
+ * while preserving the dependency order from the topological sort
  * @param allFiberModuleIds Set of all fiber module IDs
  * @param allFibers All fibers in config
  * @param orderedFibers Ordered fibers from dependency resolution
@@ -109,6 +110,12 @@ export function orderFibersByConfigAndName(
   allFibers: string[],
   orderedFibers: string[]
 ): string[] {
+  // Create a map for quick lookup of fiber index in the ordered list
+  const fiberOrderMap = new Map<string, number>();
+  orderedFibers.forEach((fiberId, index) => {
+    fiberOrderMap.set(fiberId, index);
+  });
+  
   return Array.from(allFiberModuleIds).sort((a, b) => {
     // If both fibers are in the config or both are not, sort by orderedFibers position
     const aInConfig = allFibers.includes(a);
@@ -117,14 +124,19 @@ export function orderFibersByConfigAndName(
     if (aInConfig && !bInConfig) return -1;
     if (!aInConfig && bInConfig) return 1;
     
-    // If both are in config, respect the original ordering
+    // If both are in config, respect the dependency order from topological sort
     if (aInConfig && bInConfig) {
-      const aIndex = orderedFibers.indexOf(a);
-      const bIndex = orderedFibers.indexOf(b);
+      const aIndex = fiberOrderMap.get(a) ?? -1;
+      const bIndex = fiberOrderMap.get(b) ?? -1;
+      
+      // If both are in the ordered list, use their original order
       if (aIndex !== -1 && bIndex !== -1) {
         return aIndex - bIndex;
       }
-      // If one isn't in ordered fibers, fall back to alphabetical
+      
+      // If only one is in the ordered list, prioritize it
+      if (aIndex !== -1) return -1;
+      if (bIndex !== -1) return 1;
     }
     
     // Otherwise sort alphabetically

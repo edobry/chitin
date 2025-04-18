@@ -66,12 +66,14 @@ export function createDependencyGraph<T>(): DependencyGraph<T> {
       temp.add(nodeId);
       
       const node = nodes.get(nodeId)!;
+      // Iterate through dependencies first - this ensures we process prerequisites before the current node
       for (const depId of node.dependencies) {
         visit(depId);
       }
       
       temp.delete(nodeId);
       visited.add(nodeId);
+      // Add the node to the result after processing its dependencies
       result.push(node.value);
     };
 
@@ -82,8 +84,7 @@ export function createDependencyGraph<T>(): DependencyGraph<T> {
       }
     }
 
-    // Reverse the result to get correct dependency order
-    // Dependencies should come BEFORE the modules that depend on them
+    // The topological sort already puts dependencies before dependents, no need to reverse
     return result;
   };
 
