@@ -1,13 +1,55 @@
 # Synthase Changelog
 
-## Fiber Display Emoji Enhancement
+## Fiber Dependency Ordering Fix
+
+### Fixed
+- **Fiber Ordering Based on Dependencies**
+  - Fixed the fiber ordering algorithm to properly respect dependencies defined in config
+  - Implemented workaround for configuration loading issue where fiberDeps were not included
+  - Ensured fibers are displayed in correct dependency order: dependencies before dependents
+  - Made fiber relationships more consistent with the defined dependency structure
+  - Core and dotfiles still maintain their special ordering (first and second)
+
+### Files Modified
+- `src/commands/fibers/utils.ts` - Updated orderFibersByDependencies function
+- `src/fiber/manager.ts` - Added missing createFiberFilter and createFiberManager functions
+
+## Module Discovery Debugging Improvements
+
+### Fixed
+- **Debug and Error Handling**
+  - Enhanced module discovery with improved error reporting
+  - Replaced missing logger dependency with local debug implementation
+  - Maintained consistent fiber naming conventions for "core" and other special fibers
+  - Ensured proper fiber ordering according to the dependency relationships
+  - Fixed module property handling to match the expected Module interface
+
+### Files Modified
+- `src/modules/discovery.ts` - Updated error handling and debug implementation
+
+## Fiber DNA Indicator Enhancement
 
 ### Changed
-- **Added Emoji Indicators**
-  - Replaced "Location:" label with folder emoji 📂 for cleaner visual display
-  - Replaced "Chains (N):" with chain emoji ⛓️ followed by the count
-  - Enhanced visual appeal and reduced text clutter
-  - Maintained consistent emoji theme with the status indicators
+- **Added DNA Emoji for Fibers**
+  - Added DNA emoji (🧬) to mark fibers for better visual distinction
+  - Maintained consistent emoji usage throughout the interface
+  - Enhanced visual classification system
+  - Makes it easier to identify fibers at a glance
+
+### Files Modified
+- `src/commands/fibers/display.ts` - Added DNA emoji to fiber header display
+
+## Module Discovery Bug Fixes
+
+### Fixed
+- **Module Creation & Discovery**
+  - Fixed module discovery in `discovery.ts` with proper async file operations
+  - Added helper functions for reading JSON files and obtaining file stats
+  - Fixed module property handling to match the expected Module interface
+  - Improved error handling during module creation
+
+### Files Modified
+- `src/modules/discovery.ts` - Updated file operations and module creation logic
 
 ## Fiber Display Dependency Indicator Enhancement
 
@@ -536,18 +578,6 @@
 
 ### Files Modified
 - `src/commands/fibers/index.ts` - Updated display layout with improved spacing and organization
-
-## Fiber DNA Indicator Enhancement
-
-### Changed
-- **Added Fiber Type Indicator**
-  - Added DNA emoji 🧬 to mark fibers, providing clear visual distinction
-  - Further improved the visual classification system with consistent emoji indicators
-  - Enhanced the identification of fiber components at a glance
-  - Continued building on the consistent emoji-based visual language
-
-### Files Modified
-- `src/commands/fibers/display.ts` - Added DNA emoji to fiber display header
 
 ## Fiber Core Display Fix
 

@@ -220,7 +220,8 @@ export function getFullConfig(userConfig: UserConfig | null): any {
   // Copy top-level properties from userConfig
   for (const [key, value] of Object.entries(userConfig)) {
     if (key !== 'core' && key !== 'fibers' && key !== 'chains' && key !== 'tools') {
-      result[key] = value;
+      // Copy the entire object instead of just references
+      result[key] = JSON.parse(JSON.stringify(value));
     }
   }
   

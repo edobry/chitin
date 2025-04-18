@@ -273,3 +273,106 @@ export function createChainFilter(
     });
   };
 }
+
+/**
+ * Creates a new fiber manager instance
+ * @returns FiberManager instance
+ */
+export function createFiberManager() {
+  // Store for fiber states
+  const fibers: Array<{
+    id: string,
+    active: boolean,
+    modules: string[],
+    lastActivated?: Date
+  }> = [];
+  
+  return {
+    /**
+     * Get all registered fibers
+     */
+    getAllFibers: () => {
+      return [...fibers];
+    },
+    
+    /**
+     * Register a new fiber
+     */
+    registerFiber: (id: string, modules: string[]) => {
+      // Don't register duplicates
+      if (fibers.some(f => f.id === id)) {
+        return false;
+      }
+      
+      fibers.push({
+        id,
+        active: false,
+        modules
+      });
+      
+      return true;
+    },
+    
+    /**
+     * Activate a fiber
+     */
+    activateFiber: (id: string) => {
+      const fiber = fibers.find(f => f.id === id);
+      if (!fiber) {
+        return false;
+      }
+      
+      fiber.active = true;
+      fiber.lastActivated = new Date();
+      return true;
+    },
+    
+    /**
+     * Deactivate a fiber
+     */
+    deactivateFiber: (id: string) => {
+      const fiber = fibers.find(f => f.id === id);
+      if (!fiber) {
+        return false;
+      }
+      
+      fiber.active = false;
+      return true;
+    },
+    
+    /**
+     * Check if a fiber is active
+     */
+    isFiberActive: (id: string) => {
+      const fiber = fibers.find(f => f.id === id);
+      return fiber ? fiber.active : false;
+    },
+    
+    /**
+     * Get all active fibers
+     */
+    getActiveFibers: () => {
+      return fibers.filter(f => f.active);
+    }
+  };
+}
+
+/**
+ * Creates a filter function for modules based on fiber states
+ * @param includeInactive Whether to include modules from inactive fibers
+ * @returns Filter function for modules
+ */
+export function createFiberFilter(includeInactive: boolean = false): (moduleId: string, fiberStates: Array<{id: string, active: boolean, modules: string[]}>) => boolean {
+  return (moduleId: string, fiberStates: Array<{id: string, active: boolean, modules: string[]}>): boolean => {
+    // Check if module is in any fiber
+    return fiberStates.some(fiber => {
+      // Skip inactive fibers if not including them
+      if (!includeInactive && !fiber.active) {
+        return false;
+      }
+      
+      // Check if module is in this fiber
+      return fiber.modules.includes(moduleId);
+    });
+  };
+}

@@ -34,8 +34,9 @@ describe('Fiber Utils', () => {
     expect(ordered[0]).toBe('core');
     expect(ordered[1]).toBe('dotfiles');
     
-    // Still respects other dependencies
-    expect(ordered.indexOf('cloud')).toBeLessThan(ordered.indexOf('dev'));
+    // Respects topological ordering based on dependencies
+    // Note: In raw config, cloud depends on dev, so dev should come before cloud
+    expect(ordered.indexOf('dev')).toBeLessThan(ordered.indexOf('cloud'));
   });
   
   test('orderFibersByDependencies should place dotfiles after core even if other fibers depend on core', () => {

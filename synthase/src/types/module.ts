@@ -14,6 +14,8 @@ export interface Module {
   metadata: ModuleMetadata;
   /** Module configuration */
   config?: Record<string, any>;
+  /** Parent fiber ID for chains */
+  parentFiberId?: string;
 }
 
 /**
