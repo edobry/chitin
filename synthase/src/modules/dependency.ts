@@ -1,4 +1,4 @@
-import { DependencyGraph, DependencyNode, CircularDependency, DependencyResolutionResult, DependencyResolutionOptions } from '../types';
+import { DependencyGraph, DependencyNode, CircularDependency, DependencyResolutionResult, DependencyResolutionOptions } from './dependency-types';
 
 /**
  * Creates a new dependency graph

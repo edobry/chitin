@@ -1,1 +1,2 @@
-export * from './manager'; 
+export * from './manager';
+export * from './types'; 

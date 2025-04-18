@@ -1,5 +1,155 @@
 # Synthase Changelog
 
+## Type System Improvement
+
+### Changed
+- **Enhanced Type Safety**
+  - Properly imported and used UserConfig and other types from the types module
+  - Replaced generic 'any' types with proper type definitions
+  - Fixed handling of optional properties with proper null checks
+  - Created specific interface for validation results with warnings
+  - Added proper type constraints to function parameters
+  - Improved typings in display and organization utilities
+
+### Files Modified
+- `src/commands/utils.ts` - Improved type definitions for shared command utilities
+- `src/commands/fibers/display.ts` - Enhanced type safety for UI components
+- `src/commands/fibers/organization.ts` - Added proper types for organization functions
+
+## Code Structure Improvement - Deep Refactoring
+
+### Changed
+- **Comprehensive Code Restructuring**
+  - Extracted common utilities across command modules
+  - Refactored fibers command into smaller, more focused modules
+  - Created dedicated display functions for UI concerns
+  - Created organization utilities to handle module grouping
+  - Removed duplicate code by centralizing shared functions
+  - Applied single responsibility principle throughout the codebase
+
+### Files Modified/Created
+- `src/commands/utils.ts` - New shared utilities for all commands
+- `src/commands/fibers/display.ts` - Display-focused utilities
+- `src/commands/fibers/organization.ts` - Module organization utilities
+- `src/commands/fibers/utils.ts` - Fiber-specific utilities
+- `src/commands/fibers/index.ts` - Streamlined command implementation
+- `src/commands/load-config.ts` - Simplified to use shared utilities
+- `src/commands/init.ts` - Simplified to use shared utilities
+
+## Code Structure Improvement - CLI Modularization
+
+### Changed
+- **CLI Code Restructuring**
+  - Refactored monolithic CLI into modular command structure
+  - Extracted each command (load-config, init, fibers) into its own module
+  - Moved utility functions to dedicated modules
+  - Created a cleaner main CLI entry point
+  - Improved maintainability and readability of code
+
+### Files Modified/Created
+- `src/cli.ts` - Simplified to only initialize and run the CLI
+- `src/commands/index.ts` - New central command registration
+- `src/commands/load-config.ts` - Extracted load-config command
+- `src/commands/init.ts` - Extracted init command
+- `src/commands/fibers/index.ts` - Extracted fibers command
+- `src/commands/fibers/utils.ts` - Extracted utility functions for fibers
+
+## Module Organization Improvement
+
+### Changed
+- **Unified Module Organization**
+  - Removed separate "Unconfigured Modules" section
+  - Organized all modules consistently by fiber, regardless of configuration state
+  - Integrated unconfigured chains within their respective fibers
+  - Added a "standalone" fiber for chains that cannot be associated with any fiber
+  - Maintained the ability to hide disabled fibers/chains with the `--hide-disabled` option
+
+### Fixed
+- **Special Fiber Locations**
+  - Fixed "dotfiles" fiber showing "Unknown" location by using dotfilesDir from core config
+  - Improved "core" fiber location display by using the Chitin directory path
+  - Ensured special fibers always show their correct locations
+
+### Files Modified
+- `src/cli.ts` - Redesigned module display to unify all modules under their fibers
+
+## CLI Output Formatting Improvement
+
+### Added
+- **Enhanced Module Information**
+  - Added filesystem location path to each fiber display
+  - Added `--all-modules` (`-A`) flag to show unconfigured modules
+  - Improved organization of unconfigured modules by type (fibers vs chains)
+  - Added clear explanations for module categories
+  - Displayed location paths for all modules when using --all-modules
+
+### Improved
+- **Enhanced Output Format**
+  - Simplified validation display - only showing markers for failed validations
+  - Reduced visual noise by removing checkmarks from valid modules
+  - Renamed "Other Discovered Modules" to "Unconfigured Modules" for clarity
+  - Separated unconfigured modules into Fibers and Chains sections
+  - Grouped chain modules by parent directory for better organization
+  - Removed redundant "All fibers" header text
+  - Replaced "FIBER N:" prefixes with cleaner visual separators
+  - Added horizontal dividers for better visual organization
+  - Improved summary section with more human-readable stats
+  - Used Unicode characters for more visually appealing separators
+  - Standardized formatting across the entire output
+
+### Fixed
+- **Numbering and Module Count Clarity**
+  - Changed chain numbering to be sequential within each fiber
+  - Added global load order display in detailed mode
+  - Improved summary to show both displayed and total module counts
+  - Added explanation when some validated modules aren't displayed
+  - Provided counts of hidden modules in detailed mode
+  - Fixed chain dependency display
+
+### Changed
+- **Streamlined Command Interface**
+  - Removed the standalone validate command
+  - Removed the --validate option as validation is now always performed
+  - Made validation integral to the fibers command for a more intuitive interface
+  - JSON/YAML output options now apply to validation results by default
+
+## CLI Command Structure Improvement
+
+### Added
+- **Built-in Validation in Fibers Command**
+  - Made validation an integral part of the fibers command
+  - Added visual status indicators (✓/✗) for each fiber and chain
+  - Added color-coded error and warning indicators (❌/⚠️) for better readability
+  - Included validation summary in the standard output
+  - Improved performance by eliminating redundant operations
+  - Added detailed dependency information display with `--detailed` flag
+
+### Improved
+- **Enhanced User Experience**
+  - Removed verbose discovery and validation logging for a cleaner output
+  - Ordered fibers by dependency relationships, with foundational fibers first
+  - Prioritized dev and dotfiles fibers for better usability
+  - Added explicit "Depends on" and "Required by" fiber dependency information
+  - Enhanced visual hierarchy with clear status indicators
+  - Aligned validation messages with their respective modules
+  - Added concise validation statistics in the summary section
+
+### Files Modified
+- `src/cli.ts` - Updated fibers command with cleaner output format, quieter operation, and dependency-based ordering
+
+## Module Discovery Performance Optimization
+
+### Improved
+- **Module Discovery Algorithm**
+  - Overhauled module discovery to match the original Chitin implementation's approach
+  - Eliminated deep recursive scanning in favor of targeted directory structure matching
+  - Improved performance of the `validate` command by reducing unnecessary file system operations
+  - Maintained proper dependency resolution while matching Chitin's directory traversal pattern
+  - Fixed support for chain files (direct shell scripts) and nested chain directories
+
+### Files Modified
+- `src/modules/discovery.ts` - Completely reworked discovery functions to follow Chitin's structure
+
 ## Configuration Compatibility Fix
 
 ### Fixed
@@ -183,38 +333,4 @@
   - Improved boolean environment variables ('true'/'false' format)
 
 - **CLI Implementation**
-  - Created `load-config` command with JSON/YAML output options
-  - Added environment variable export functionality
-  - Implemented configuration validation in CLI
-  - Created minimal initialization command with environment setup
-
-- **Testing Framework**
-  - Set up Bun's testing environment
-  - Added configuration loader tests
-  - Created test fixtures and helpers
-
-- **Documentation**
-  - Created comprehensive README with usage examples
-  - Documented current and target relationship with Chitin
-  - Added detailed CLI command documentation
-  - Provided programmatic API reference
-  - Included configuration format examples
-
-### Files Created
-- `src/types/config.ts` - Configuration type definitions
-- `src/utils/{file.ts, yaml.ts, path.ts}` - Utility functions
-- `src/shell/environment.ts` - Bash interface
-- `src/config/{loader.ts, merger.ts, validator.ts}` - Configuration system
-- `src/cli.ts` - Command-line interface
-- `src/index.ts` - Main entry point and API
-- `tests/config/loader.test.ts` - Configuration system tests
-
-### Improved
-- Updated configuration system to use XDG standard paths (~/.config/chitin)
-- Enhanced configuration output to match the original chitin shell format
-- Added support for fiber-based configuration structure
-- Preserved symbolic path representation (~/Projects, localshare/chezmoi)
-- Removed empty objects from configuration output
-- Fixed type safety issues with fiber interfaces
-- Moved environment exports to XDG cache directory (~/.cache/chitin)
-- Changed boolean environment variables to use 'true'/'false' format 
+  - Created `load-config`
