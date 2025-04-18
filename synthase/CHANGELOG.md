@@ -1,5 +1,20 @@
 # Synthase Changelog
 
+## Fiber Display Formatting Improvement
+
+### Changed
+- **Chain Display Formatting**
+  - Removed numbering from chains in the fiber display for cleaner output
+  - Eliminated "No chains in this fiber" message for empty fibers
+  - Simplified the visual presentation of chains in fibers
+  - Improved readability of the fibers command output
+  - Made output more consistent across different fiber types
+  - Removed unused chain counter variable and parameter
+
+### Files Modified
+- `src/commands/fibers/display.ts` - Removed chain numbering and counter parameter
+- `src/commands/fibers/index.ts` - Removed empty chains message and counter variable
+
 ## Fiber Display Order Improvement
 
 ### Changed

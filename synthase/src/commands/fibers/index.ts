@@ -239,34 +239,25 @@ export function createFibersCommand(): Command {
           if (fiberChains.length > 0) {
             console.log(`  Chains (${fiberChains.length}):`);
             
-            // Use a counter for sequential numbering within the fiber
-            let chainCounter = 1;
-            
             for (const chainId of fiberChains) {
               const chainConfig = config[fiberId]?.moduleConfig?.[chainId];
               
-              // Display chain and increment counter only if it was displayed
-              const wasDisplayed = displayChain(
+              // Display chain
+              displayChain(
                 chainId,
                 chainConfig,
                 fiberId,
                 config,
                 validationResults,
                 orderedChains.indexOf(chainId) + 1,
-                chainCounter,
                 { 
                   detailed: options.detailed, 
                   hideDisabled: options.hideDisabled 
                 }
               );
-              
-              if (wasDisplayed) {
-                chainCounter++;
-              }
             }
-          } else {
-            console.log(`  No chains in this fiber`);
           }
+          // Empty fibers will have no chains section displayed
         }
         
         // Display summary information

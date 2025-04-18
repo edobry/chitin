@@ -187,7 +187,6 @@ export function getChainStatus(
  * @param config Global configuration
  * @param validationResults Validation results
  * @param globalIndex Global load order index
- * @param counter Chain counter
  * @param options Display options
  * @returns Whether the chain was displayed (not hidden)
  */
@@ -198,7 +197,6 @@ export function displayChain(
   config: UserConfig,
   validationResults: ValidationResultsMap,
   globalIndex: number,
-  counter: number,
   options: DisplayOptions
 ): boolean {
   const isChainEnabled = chainConfig && chainConfig.enabled !== false;
@@ -218,8 +216,8 @@ export function displayChain(
   // Get dependencies for this chain
   const dependencies = getChainDependencies(chainId, config[fiberId]?.moduleConfig || {});
   
-  // Show chain with sequential numbering and validation status
-  console.log(`    ${counter}. ${chainId}${chainStatus} ${chainValidation}`);
+  // Show chain without sequential numbering, just the validation status
+  console.log(`    ${chainId}${chainStatus} ${chainValidation}`);
   
   // Show global load order in detailed mode
   if (options.detailed) {
