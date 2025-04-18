@@ -77,18 +77,8 @@ export function associateChainsByFiber(
       }
     }
     
-    // If no matching fiber was found, add to "standalone" fiber
-    if (!foundFiber) {
-      if (!fiberChainMap.has('standalone')) {
-        fiberChainMap.set('standalone', []);
-        
-        // Add standalone to display fibers if not already there
-        if (!displayFiberIds.includes('standalone')) {
-          displayFiberIds.push('standalone');
-        }
-      }
-      fiberChainMap.get('standalone')?.push(chainId);
-    }
+    // If no matching fiber was found, we simply don't include this chain
+    // Unassociated chains are not displayed
   }
   
   return fiberChainMap;

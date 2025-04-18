@@ -3,13 +3,14 @@ import { findChitinDir, getUserConfigPath } from '../utils/path';
 import { loadYamlFile } from '../utils/yaml';
 import { UserConfig, FiberConfig, ChainConfig, CoreConfig } from '../types';
 import { expandPath, fileExists, ensureDir, writeFile } from '../utils/file';
+import { FILE_NAMES, FIBER_NAMES, CONFIG_FIELDS } from '../constants';
 
 /**
  * Default file names for configuration files
  */
 export const CONFIG_FILES = {
-  USER: 'userConfig.yaml',
-  MODULE: 'config.yaml',
+  USER: FILE_NAMES.USER_CONFIG,
+  MODULE: FILE_NAMES.MODULE_CONFIG,
 };
 
 /**
@@ -135,22 +136,22 @@ export async function loadModuleConfig<T extends FiberConfig | ChainConfig>(
  */
 export function getDefaultConfig(): any {
   return {
-    projectDir: expandPath('~'),
-    dotfilesDir: expandPath('~'),
-    checkTools: false,
-    installToolDeps: false,
-    autoInitDisabled: false,
-    loadParallel: false,
-    fibers: {},
-    chains: {},
-    tools: {},
-    core: {
-      projectDir: expandPath('~'),
-      dotfilesDir: expandPath('~'),
-      checkTools: false,
-      installToolDeps: false,
-      autoInitDisabled: false,
-      loadParallel: false,
+    [CONFIG_FIELDS.PROJECT_DIR]: expandPath('~'),
+    [CONFIG_FIELDS.DOTFILES_DIR]: expandPath('~'),
+    [CONFIG_FIELDS.CHECK_TOOLS]: false,
+    [CONFIG_FIELDS.INSTALL_TOOL_DEPS]: false,
+    [CONFIG_FIELDS.AUTO_INIT_DISABLED]: false,
+    [CONFIG_FIELDS.LOAD_PARALLEL]: false,
+    [CONFIG_FIELDS.FIBERS]: {},
+    [CONFIG_FIELDS.CHAINS]: {},
+    [CONFIG_FIELDS.TOOLS]: {},
+    [FIBER_NAMES.CORE]: {
+      [CONFIG_FIELDS.PROJECT_DIR]: expandPath('~'),
+      [CONFIG_FIELDS.DOTFILES_DIR]: expandPath('~'),
+      [CONFIG_FIELDS.CHECK_TOOLS]: false,
+      [CONFIG_FIELDS.INSTALL_TOOL_DEPS]: false,
+      [CONFIG_FIELDS.AUTO_INIT_DISABLED]: false,
+      [CONFIG_FIELDS.LOAD_PARALLEL]: false,
     }
   };
 }
@@ -169,7 +170,7 @@ export function getCoreConfigValue(config: UserConfig, field: string): any {
   const value = config.core[field as keyof CoreConfig];
   
   // Expand paths on-demand for fields we know are paths
-  if (value && typeof value === 'string' && (field === 'projectDir' || field === 'dotfilesDir')) {
+  if (value && typeof value === 'string' && (field === CONFIG_FIELDS.PROJECT_DIR || field === CONFIG_FIELDS.DOTFILES_DIR)) {
     return expandPath(value);
   }
   
@@ -182,11 +183,12 @@ export function getCoreConfigValue(config: UserConfig, field: string): any {
  * @returns Expanded project directory path or undefined
  */
 export function getProjectDir(config: UserConfig): string | undefined {
-  if (!config?.core?.projectDir) {
+  if (!config?.core?.[CONFIG_FIELDS.PROJECT_DIR]) {
     return undefined;
   }
   
-  return expandPath(config.core.projectDir);
+  const projectDir = config.core[CONFIG_FIELDS.PROJECT_DIR];
+  return typeof projectDir === 'string' ? expandPath(projectDir) : undefined;
 }
 
 /**
@@ -195,11 +197,12 @@ export function getProjectDir(config: UserConfig): string | undefined {
  * @returns Expanded dotfiles directory path or undefined
  */
 export function getDotfilesDir(config: UserConfig): string | undefined {
-  if (!config?.core?.dotfilesDir) {
+  if (!config?.core?.[CONFIG_FIELDS.DOTFILES_DIR]) {
     return undefined;
   }
   
-  return expandPath(config.core.dotfilesDir);
+  const dotfilesDir = config.core[CONFIG_FIELDS.DOTFILES_DIR];
+  return typeof dotfilesDir === 'string' ? expandPath(dotfilesDir) : undefined;
 }
 
 /**
@@ -219,32 +222,32 @@ export function getFullConfig(userConfig: UserConfig | null): any {
   
   // Copy top-level properties from userConfig
   for (const [key, value] of Object.entries(userConfig)) {
-    if (key !== 'core' && key !== 'fibers' && key !== 'chains' && key !== 'tools') {
+    if (key !== FIBER_NAMES.CORE && key !== CONFIG_FIELDS.FIBERS && key !== CONFIG_FIELDS.CHAINS && key !== CONFIG_FIELDS.TOOLS) {
       // Copy the entire object instead of just references
       result[key] = JSON.parse(JSON.stringify(value));
     }
   }
   
   // Merge core fiber configuration
-  result.core = {
-    ...defaultConfig.core,
+  result[FIBER_NAMES.CORE] = {
+    ...defaultConfig[FIBER_NAMES.CORE],
     ...userConfig.core,
   };
   
   // Copy top-level properties from core for backward compatibility
   if (userConfig.core) {
-    if (userConfig.core.projectDir) result.projectDir = userConfig.core.projectDir;
-    if (userConfig.core.dotfilesDir) result.dotfilesDir = userConfig.core.dotfilesDir;
-    if (userConfig.core.checkTools !== undefined) result.checkTools = userConfig.core.checkTools;
-    if (userConfig.core.installToolDeps !== undefined) result.installToolDeps = userConfig.core.installToolDeps;
-    if (userConfig.core.autoInitDisabled !== undefined) result.autoInitDisabled = userConfig.core.autoInitDisabled;
-    if (userConfig.core.loadParallel !== undefined) result.loadParallel = userConfig.core.loadParallel;
+    if (userConfig.core[CONFIG_FIELDS.PROJECT_DIR]) result[CONFIG_FIELDS.PROJECT_DIR] = userConfig.core[CONFIG_FIELDS.PROJECT_DIR];
+    if (userConfig.core[CONFIG_FIELDS.DOTFILES_DIR]) result[CONFIG_FIELDS.DOTFILES_DIR] = userConfig.core[CONFIG_FIELDS.DOTFILES_DIR];
+    if (userConfig.core[CONFIG_FIELDS.CHECK_TOOLS] !== undefined) result[CONFIG_FIELDS.CHECK_TOOLS] = userConfig.core[CONFIG_FIELDS.CHECK_TOOLS];
+    if (userConfig.core[CONFIG_FIELDS.INSTALL_TOOL_DEPS] !== undefined) result[CONFIG_FIELDS.INSTALL_TOOL_DEPS] = userConfig.core[CONFIG_FIELDS.INSTALL_TOOL_DEPS];
+    if (userConfig.core[CONFIG_FIELDS.AUTO_INIT_DISABLED] !== undefined) result[CONFIG_FIELDS.AUTO_INIT_DISABLED] = userConfig.core[CONFIG_FIELDS.AUTO_INIT_DISABLED];
+    if (userConfig.core[CONFIG_FIELDS.LOAD_PARALLEL] !== undefined) result[CONFIG_FIELDS.LOAD_PARALLEL] = userConfig.core[CONFIG_FIELDS.LOAD_PARALLEL];
   }
   
   // Copy all other fiber configurations
   for (const [fiberName, fiberConfig] of Object.entries(userConfig)) {
-    if (fiberName !== 'core') {
-      if (fiberName === 'fibers' || fiberName === 'chains' || fiberName === 'tools') {
+    if (fiberName !== FIBER_NAMES.CORE) {
+      if (fiberName === CONFIG_FIELDS.FIBERS || fiberName === CONFIG_FIELDS.CHAINS || fiberName === CONFIG_FIELDS.TOOLS) {
         result[fiberName] = {...defaultConfig[fiberName], ...fiberConfig};
       } else {
         // Don't add to fibers object to avoid duplication
@@ -254,8 +257,8 @@ export function getFullConfig(userConfig: UserConfig | null): any {
   }
   
   // Remove the empty fibers object if it exists to avoid duplication in output
-  if (result.fibers && Object.keys(result.fibers).length === 0) {
-    delete result.fibers;
+  if (result[CONFIG_FIELDS.FIBERS] && Object.keys(result[CONFIG_FIELDS.FIBERS]).length === 0) {
+    delete result[CONFIG_FIELDS.FIBERS];
   }
   
   return result;

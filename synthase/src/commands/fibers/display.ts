@@ -1,6 +1,7 @@
 import { getCoreConfigValue } from '../../config';
 import { findChitinDir } from '../../utils/path';
 import { isFiberEnabled, getChainDependencies, getDependentFibers } from './utils';
+import { areFiberDependenciesSatisfied } from '../../fiber/manager';
 import { UserConfig, ConfigValidationResult, Module, FiberConfig } from '../../types';
 
 /**
@@ -149,8 +150,6 @@ export function displayFiberDependencies(
   options: DisplayOptions,
   modules: Module[] = []
 ): void {
-  if (fiberId === 'standalone') return;
-  
   // First try to find the fiber in the modules
   const fiberModule = modules.find(m => m.id === fiberId && m.type === 'fiber');
   
@@ -203,8 +202,6 @@ export function getChainStatus(
 ): string {
   if (!isEnabled) {
     return '🔴';  // Red circle emoji for disabled, no space
-  } else if (!isConfigured) {
-    return '(unconfigured)';
   } else if (!hideDisabled) {
     return '🟢';  // Green circle emoji for enabled, no space
   }
@@ -220,6 +217,7 @@ export function getChainStatus(
  * @param validationResults Validation results
  * @param globalIndex Global load order index
  * @param options Display options
+ * @param chainModule The chain module with execution-based enabled state
  * @returns Whether the chain was displayed (not hidden)
  */
 export function displayChain(
@@ -229,9 +227,19 @@ export function displayChain(
   config: UserConfig,
   validationResults: ValidationResultsMap,
   globalIndex: number,
-  options: DisplayOptions
+  options: DisplayOptions,
+  chainModule?: Module
 ): boolean {
-  const isChainEnabled = chainConfig && chainConfig.enabled !== false;
+  // Check if the fiber is disabled first
+  const fiberEnabled = isFiberEnabled(fiberId, config);
+  
+  // If fiber is disabled, chain is automatically disabled regardless of config
+  const isChainEnabled = !fiberEnabled ? false : (
+    chainModule?.isEnabled !== undefined 
+    ? chainModule.isEnabled 
+    : (chainConfig && chainConfig.enabled !== false)
+  );
+    
   const isChainConfigured = !!chainConfig;
   
   // Skip disabled chains if hide-disabled option is enabled
@@ -356,5 +364,69 @@ export function displaySummary(
   // Show info about the --hide-disabled option if it wasn't used
   if (!options.hideDisabled) {
     console.log(`Note: Use --hide-disabled (-H) to hide disabled fibers and chains.`);
+  }
+}
+
+/**
+ * Displays a fiber with its details
+ * @param fiberId Fiber ID
+ * @param config Global configuration
+ * @param validationResults Validation results
+ * @param options Display options
+ * @param modules Discovered modules
+ */
+export function displayFiber(
+  fiberId: string,
+  config: UserConfig,
+  validationResults: ValidationResultsMap,
+  options: DisplayOptions,
+  modules: Module[]
+): void {
+  const isCore = fiberId === 'core';
+  const enabled = isFiberEnabled(fiberId, config);
+  const satisfied = areFiberDependenciesSatisfied(fiberId, config);
+  const inConfig = fiberId in config;
+  
+  // Skip disabled fibers if hide-disabled option is enabled
+  if (options.hideDisabled && !enabled && !isCore) {
+    return;
+  }
+  
+  // Get status and validation indicators
+  const statusIndicator = getFiberStatus(fiberId, enabled, satisfied, inConfig, options.hideDisabled);
+  const fiberValidation = validationResults[fiberId] && !validationResults[fiberId].valid ? '✗' : '';
+  
+  // Display fiber header
+  displayFiberHeader(fiberId, statusIndicator, fiberValidation);
+  
+  // Add an empty line after fiber name
+  console.log('');
+  
+  // Find the fiber's path from the module result
+  const fiberModule = modules.find(m => m.id === fiberId && m.type === 'fiber');
+    
+  // Get and display fiber path
+  const fiberPath = getFiberPath(fiberId, fiberModule, config);
+  console.log(`  📂 ${fiberPath}`);
+  
+  // Display validation results
+  displayValidationResults(validationResults[fiberId]);
+  
+  // Show fiber dependencies
+  displayFiberDependencies(fiberId, config, options, modules);
+  
+  // Add a bottom separator line
+  console.log(`  ───────────────────────────────────────────`);
+  
+  // Get chains for this fiber
+  const fiberChains = Object.keys(config[fiberId]?.moduleConfig || {});
+  
+  if (fiberChains.length > 0) {
+    // Add plural "s" when count is not 1
+    const pluralS = fiberChains.length === 1 ? '' : 's';
+    console.log(`  ${fiberChains.length} ⛓️${pluralS}:`);
+  } else {
+    // Show "0 ⛓️s" for empty fibers
+    console.log(`  0 ⛓️s`);
   }
 } 

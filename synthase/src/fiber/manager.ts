@@ -1,4 +1,5 @@
 import { ToolDependencyChecker, ModuleFilter } from '../types';
+import { FIBER_NAMES, CONFIG_FIELDS } from '../constants';
 
 /**
  * Get fiber IDs from the user config
@@ -10,17 +11,17 @@ export function getFiberIds(config: Record<string, any>): string[] {
   // Get top-level keys from config, excluding non-fiber system properties
   return Object.keys(config).filter(key => 
     // Exclude system properties copied at the top level
-    key !== 'projectDir' && 
-    key !== 'dotfilesDir' && 
-    key !== 'checkTools' && 
-    key !== 'installToolDeps' && 
-    key !== 'autoInitDisabled' && 
+    key !== CONFIG_FIELDS.PROJECT_DIR && 
+    key !== CONFIG_FIELDS.DOTFILES_DIR && 
+    key !== CONFIG_FIELDS.CHECK_TOOLS && 
+    key !== CONFIG_FIELDS.INSTALL_TOOL_DEPS && 
+    key !== CONFIG_FIELDS.AUTO_INIT_DISABLED && 
     key !== 'failOnError' && 
-    key !== 'loadParallel' && 
+    key !== CONFIG_FIELDS.LOAD_PARALLEL && 
     // Exclude special collections (but not their contents)
-    key !== 'fibers' && 
-    key !== 'chains' && 
-    key !== 'tools'
+    key !== CONFIG_FIELDS.FIBERS && 
+    key !== CONFIG_FIELDS.CHAINS && 
+    key !== CONFIG_FIELDS.TOOLS
   );
 }
 
@@ -37,7 +38,7 @@ export function getLoadableFibers(
   return getFiberIds(config)
     .filter(fiberId => {
       // Core is always loaded
-      if (fiberId === 'core') {
+      if (fiberId === FIBER_NAMES.CORE) {
         return true;
       }
       
@@ -67,7 +68,7 @@ export function isFiberEnabled(fiberId: string, config: Record<string, any>): bo
   }
   
   // Core is always enabled
-  if (fiberId === 'core') {
+  if (fiberId === FIBER_NAMES.CORE) {
     return true;
   }
   
@@ -93,7 +94,7 @@ export function areFiberDependenciesSatisfied(
   }
   
   // Core has no tool dependencies
-  if (fiberId === 'core') {
+  if (fiberId === FIBER_NAMES.CORE) {
     return true;
   }
   
@@ -255,7 +256,7 @@ export function createChainFilter(
 ): ModuleFilter {
   return (chainId: string): boolean => {
     // Core is always loaded if it's in loadableFibers
-    const coreIncluded = loadableFibers.includes('core');
+    const coreIncluded = loadableFibers.includes(FIBER_NAMES.CORE);
     
     // Check if chain is in core and we're including core
     if (coreIncluded && config.core?.moduleConfig && chainId in config.core.moduleConfig) {
@@ -264,7 +265,7 @@ export function createChainFilter(
     
     // Check if chain is in any loadable fiber
     return loadableFibers.some(fiberId => {
-      if (fiberId === 'core') return false; // Already checked core
+      if (fiberId === FIBER_NAMES.CORE) return false; // Already checked core
       
       const fiber = config[fiberId];
       const moduleConfig = fiber.moduleConfig || {};

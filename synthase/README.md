@@ -49,9 +49,9 @@ Synthase provides a CLI for working with Chitin configurations:
 #### Configuration Commands
 
 ```bash
-# load-config
+# config
 # Loads and displays the user configuration
-bun run src/cli.ts load-config
+bun run src/cli.ts config
 
 # Display options:
 #   --json, -j         Output as JSON instead of YAML
@@ -60,17 +60,17 @@ bun run src/cli.ts load-config
 
 # Examples:
 # View configuration in YAML format (default)
-bun run src/cli.ts load-config
+bun run src/cli.ts config
 
 # Output configuration as JSON
-bun run src/cli.ts load-config --json
+bun run src/cli.ts config --json
 
 # Export configuration to environment variables
 # Creates a .chitin_env_ts file that can be sourced by Bash
-bun run src/cli.ts load-config --export-env
+bun run src/cli.ts config --export-env
 
 # Use a custom configuration file
-bun run src/cli.ts load-config --path /path/to/userConfig.yaml
+bun run src/cli.ts config --path /path/to/userConfig.yaml
 ```
 
 #### Initialization Commands
@@ -133,6 +133,31 @@ bun run src/cli.ts fibers --check-dependencies
 
 # Show detailed information
 bun run src/cli.ts fibers --detailed
+```
+
+#### Tool Management Commands
+
+```bash
+# tools
+# List all configured tools and their settings
+bun run src/cli.ts tools
+
+# Options:
+#   --json, -j              Output as JSON
+#   --yaml, -y              Output as YAML
+#   --path <path>, -p       Custom path to user config file
+#   --detailed, -d          Show detailed information for each tool
+#   --check, -c             Check if tools are installed
+
+# Examples:
+# List all tools with basic information
+bun run src/cli.ts tools
+
+# Show detailed tool information
+bun run src/cli.ts tools --detailed
+
+# Check if configured tools are installed
+bun run src/cli.ts tools --check
 ```
 
 Fibers determine which chains (modules) get loaded. The core fiber is always loaded, while other fibers are loaded based on their enabled status and tool dependencies.
@@ -337,7 +362,6 @@ async function main() {
 synthase/
 ├── src/
 │   ├── config/           # Configuration management
-│   ├── modules/          # Module system
 │   │   ├── discovery.ts  # Module discovery
 │   │   ├── dependency.ts # Dependency resolution
 │   │   ├── loader.ts     # Module loading
@@ -361,3 +385,19 @@ bun test
 ## License
 
 Same as [Chitin](https://github.com/edobry/chitin)'s license.
+
+## Running the CLI
+
+To run the CLI, use the following command:
+
+```bash
+bun run src/cli.ts [command]
+```
+
+For example, to list fibers and chains:
+
+```bash
+bun run src/cli.ts fibers
+```
+
+Note: You should run `src/cli.ts` directly rather than using `index.ts`, as the index file is primarily for exporting modules.

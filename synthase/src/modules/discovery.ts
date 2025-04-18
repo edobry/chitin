@@ -223,10 +223,53 @@ async function discoverChains(
 }
 
 /**
- * Creates a Module object from a directory or file
- * @param path Module directory/file path
- * @param type Type of module to create (fiber or chain)
- * @param dotfilesDir Optional path to dotfiles directory
+ * Determine if a module should be considered enabled based on execution logic
+ * @param id Module ID
+ * @param type Module type
+ * @param config User configuration
+ * @returns Whether the module is enabled
+ */
+export function determineModuleEnabledState(
+  id: string,
+  type: 'fiber' | 'chain',
+  parentFiberId: string | undefined,
+  config: Record<string, any>
+): boolean {
+  // Core fiber is always enabled
+  if (type === 'fiber' && id === 'core') {
+    return true;
+  }
+
+  // For fibers, check if explicitly disabled
+  if (type === 'fiber') {
+    // If fiber is in config but explicitly disabled, it's disabled
+    if (id in config && config[id]?.enabled === false) {
+      return false;
+    }
+    // Otherwise fibers are considered enabled
+    return true;
+  }
+
+  // For chains, check if explicitly disabled in parent fiber's moduleConfig
+  if (type === 'chain' && parentFiberId) {
+    const parentFiber = config[parentFiberId];
+    if (parentFiber?.moduleConfig?.[id]?.enabled === false) {
+      return false;
+    }
+    // Chains are enabled unless explicitly disabled
+    return true;
+  }
+
+  // Default to enabled
+  return true;
+}
+
+/**
+ * Creates a module from a path
+ * @param path Path to the module
+ * @param type Type of module (fiber or chain)
+ * @param dotfilesDir Dotfiles directory
+ * @returns Module object
  */
 export async function createModule(
   path: string,
@@ -260,8 +303,10 @@ export async function createModule(
     if (isCoreFiber) {
       // Always use 'core' for the main chitin repository to avoid duplication
       id = 'core';
+      moduleName = 'core';
     } else if (isDotfiles) {
       id = 'dotfiles';
+      moduleName = 'dotfiles';
     } else if (moduleName.startsWith('chitin-')) {
       // Strip chitin- prefix for external fibers
       id = moduleName.replace(/^chitin-/, '');
@@ -278,8 +323,22 @@ export async function createModule(
     // Directory-specific properties
     let entrypoint: string | undefined;
     let description: string | undefined;
+    let moduleConfig: any = { enabled: true };
     
     if (stats.isDirectory()) {
+      // Check for config.yaml and load it
+      const configPath = join(path, 'config.yaml');
+      if (await fileExists(configPath)) {
+        try {
+          const loadedConfig = await loadModuleConfig(configPath);
+          if (loadedConfig) {
+            moduleConfig = loadedConfig;
+          }
+        } catch (error) {
+          debug(`Error loading config for ${path}: ${error}`);
+        }
+      }
+      
       // For directories, check for package.json or set default entrypoint
       try {
         const pkgJsonPath = join(path, 'package.json');
@@ -307,7 +366,7 @@ export async function createModule(
             entrypoint = indexPath;
           }
         } else if (type === 'chain') {
-          // For chain directories, look for <name>.sh or index.sh
+          // For chain directories, look for <n>.sh or index.sh
           const specificScript = join(path, `${moduleName}.sh`);
           const indexScript = join(path, 'index.sh');
           
@@ -323,6 +382,15 @@ export async function createModule(
       entrypoint = path;
     }
     
+    // For core and dotfiles fibers, ensure id matches name
+    if (isCoreFiber) {
+      id = 'core';
+      moduleName = 'core';
+    } else if (isDotfiles) {
+      id = 'dotfiles';
+      moduleName = 'dotfiles';
+    }
+    
     // Create and return the module with compatible properties
     return {
       id,
@@ -333,7 +401,8 @@ export async function createModule(
         dependencies: [],
         description
       },
-      config: { enabled: true }
+      config: moduleConfig,
+      isEnabled: true // Default to enabled, will be updated later with user config
     };
   } catch (error) {
     debug(`Error creating module from ${path}: ${error}`);
@@ -350,13 +419,22 @@ async function findChitinExternalDirs(projectDir: string): Promise<string[]> {
   try {
     // Use glob to find chitin-* directories, exactly as Chitin does
     const pattern = join(projectDir, 'chitin-*');
+    debug(`Looking for external fibers matching pattern: ${pattern}`);
+    
     // Find all matches, then filter to directories only
     const matches = await glob(pattern);
+    debug(`Found ${matches.length} potential external fibers: ${matches.join(', ')}`);
+    
     const dirMatches = [];
     
     for (const match of matches) {
-      if (await isDirectory(match)) {
-        dirMatches.push(match);
+      try {
+        if (await isDirectory(match)) {
+          debug(`Confirmed external fiber directory: ${match}`);
+          dirMatches.push(match);
+        }
+      } catch (error) {
+        debug(`Error checking if ${match} is a directory: ${error}`);
       }
     }
     
@@ -365,6 +443,33 @@ async function findChitinExternalDirs(projectDir: string): Promise<string[]> {
     console.error('Error finding chitin-* directories:', error);
     return [];
   }
+}
+
+/**
+ * Updates module enabled states based on user configuration
+ * @param modules Array of discovered modules
+ * @param config User configuration
+ * @returns Updated array of modules
+ */
+export function updateModuleEnabledStates(
+  modules: Module[],
+  config: Record<string, any>
+): Module[] {
+  return modules.map(module => {
+    // Calculate the correct enabled state based on execution logic
+    const isEnabled = determineModuleEnabledState(
+      module.id,
+      module.type,
+      module.parentFiberId,
+      config
+    );
+    
+    // Return a new module with the updated enabled state
+    return {
+      ...module,
+      isEnabled
+    };
+  });
 }
 
 /**
@@ -402,9 +507,17 @@ export async function discoverModulesFromConfig(
   }
   
   // Perform discovery using chitin's approach
-  return discoverModules({
+  const discoveryResult = await discoverModules({
     baseDirs,
     recursive: false, // Not needed anymore since we handle nesting specifically
     dotfilesDir     // Pass the dotfiles directory so we can identify it accurately
   });
+  
+  // Update enabled states based on user configuration
+  const updatedModules = updateModuleEnabledStates(discoveryResult.modules, userConfig);
+  
+  return {
+    modules: updatedModules,
+    errors: discoveryResult.errors
+  };
 } 

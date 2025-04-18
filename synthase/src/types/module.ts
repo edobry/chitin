@@ -16,6 +16,8 @@ export interface Module {
   config?: Record<string, any>;
   /** Parent fiber ID for chains */
   parentFiberId?: string;
+  /** Whether the module is enabled according to execution logic (vs UI display logic) */
+  isEnabled?: boolean;
 }
 
 /**

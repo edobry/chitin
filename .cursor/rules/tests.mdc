@@ -1,0 +1,6 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+Whenever you make a code change, run the tests and ensure they still pass. The only exception is when you're actively iterating on writing tests themselves, in which case only the tests being written/modified should be failing.

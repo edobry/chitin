@@ -3,6 +3,7 @@ import { Module } from '../../types';
 import fs from 'fs';
 import yaml from 'js-yaml';
 import { join } from 'path';
+import { FIBER_NAMES, CONFIG_FIELDS, FILE_NAMES } from '../../constants';
 
 /**
  * Orders fibers by their dependencies with foundational fibers first
@@ -31,7 +32,7 @@ export function orderFibersByDependencies(
   // FIXME: This is a temporary fix, proper solution would be to fix the config loader
   let rawUserConfig: Record<string, any> = {};
   try {
-    const configPath = join(process.cwd(), 'test-user-config.yaml');
+    const configPath = join(process.cwd(), FILE_NAMES.TEST_USER_CONFIG);
     if (fs.existsSync(configPath)) {
       const rawConfig = fs.readFileSync(configPath, 'utf8');
       rawUserConfig = yaml.load(rawConfig) as Record<string, any>;
@@ -51,12 +52,12 @@ export function orderFibersByDependencies(
     }
     
     // Try the raw user config
-    if (fiberDeps.length === 0 && rawUserConfig[fiberId] && rawUserConfig[fiberId].fiberDeps) {
-      fiberDeps = rawUserConfig[fiberId].fiberDeps;
+    if (fiberDeps.length === 0 && rawUserConfig[fiberId] && rawUserConfig[fiberId][CONFIG_FIELDS.FIBER_DEPS]) {
+      fiberDeps = rawUserConfig[fiberId][CONFIG_FIELDS.FIBER_DEPS];
     }
     // Fallback to config if needed
-    else if (fiberDeps.length === 0 && config[fiberId] && config[fiberId].fiberDeps) {
-      fiberDeps = config[fiberId].fiberDeps;
+    else if (fiberDeps.length === 0 && config[fiberId] && config[fiberId][CONFIG_FIELDS.FIBER_DEPS]) {
+      fiberDeps = config[fiberId][CONFIG_FIELDS.FIBER_DEPS];
     }
     
     for (const depId of fiberDeps) {
@@ -73,19 +74,19 @@ export function orderFibersByDependencies(
   
   // Handle special case fibers - core must be first and dotfiles second
   // Remove core and dotfiles from the sorted list
-  sortedFibers = sortedFibers.filter(id => id !== 'core' && id !== 'dotfiles');
+  sortedFibers = sortedFibers.filter(id => id !== FIBER_NAMES.CORE && id !== FIBER_NAMES.DOTFILES);
   
   // Create the final ordered list with core first, dotfiles second, then the rest 
   const orderedFibers: string[] = [];
   
   // Add core if present in the original list
-  if (fibers.includes('core')) {
-    orderedFibers.push('core');
+  if (fibers.includes(FIBER_NAMES.CORE)) {
+    orderedFibers.push(FIBER_NAMES.CORE);
   }
   
   // Add dotfiles if present in the original list
-  if (fibers.includes('dotfiles')) {
-    orderedFibers.push('dotfiles');
+  if (fibers.includes(FIBER_NAMES.DOTFILES)) {
+    orderedFibers.push(FIBER_NAMES.DOTFILES);
   }
   
   // Add the remaining sorted fibers
@@ -100,7 +101,7 @@ export function orderFibersByDependencies(
  */
 export function getDependentFibers(fiberId: string, config: Record<string, any>): string[] {
   return Object.keys(config)
-    .filter(id => config[id]?.fiberDeps?.includes(fiberId))
+    .filter(id => config[id]?.[CONFIG_FIELDS.FIBER_DEPS]?.includes(fiberId))
     .filter(id => id !== fiberId);
 }
 
@@ -112,13 +113,13 @@ export function getDependentFibers(fiberId: string, config: Record<string, any>)
  */
 export function isFiberEnabled(fiberId: string, config: Record<string, any>): boolean {
   // Core is always enabled
-  if (fiberId === 'core') return true;
+  if (fiberId === FIBER_NAMES.CORE) return true;
   
   // Check if the fiber exists in config
   if (!(fiberId in config)) return false;
   
   // Check if the fiber is explicitly disabled
-  return config[fiberId]?.enabled !== false;
+  return config[fiberId]?.[CONFIG_FIELDS.ENABLED] !== false;
 }
 
 /**
@@ -134,7 +135,7 @@ export function getChainDependencies(chainId: string, moduleConfig: Record<strin
   const deps = moduleConfig[chainId].dependencies || [];
   
   // Get additional dependencies from chainDeps field if it exists
-  const chainDeps = moduleConfig[chainId].chainDeps || [];
+  const chainDeps = moduleConfig[chainId][CONFIG_FIELDS.CHAIN_DEPS] || [];
   
   return [...deps, ...chainDeps];
 }

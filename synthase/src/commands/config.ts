@@ -4,11 +4,11 @@ import { serializeToYaml } from '../utils';
 import { loadAndValidateConfig, createEnvironmentVariables } from './utils';
 
 /**
- * Create and configure the load-config command
+ * Create and configure the config command
  * @returns Configured Command object
  */
-export function createLoadConfigCommand(): Command {
-  const command = new Command('load-config')
+export function createConfigCommand(): Command {
+  const command = new Command('config')
     .description('Load and validate the Chitin configuration')
     .option('-j, --json', 'Output as JSON instead of YAML')
     .option('-e, --export-env', 'Export configuration as environment variables')

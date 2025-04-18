@@ -37,4 +37,16 @@ export {
   // Shell environment
   importEnvironmentFromBash,
   exportEnvironmentToBash
-}; 
+};
+
+// If this file is run directly, execute the CLI
+if (import.meta.url === import.meta.main) {
+  console.log("Index.ts running as main, executing CLI...");
+  import('./cli.ts').then(() => {
+    console.log("CLI execution complete");
+  }).catch(err => {
+    console.error("Error executing CLI:", err);
+  });
+} else {
+  console.log("Index.ts loaded as a module, not executing CLI");
+} 

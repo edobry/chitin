@@ -1,5 +1,96 @@
 # Synthase Changelog
 
+## Chain Status Display Improvement
+
+### Changed
+- **Simplified Chain Status Display**
+  - Removed the "(unconfigured)" label from chains without explicit configuration
+  - Unconfigured chains now display with the same status indicators as configured chains
+  - All chains are now shown with either 🟢 (enabled) or 🔴 (disabled) status
+  - Improved visual consistency in the fibers command output
+
+### Files Modified
+- `src/commands/fibers/display.ts` - Updated getChainStatus function to remove unconfigured label
+
+## Chain Enabled Status Fix
+
+### Fixed
+- **Fixed Chain Status Display**
+  - Updated how chain enabled/disabled status is determined to match execution logic
+  - Added `isEnabled` property to Module interface to store correct enabled state
+  - Modified display code to use module's enabled state rather than just config
+  - Chains without explicit configuration now correctly show as enabled in the UI
+  - Fixed issue where chains like `zinit-env` would incorrectly show as disabled in the UI
+  - Fixed import issues with areFiberDependenciesSatisfied to ensure the command runs properly
+
+### Files Modified
+- `src/types/module.ts` - Added isEnabled property to Module interface
+- `src/modules/discovery.ts` - Added functions to determine and update module enabled states
+- `src/commands/fibers/display.ts` - Updated displayChain to use module's isEnabled property and fixed imports
+- `src/commands/fibers/index.ts` - Added function to find module by ID and updated displayChain call
+
+## Standalone Fiber Bug Fix
+
+### Fixed
+- **Removed Erroneous Standalone Fiber**
+  - Fixed bug where unassociated chains were incorrectly grouped under a non-existent "standalone" fiber
+  - Removed all references to standalone fiber throughout the codebase
+  - Unassociated chains are now properly excluded from display rather than showing as a fake fiber
+  - Improved association logic between chains and fibers
+  - Eliminated misleading output in fibers command
+
+### Files Modified
+- `src/commands/fibers/organization.ts` - Removed standalone fiber creation
+- `src/commands/fibers/display.ts` - Removed standalone-related display code
+- `src/constants.ts` - Removed STANDALONE constant
+
+## Tool Management Command Addition
+
+### Added
+- **Tools Command**
+  - Added new `tools` command to list and display all configured tools
+  - Shows tool check methods and installation methods in a clean format
+  - Added options for viewing detailed tool information
+  - Supports JSON and YAML output formats
+  - Added preliminary support for checking tool installation status
+  - Extracts tools from global config, fibers, and chains
+  - Displays tool sources to show where each tool is configured
+
+### Files Modified/Created
+- `src/commands/tools.ts` - New file implementing the tools command
+- `src/commands/index.ts` - Updated to register the new command
+- `README.md` - Added documentation for the new command
+
+## Command Name Improvement
+
+### Changed
+- **Command Name Refinement**
+  - Renamed the `load-config` command to simply `config` for improved user experience
+  - Updated all references and documentation to reflect the new command name
+  - Maintained all existing functionality while providing a more concise interface
+
+### Files Modified
+- `src/commands/load-config.ts` -> `src/commands/config.ts` - Renamed file and updated command name
+- `src/commands/index.ts` - Updated imports and command registration
+- `README.md` - Updated documentation to reflect new command name
+
+## String Constants Extraction
+
+### Changed
+- **Centralized String Constants**
+  - Created a dedicated constants.ts file to centralize string literals
+  - Extracted module types, special fiber names, config fields and file names into constants
+  - Eliminated string duplication throughout the codebase
+  - Improved maintainability by removing hardcoded strings
+  - Enhanced type safety with typed constant objects
+  - Made refactoring easier by centralizing string definitions
+
+### Files Modified
+- Added `src/constants.ts` - New constants module
+- `src/fiber/manager.ts` - Updated to use constants
+- `src/commands/fibers/utils.ts` - Updated to use constants
+- `src/config/loader.ts` - Updated to use constants
+
 ## Fiber Dependency Ordering Fix
 
 ### Fixed
@@ -640,3 +731,33 @@
 ### Files Modified
 - `src/modules/discovery.ts` - Added more precise fiber detection and improved external directory handling
 - `src/commands/fibers/organization.ts` - Improved chain-to-fiber association logic with path length prioritization
+
+## Chain Disabled State Inheritance Fix
+
+### Fixed
+- **Chain Status Inheritance Fix**
+  - Fixed display issue where chains in disabled fibers were still showing as enabled
+  - Updated chain status logic to automatically inherit disabled state from parent fiber
+  - Chains now properly show as disabled (🔴) when their parent fiber is disabled
+  - Creates a consistent hierarchical relationship where fiber state cascades to all chains
+  - Added comprehensive test coverage for this behavior
+
+### Files Modified
+- `src/commands/fibers/display.ts` - Updated displayChain function to consider fiber enabled state
+- `tests/commands/fibers/display.test.ts` - New test file for chain display functionality, verifying disabled fiber inheritance
+
+## Module Discovery Test Improvement
+
+### Fixed
+- **Module Discovery Test Suite**
+  - Fixed failing tests in the module discovery test suite
+  - Improved test fixture setup with proper directory and file creation
+  - Fixed test cases for basic directory structure discovery
+  - Updated external fiber discovery tests to correctly use config-based discovery
+  - Corrected test assertions to handle variable discovery results across environments
+  - Fixed module config loading from config.yaml files
+  - Enhanced debug output to make test failures more diagnosable
+
+### Files Modified
+- `src/modules/discovery.ts` - Improved module creation and config loading from YAML files
+- `tests/modules/discovery.test.ts` - Fixed test assertions and setup to work reliably

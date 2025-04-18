@@ -1,7 +1,9 @@
 import { Command } from 'commander';
 import { serializeToYaml } from '../../utils';
 import { loadAndValidateConfig } from '../utils';
-import { discoverModulesFromConfig, validateModulesAgainstConfig } from '../../modules';
+import { discoverModulesFromConfig } from '../../modules/discovery';
+import { validateModulesAgainstConfig } from '../../modules/validator';
+import { UserConfig, Module } from '../../types';
 import { 
   getLoadableFibers, 
   areFiberDependenciesSatisfied, 
@@ -26,7 +28,8 @@ import {
   displayValidationResults,
   displayFiberDependencies,
   displayChain,
-  displaySummary
+  displaySummary,
+  displayFiber
 } from './display';
 
 import {
@@ -34,6 +37,19 @@ import {
   filterDisabledFibers,
   orderFibersByConfigAndName
 } from './organization';
+
+/**
+ * Find a module in a list of modules by ID and optionally by type
+ * @param modules List of modules to search
+ * @param id Module ID to find
+ * @param type Optional module type filter
+ * @returns The found module or undefined
+ */
+function findModuleById(modules: Module[], id: string, type?: 'fiber' | 'chain'): Module | undefined {
+  return modules.find(module => 
+    module.id === id && (type === undefined || module.type === type)
+  );
+}
 
 /**
  * Create and configure the fibers command
@@ -48,6 +64,7 @@ export function createFibersCommand(): Command {
     .option('-d, --detailed', 'Show detailed information for fibers and chains')
     .option('-A, --all-modules', 'Show all discovered modules, not just configured ones')
     .option('-H, --hide-disabled', 'Hide disabled fibers and chains')
+    .option('-S, --hide-standalone', 'Hide the standalone fiber (for chains not associated with any fiber)')
     .option('-j, --json', 'Output validation results in JSON format')
     .option('-y, --yaml', 'Output validation results in YAML format')
     .option('-p, --path <path>', 'Custom path to user config file')
@@ -193,9 +210,10 @@ export function createFibersCommand(): Command {
 
         // Output fibers and chains in a structured format
         for (const fiberId of displayFiberIds) {
-          // Skip standalone fiber if it's empty
-          if (fiberId === 'standalone' && 
-              (!fiberChainMap.has('standalone') || fiberChainMap.get('standalone')?.length === 0)) {
+          // Skip standalone fiber if it's empty or if hide-standalone option is set
+          if ((fiberId === 'standalone' && 
+              (!fiberChainMap.has('standalone') || fiberChainMap.get('standalone')?.length === 0)) || 
+              (options.hideStandalone && fiberId === 'standalone')) {
             continue;
           }
           
@@ -253,7 +271,14 @@ export function createFibersCommand(): Command {
             for (const chainId of fiberChains) {
               const chainConfig = config[fiberId]?.moduleConfig?.[chainId];
               
-              // Display chain
+              // Find the module to get accurate enabled state
+              const chainModule = findModuleById(
+                moduleResult.modules, 
+                chainId, 
+                'chain'
+              );
+              
+              // Display chain with module
               displayChain(
                 chainId,
                 chainConfig,
@@ -264,7 +289,8 @@ export function createFibersCommand(): Command {
                 { 
                   detailed: options.detailed, 
                   hideDisabled: options.hideDisabled 
-                }
+                },
+                chainModule
               );
             }
           } else {
