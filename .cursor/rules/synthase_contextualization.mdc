@@ -1,0 +1,40 @@
+---
+description: 
+globs: synthase/**
+alwaysApply: false
+---
+Rule Name: synthase_contextualization
+Description: 
+When working in the synthase directory, follow this contextualization process to understand the codebase before making changes:
+
+1. KEY FILES TO EXAMINE:
+   - Command Implementation: Start with index.ts, then utils.ts, display.ts, and organization.ts in src/commands/fibers/
+   - Configuration System: Understand loader.ts, discovery.ts, and validator.ts
+   - Project Standards: Review CHANGELOG.md for documentation patterns
+
+2. UNDERSTANDING PRIORITY:
+   - First build structural understanding of command flow
+   - Then examine data processing in utils and organization
+   - Finally understand presentation logic in display modules
+
+3. CONFIGURATION HIERARCHY:
+   - Module metadata (from direct inspection) has highest priority
+   - Fiber-specific config.yaml files are checked next
+   - Global user configuration is the fallback
+
+4. TESTING APPROACH:
+   - Run example commands with --detailed flags
+   - Compare actual vs. expected behavior
+   - Trace issues through the call chain
+
+5. KEY CONCEPTS:
+   - Fibers: Top-level organizational units (core, dotfiles, etc.)
+   - Chains: Individual modules associated with fibers
+   - Dependencies: Relationships between fibers and chains
+   - Tree visualization: Shows dependency relationships with proper indicators
+
+Always maintain these conventions:
+- Special handling for 'core' (always first) and 'dotfiles' fibers
+- Document all changes in CHANGELOG.md with proper formatting
+- Use established visual indicators (🟢/🔴) consistently
+- Keep clear separation between discovery, organization, and display concerns 
