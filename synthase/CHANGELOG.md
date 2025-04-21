@@ -1,5 +1,65 @@
 # Synthase Changelog
 
+## Fiber Dependencies Display Improvement
+
+### Changed
+- **Streamlined Dependencies Display**
+  - Removed redundant explanatory text from the `fibers deps` command output
+  - Removed lines like "(showing dependencies - what each fiber requires)" to reduce noise
+  - Made the dependency diagram display cleaner and more focused
+  - Improved the signal-to-noise ratio in command output
+
+### Files Modified
+- `src/commands/fibers/index.ts` - Removed unnecessary explanatory text from dependency display
+
+## Standalone Fiber Removal
+
+### Fixed
+- **Standalone Fiber Proper Removal**
+  - Completely removed the "standalone" fiber from the fibers command output
+  - Modified `associateChainsByFiber` function to not create a standalone fiber for orphaned chains
+  - Updated `countDisplayedModules` to remove standalone chains handling
+  - Added informative message in the summary about chains not associated with any fiber
+  - Chains not associated with any fiber are now properly excluded from display instead of being shown under a fake "standalone" fiber
+  - This aligns with the expected behavior where only chains properly associated with fibers should appear in the output
+
+## Fibers Command Subcommands Addition
+
+### Added
+- **Fibers Command Subcommands**
+  - Restructured fibers command to use subcommands
+  - Added `get` subcommand for displaying detailed fiber information
+  - Added `list` subcommand for displaying just the names of available fibers
+  - Added `deps` subcommand for visualizing fiber dependency relationships
+  - Added `config` subcommand for viewing the configuration of a specific fiber
+  - Made `get` the default subcommand when none is specified
+  - Added ability to get details for a specific fiber by name with `fibers get <name>`
+  - Added advanced dependency detection with multiple sources in `fibers deps`:
+    - Explicitly configured dependencies in fiber configuration
+    - Dependencies derived from tool dependencies and provided tools
+    - Dependencies from module metadata
+    - Inferred dependencies based on load order when no explicit dependencies exist
+  - Added `--flat` option to display all fiber dependencies in a simple list format
+  - Added detailed dependency information with `--detailed` flag
+  - Added status indicators to fibers in dependency diagram
+  - Added ASCII tree-based dependency diagram with `fibers deps`
+  - Added ability to view reverse dependencies with `fibers deps --reverse`
+  - Included dependency statistics showing most dependent and required fibers
+  - Added YAML/JSON output for fiber configuration with `fibers config <name>`
+  - Improved code organization with shared logic between subcommands
+
+### Changed
+- **Refactored Fibers Command Structure**
+  - Extracted shared config and module loading logic into reusable function
+  - Improved separation of concerns with dedicated subcommand handlers
+  - Enhanced core functionality to filter display by specific fiber name
+  - Only display summary information when viewing all fibers
+  - Simplified command options by moving them to appropriate subcommands
+  - Improved dependency visualization with better detection and presentation
+
+### Files Modified
+- `src/commands/fibers/index.ts` - Refactored to use subcommands
+
 ## Chain Status Display Improvement
 
 ### Changed
@@ -44,6 +104,51 @@
 - `src/commands/fibers/display.ts` - Removed standalone-related display code
 - `src/constants.ts` - Removed STANDALONE constant
 
+## Tool Management Command Update
+
+### Changed
+- **Improved Tool Source Labeling**
+  - Updated the tools command to display module sources more accurately
+  - Removed redundant "module:" prefix from source labels
+  - Changed "Source: global" to "Source: chitin" to properly reflect the source module
+  - Improved readability by using more concise and accurate source references
+  - Made output more aligned with Chitin's module-based architecture
+  - Enhanced consistency in the source label format
+  - Removed the "Full Tool Configurations" section header for cleaner output
+  - Simplified check method display to only show method type without full commands
+  - Simplified install method display to only show method type (Homebrew, Git, etc.) without verbose details
+  - Fixed module name format to use colon separator (`fiber:chain` instead of `fiber.chain:tool`)
+  - Improved readability of tool reference sources
+
+### Added
+- **Subcommand Structure**
+  - Reorganized the tools command to use subcommands like the fibers command
+  - Added `get` subcommand to display detailed tool information (default behavior)
+  - Added `list` subcommand to output only tool names one per line, suitable for scripting
+  - Added ability to get details for a specific tool by name with `tools get <name>`
+  - Made `get` the default subcommand when none is specified
+  - Redirected all informational and error messages to stderr
+  - Made output suitable for scripting and piping to other commands
+
+### Fixed
+- **Output Formatting**
+  - Fixed duplicate separators in tools command output
+  - Removed redundant divider lines between tools for cleaner presentation
+  - Ensured consistent formatting for both `tools` and `tools get` commands
+  - Enhanced visual clarity of tool listings
+  
+- **External Fiber Tool Discovery**
+  - Fixed issue where tools defined in external fibers weren't being discovered
+  - Improved module config loading to properly capture tools from external fiber config.yaml files
+  - Enhanced debugging and error handling in config loading process
+  - Now correctly shows all tools defined across all fibers and chains
+  - Fixed tool count showing only 8 tools when there are actually over 140 defined
+
+### Files Modified
+- `src/commands/tools.ts` - Updated source labeling and added subcommands
+- `src/modules/discovery.ts` - Fixed module config loading for external fibers
+- `src/config/loader.ts` - Enhanced loadModuleConfig to handle config paths correctly
+
 ## Tool Management Command Addition
 
 ### Added
@@ -55,6 +160,12 @@
   - Added preliminary support for checking tool installation status
   - Extracts tools from global config, fibers, and chains
   - Displays tool sources to show where each tool is configured
+  - Added `--parent-config` option to load tools from parent project config.yaml
+  - Auto-detects simple tool references in Chitin-style configuration
+  - Separates display of full tool configs from simple references
+  - Auto-attempts to find parent config.yaml file
+  - Improved tool discovery using Chitin's module discovery system to find tools in all fibers and chains, matching Chitin's behavior
+  - Updated to use debug logging instead of technical information
 
 ### Files Modified/Created
 - `src/commands/tools.ts` - New file implementing the tools command
@@ -761,3 +872,45 @@
 ### Files Modified
 - `src/modules/discovery.ts` - Improved module creation and config loading from YAML files
 - `tests/modules/discovery.test.ts` - Fixed test assertions and setup to work reliably
+
+## Debug Logging Improvements for Tool Subcommands
+
+### Fixed
+- **Console Output Cleanup**
+  - Fixed informational messages in `tools list` command being printed to stdout
+  - Moved auto-detection and merging messages to debug logging
+  - Ensured `tools list` only outputs tool names to stdout for better scripting support
+  - Applied the same debug logging pattern to all tools subcommands
+
+### Files Modified
+- `src/commands/tools.ts` - Updated to use debug logging for informational messages in all subcommands
+
+## Tool Command Filter Options
+
+### Added
+- **Tool Filtering Options**
+  - Added filter options to `tools get` and `tools list` commands:
+    - `-s, --source <source>` to filter tools by source module (e.g., "core", "dotfiles", "cloud:aws")
+    - `--filter-check <method>` to filter tools by check method (command, brew, path, eval, optional)
+    - `--filter-install <method>` to filter tools by install method (brew, git, script, artifact, command)
+  - Implemented helper functions to identify tool check and install methods
+  - Added filtering logic to show only tools matching the specified criteria
+  - Simplified exploring and identifying tools from specific modules or with specific installation methods
+
+### Files Modified
+- `src/commands/tools.ts` - Added filtering options and implementation
+
+## Tool Status Check Implementation
+
+### Added
+- **Tool Status Checking**
+  - Replaced `-c, --check` option with `--status` in `tools get` command
+  - Added capability to check if tools are installed and display status with colored indicators
+  - Implemented reusable `checkToolStatus` function that can be imported by other modules
+  - Added support for different check methods (command, brew, path, eval)
+  - Created standardized status result interface to use throughout the codebase
+  - Added visual indicators: 🟢 (installed), 🔴 (not installed), ⚠️ (error), ⚪ (unknown)
+  - Parallel status checking for better performance when displaying multiple tools
+
+### Files Modified
+- `src/commands/tools.ts` - Added tool status checking functionality

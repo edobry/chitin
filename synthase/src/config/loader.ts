@@ -119,15 +119,25 @@ export async function loadUserConfig(
 export async function loadModuleConfig<T extends FiberConfig | ChainConfig>(
   modulePath: string
 ): Promise<T | null> {
-  const configPath = join(modulePath, CONFIG_FILES.MODULE);
-  
-  // Check if module config exists
-  if (!await fileExists(configPath)) {
+  try {
+    // If the path is a directory, look for config.yaml in it
+    let configPath = modulePath;
+    if (!configPath.endsWith('config.yaml')) {
+      configPath = join(modulePath, CONFIG_FILES.MODULE);
+    }
+    
+    // Check if module config exists
+    if (!await fileExists(configPath)) {
+      return null;
+    }
+    
+    // Load module config
+    const result = await loadYamlFile<T>(configPath);
+    return result;
+  } catch (error) {
+    console.error(`Error loading module config from ${modulePath}: ${error instanceof Error ? error.message : String(error)}`);
     return null;
   }
-  
-  // Load module config
-  return await loadYamlFile<T>(configPath);
 }
 
 /**

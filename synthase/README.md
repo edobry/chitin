@@ -146,6 +146,7 @@ bun run src/cli.ts tools
 #   --json, -j              Output as JSON
 #   --yaml, -y              Output as YAML
 #   --path <path>, -p       Custom path to user config file
+#   --parent-config <path>, -P  Path to parent project config.yaml (where global tools are defined)
 #   --detailed, -d          Show detailed information for each tool
 #   --check, -c             Check if tools are installed
 
@@ -155,6 +156,9 @@ bun run src/cli.ts tools
 
 # Show detailed tool information
 bun run src/cli.ts tools --detailed
+
+# Load tools from parent config.yaml
+bun run src/cli.ts tools --parent-config ../config.yaml
 
 # Check if configured tools are installed
 bun run src/cli.ts tools --check
@@ -391,13 +395,24 @@ Same as [Chitin](https://github.com/edobry/chitin)'s license.
 To run the CLI, use the following command:
 
 ```bash
+# Run the CLI directly
 bun run src/cli.ts [command]
-```
 
-For example, to list fibers and chains:
-
-```bash
+# Example: list fibers
 bun run src/cli.ts fibers
 ```
 
-Note: You should run `src/cli.ts` directly rather than using `index.ts`, as the index file is primarily for exporting modules.
+Note: Run `src/cli.ts` directly rather than `index.ts`, as the latter is primarily for module exports.
+
+### Debug Logging
+
+Synthase includes debug logging that can be enabled by setting the `DEBUG` environment variable:
+
+```bash
+# Run any command with debug logging enabled
+DEBUG=true bun run src/cli.ts fibers
+
+# This will output detailed debug information prefixed with [DEBUG]
+```
+
+By default, debug logging is disabled, resulting in cleaner output focused on the essential information.

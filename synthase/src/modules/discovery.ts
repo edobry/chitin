@@ -4,8 +4,13 @@ import { loadModuleConfig, getProjectDir, getDotfilesDir } from '../config/loade
 import { fileExists, isDirectory, readDirectory, expandPath } from '../utils/file';
 import { glob } from 'glob';
 import { stat, readFile } from 'fs/promises';
-// Using console.log instead of debug import that can't be found
-const debug = (message: string) => console.log(`[DEBUG] ${message}`);
+// Debug utility to show logs only when DEBUG environment variable is set
+const DEBUG = process.env.DEBUG === 'true';
+const debug = (message: string) => {
+  if (DEBUG) {
+    console.log(`[DEBUG] ${message}`);
+  }
+};
 
 // Helper function to read and parse JSON files
 async function readJson(path: string) {
@@ -330,13 +335,26 @@ export async function createModule(
       const configPath = join(path, 'config.yaml');
       if (await fileExists(configPath)) {
         try {
+          debug(`Loading module config from: ${configPath}`);
           const loadedConfig = await loadModuleConfig(configPath);
+          
           if (loadedConfig) {
+            debug(`Successfully loaded config for ${id}: ${JSON.stringify(loadedConfig)}`);
+            // Replace the entire moduleConfig with the loaded config
             moduleConfig = loadedConfig;
+            
+            // Make sure the enabled property is preserved or defaulted
+            if (moduleConfig.enabled === undefined) {
+              moduleConfig.enabled = true;
+            }
+          } else {
+            debug(`No config loaded from ${configPath}`);
           }
         } catch (error) {
-          debug(`Error loading config for ${path}: ${error}`);
+          debug(`Error loading config for ${path}: ${error instanceof Error ? error.message : String(error)}`);
         }
+      } else {
+        debug(`No config.yaml found at ${configPath}`);
       }
       
       // For directories, check for package.json or set default entrypoint

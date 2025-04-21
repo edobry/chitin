@@ -77,8 +77,8 @@ export function associateChainsByFiber(
       }
     }
     
-    // If no matching fiber was found, we simply don't include this chain
-    // Unassociated chains are not displayed
+    // If no matching fiber was found, simply don't associate this chain with any fiber
+    // We no longer add unassociated chains to a "standalone" fiber
   }
   
   return fiberChainMap;

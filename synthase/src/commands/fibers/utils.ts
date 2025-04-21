@@ -144,13 +144,11 @@ export function getChainDependencies(chainId: string, moduleConfig: Record<strin
  * Counts displayed modules for summary
  * @param fiberIds Fiber IDs being displayed
  * @param fiberChainMap Map of fibers to their chains
- * @param unmappedChains Any standalone chains
  * @returns Object with fiber and chain counts
  */
 export function countDisplayedModules(
   fiberIds: string[],
-  fiberChainMap: Map<string, string[]>,
-  unmappedChains: string[] = []
+  fiberChainMap: Map<string, string[]>
 ): { fibers: number, chains: number } {
   let fiberCount = 0;
   let chainCount = 0;
@@ -160,9 +158,6 @@ export function countDisplayedModules(
     const chains = fiberChainMap.get(fiberId) || [];
     chainCount += chains.length;
   }
-  
-  // Add standalone chains
-  chainCount += unmappedChains.length;
   
   return { fibers: fiberCount, chains: chainCount };
 } 
