@@ -1,12 +1,10 @@
 #!/usr/bin/env bun
 import { createCLI } from './commands';
-import { initBrewEnvironment } from './commands/tools.js';
 
 // Debug utility to show logs only when DEBUG environment variable is set
-const DEBUG = process.env.DEBUG === 'true';
 function debug(...args: any[]): void {
-  if (DEBUG) {
-    console.log('[DEBUG]', ...args);
+  if (process.env.DEBUG && process.env.DEBUG !== 'false' && process.env.DEBUG !== '0') {
+    console.log('[DEBUG CLI]', ...args);
   }
 }
 
@@ -27,4 +25,4 @@ if (process.argv.length <= 2) {
   program.help();
 }
 
-debug("CLI execution completed."); 
+debug("CLI execution completed.");

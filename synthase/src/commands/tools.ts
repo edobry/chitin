@@ -161,41 +161,49 @@ function isBrewPackageInstalledFromCache(packageName: string, isCask: boolean): 
 export async function initBrewEnvironment(timeoutMs: number = 1000): Promise<boolean> {
   try {
     debug('=== Initializing Homebrew environment (FIXED VERSION) ===');
-    // First get the shellenv output
-    debug('Running brew shellenv command...');
-    const { stdout, exitCode, stderr } = await safeExecaCommand('/opt/homebrew/bin/brew shellenv', {
-      shell: true,
-      reject: false,
-      timeout: timeoutMs
-    });
     
-    if (exitCode !== 0) {
-      debug(`Homebrew environment initialization failed: ${stderr || 'unknown error'}`);
-      return false;
-    }
+    // Directly set the environment variables for Homebrew
+    // This is equivalent to what brew shellenv would do
+    debug('Setting up Homebrew environment variables directly');
     
-    // Add the environment variables from brew shellenv to the current process
-    if (stdout && typeof stdout === 'string') {
-      debug('Parsing and applying environment variables from brew shellenv output');
-      const envVars = stdout.split('\n')
-        .filter((line: string) => line.startsWith('export '))
-        .map((line: string) => line.replace('export ', '').split('='))
-        .filter((parts: string[]) => parts.length === 2);
+    // Standard Homebrew paths for Apple Silicon Macs
+    const homebrewPrefix = '/opt/homebrew';
+    const paths = [
+      `${homebrewPrefix}/bin`,
+      `${homebrewPrefix}/sbin`,
+      process.env.PATH || ''
+    ].join(':');
+    
+    // Set PATH and other environment variables
+    process.env.PATH = paths;
+    process.env.HOMEBREW_PREFIX = homebrewPrefix;
+    process.env.HOMEBREW_CELLAR = `${homebrewPrefix}/Cellar`;
+    process.env.HOMEBREW_REPOSITORY = homebrewPrefix;
+    process.env.MANPATH = `${homebrewPrefix}/share/man${process.env.MANPATH ? `:${process.env.MANPATH}` : ''}`;
+    process.env.INFOPATH = `${homebrewPrefix}/share/info${process.env.INFOPATH ? `:${process.env.INFOPATH}` : ''}`;
+    
+    debug(`PATH is now: ${process.env.PATH}`);
+    debug('Homebrew environment initialized successfully');
+    
+    // Check if it worked
+    try {
+      const { exitCode } = await safeExecaCommand('brew --version', {
+        shell: true,
+        reject: false,
+        timeout: timeoutMs
+      });
       
-      debug(`Found ${envVars.length} environment variables to set`);
-      for (const [key, value] of envVars) {
-        // Remove quotes if present
-        const cleanValue = value.replace(/^"|"$/g, '').replace(/^'|'$/g, '');
-        process.env[key] = cleanValue;
-        debug(`Set ${key}=${cleanValue}`);
+      if (exitCode !== 0) {
+        debug('Homebrew is not available even after environment setup');
+        return false;
       }
       
-      debug('Homebrew environment initialized successfully');
-    } else {
-      debug('No output from brew shellenv command');
+      debug('Homebrew is now available');
+      return true;
+    } catch (error) {
+      debug(`Error checking Homebrew availability: ${error}`);
+      return false;
     }
-    
-    return true;
   } catch (error) {
     debug(`Error initializing Homebrew environment: ${error}`);
     return false;
@@ -339,67 +347,38 @@ async function isBrewPackageInstalled(packageName: string, isCask: boolean = fal
  * @returns Configured Command object
  */
 export function createToolsCommand(): Command {
-  const command = new Command('tools')
-    .description('Manage and display configured tools')
-    .option('-j, --json', 'Output as JSON instead of YAML')
-    .option('-y, --yaml', 'Output as YAML')
-    .option('-p, --path <path>', 'Custom path to user config file')
-    .option('-P, --parent-config <path>', 'Path to parent project config.yaml (where global tools are defined)')
-    .option('-b, --base-dirs <dirs...>', 'Additional base directories to scan for modules')
-    .option('-l, --log-level <level>', 'Set logging level (none, error, warn, info, debug, trace, or 0-5)', 'error');
-
-  // Create get subcommand (default behavior)
-  const getCommand = new Command('get')
-    .description('Display detailed information about tools')
-    .option('-d, --detailed', 'Show detailed information for each tool')
-    .option('--status', 'Check if tools are installed and show status')
-    .option('--missing', 'Only show tools that are not installed (requires --status)')
-    .option('--filter-source <source>', 'Filter tools by source module (e.g., "core", "dotfiles", "cloud:aws")')
-    .option('--filter-check <method>', 'Filter tools by check method (command, brew, path, eval, optional)')
-    .option('--filter-install <method>', 'Filter tools by install method (brew, git, script, artifact, command)')
-    .argument('[tool]', 'Optional tool name to display details for')
-    .action(async (toolName, options) => {
-      const parentOptions = command.opts();
-      const mergedOptions = { ...parentOptions, ...options };
-      
-      // Set log level before executing handler
-      if (mergedOptions.logLevel) {
-        setLogLevel(mergedOptions.logLevel);
-      }
-      
-      await handleToolsCommand(toolName, mergedOptions);
-    });
-
-  // Create list subcommand
-  const listCommand = new Command('list')
-    .description('List all tool names, one per line')
-    .option('--status', 'Check if tools are installed and show status')
-    .option('--missing', 'Only show tools that are not installed (requires --status)')
-    .option('--filter-source <source>', 'Filter tools by source module (e.g., "core", "dotfiles", "cloud:aws")')
-    .option('--filter-check <method>', 'Filter tools by check method (command, brew, path, eval, optional)')
-    .option('--filter-install <method>', 'Filter tools by install method (brew, git, script, artifact, command)')
-    .action(async (options) => {
-      const parentOptions = command.opts();
-      const mergedOptions = { ...parentOptions, ...options };
-      
-      // Set log level before executing handler
-      if (mergedOptions.logLevel) {
-        setLogLevel(mergedOptions.logLevel);
-      }
-      
-      await handleListCommand(mergedOptions);
-    });
-
-  // Add subcommands
-  command.addCommand(getCommand);
-  command.addCommand(listCommand);
-
-  // Set default action to show help
-  command.action(() => {
-    command.help();
+  const cmd = new Command('tools')
+    .description('Manage and display tool configurations')
+    .addCommand(
+      new Command('get')
+        .description('Get detailed information about configured tools')
+        .argument('[toolName]', 'Optional tool name to display')
+        .option('-d, --detailed', 'Show detailed tool configuration')
+        .option('--status', 'Check if tools are installed')
+        .option('--missing', 'Only show tools that are not installed')
+        .option('--filter-source <source>', 'Filter tools by source')
+        .option('--filter-check <method>', 'Filter tools by check method')
+        .option('--filter-install <method>', 'Filter tools by install method')
+        .option('-y, --yes', 'Skip confirmation when checking many tools')
+        .option('--json', 'Output in JSON format')
+        .option('--yaml', 'Output in YAML format')
+        .action(handleToolsCommand)
+    )
+    .addCommand(
+      new Command('list')
+        .description('List tool names for scripts')
+        .option('--filter-source <source>', 'Filter tools by source')
+        .option('--filter-check <method>', 'Filter tools by check method')
+        .option('--filter-install <method>', 'Filter tools by install method')
+        .action(handleListCommand)
+    );
+  
+  // Make 'get' the default subcommand
+  cmd.action((options) => {
+    handleToolsCommand(undefined, options);
   });
-
-  return command;
+  
+  return cmd;
 }
 
 /**
@@ -476,11 +455,17 @@ async function _checkToolStatus(
   // If this is an optional tool, mark as UNKNOWN if not otherwise determined
   const isOptional = config.optional === true;
   
-  // Start with default unknown status
-  let result: ToolStatusResult = {
-    status: ToolStatus.UNKNOWN,
+  // Start timing the check
+  const startTime = Date.now();
+  
+  const result: ToolStatusResult = {
+    status: isOptional ? ToolStatus.UNKNOWN : ToolStatus.NOT_INSTALLED,
+    message: isOptional ? 'Optional tool with no check method' : 'Tool not installed'
   };
-
+  
+  // Add a function to calculate check duration
+  const getCheckDuration = () => Date.now() - startTime;
+  
   try {
     // Check for abort signal
     if (signal?.aborted) {
@@ -493,7 +478,9 @@ async function _checkToolStatus(
       const startTime = Date.now();
       try {
         // Use shell pool for command execution instead of safeExecaCommand
-        const result = await shellPool.executeCommand(config.checkCommand, timeoutMs);
+        // Fix type error by ensuring checkCommand is a string
+        const commandStr = typeof config.checkCommand === 'string' ? config.checkCommand : String(config.checkCommand);
+        const result = await shellPool.executeCommand(commandStr, timeoutMs);
         const duration = Date.now() - startTime;
         
         // Status is based on exit code, not stderr content
@@ -583,23 +570,29 @@ async function _checkToolStatus(
       
       try {
         // Execute the eval command using shell pool
-        const result = await shellPool.executeCommand(config.checkEval, timeoutMs);
+        const evalCommand = typeof config.checkEval === 'string' ? config.checkEval : String(config.checkEval);
+        const result = await shellPool.executeCommand(evalCommand, timeoutMs).catch((error: Error) => {
+          throw new Error(`Eval check timed out or failed: ${error.message}`);
+        });
         
         if (result.exitCode === 0) {
           return {
             status: ToolStatus.INSTALLED,
-            message: `Eval check successful`
+            message: `Eval check successful`,
+            checkDuration: getCheckDuration()
           };
         } else {
           return {
             status: ToolStatus.NOT_INSTALLED,
-            message: `Eval check failed with exit code ${result.exitCode}`
+            message: `Eval check failed with exit code ${result.exitCode}`,
+            checkDuration: getCheckDuration()
           };
         }
       } catch (error) {
         result.status = ToolStatus.ERROR;
         result.message = `Error executing eval check: ${error instanceof Error ? error.message : String(error)}`;
         result.error = error instanceof Error ? error : new Error(String(error));
+        result.checkDuration = getCheckDuration();
         return result;
       }
     }
@@ -662,23 +655,30 @@ async function _checkToolStatus(
       
       try {
         // Use the shell pool to execute the which command
-        const { exitCode, stdout, stderr } = await shellPool.executeCommand(`which "${command}"`, timeoutMs);
+        const { exitCode, stdout, stderr } = await shellPool.executeCommand(`which "${command}"`, timeoutMs).catch((error: Error) => {
+          debug(`Command check timed out or failed: ${error.message}`);
+          // Return a default failed result when the command times out
+          return { exitCode: 1, stdout: '', stderr: `Timeout checking command: ${error.message}` };
+        });
         
         debug(`Exit code: ${exitCode}, Stdout: ${stdout}, Stderr: ${stderr}`);
         
         if (exitCode === 0) {
           result.status = ToolStatus.INSTALLED;
           result.message = `Command '${command}' found in PATH: ${stdout}`;
+          result.checkDuration = getCheckDuration();
           return result;
         } else {
           result.status = ToolStatus.NOT_INSTALLED;
           result.message = `Command '${command}' not found in PATH`;
+          result.checkDuration = getCheckDuration();
           return result;
         }
       } catch (error) {
         result.status = ToolStatus.ERROR;
         result.message = `Error checking command in PATH: ${error instanceof Error ? error.message : String(error)}`;
         result.error = error instanceof Error ? error : new Error(String(error));
+        result.checkDuration = getCheckDuration();
         return result;
       }
     }
@@ -1007,191 +1007,81 @@ async function handleListCommand(options: any): Promise<void> {
  * @param options Command options
  */
 async function handleToolsCommand(toolName: string | undefined, options: any): Promise<void> {
-  try {
-    // Reset Homebrew caches at the start of each command
-    brewFormulasCache = [];
-    brewCasksCache = [];
-    brewCacheInitialized = false;
-    
-    // Validate options
-    if (options.missing && !options.status) {
-      console.error('Error: --missing option requires --status');
-      process.exit(1);
-    }
-
-    debug('Loading configuration...');
-    // Load and validate configuration
-    const { config, validation } = await loadAndValidateConfig({
-      userConfigPath: options.path,
-      exitOnError: false
-    });
-    
-    if (!validation.valid) {
-      console.error('Configuration validation warnings:');
-      validation.errors.forEach(error => console.error(`- ${error}`));
-    }
-
-    // Try to load parent config if provided or attempt auto-detection
-    let parentConfig: any = {};
-    let parentConfigPath = '';
-    
-    if (options.parentConfig) {
-      try {
-        parentConfigPath = options.parentConfig;
-        parentConfig = loadParentConfig(parentConfigPath);
-        debug(`Loaded parent config from ${parentConfigPath}`);
-      } catch (error) {
-        console.error(`Error loading parent config: ${error instanceof Error ? error.message : String(error)}`);
-      }
-    } else {
-      // Try to auto-detect parent config
-      try {
-        // Assuming Synthase is in a subdirectory of the Chitin project
-        const possiblePaths = [
-          path.resolve(process.cwd(), '..', 'config.yaml'),
-          path.resolve(process.cwd(), '..', '..', 'config.yaml'),
-          path.resolve(process.cwd(), 'config.yaml'),
-        ];
-        
-        for (const configPath of possiblePaths) {
-          try {
-            if (fs.existsSync(configPath)) {
-              parentConfigPath = configPath;
-              parentConfig = loadParentConfig(configPath);
-              debug(`Auto-detected parent config at ${configPath}`);
-              break;
-            }
-          } catch (e) {
-            // Skip this path
-          }
-        }
-      } catch (error) {
-        debug('Could not auto-detect parent config file');
-      }
-    }
-
-    // Merge parent config with current config
-    const mergedConfig = { ...config };
-    
-    // Merge tools from parent config
-    if (parentConfig && parentConfig.tools) {
-      mergedConfig.tools = { 
-        ...(mergedConfig.tools || {}), 
-        ...parentConfig.tools 
-      };
-      
-      debug(`Merged ${Object.keys(parentConfig.tools).length} tools from parent config`);
-    }
-    
-    // Merge toolDeps from parent config
-    if (parentConfig && Array.isArray(parentConfig.toolDeps)) {
-      mergedConfig.toolDeps = [
-        ...(Array.isArray(mergedConfig.toolDeps) ? mergedConfig.toolDeps : []),
-        ...parentConfig.toolDeps
-      ];
-      
-      debug(`Merged ${parentConfig.toolDeps.length} toolDeps from parent config`);
-    }
-
-    // Discover modules from configuration (similar to fibers command)
-    debug('Discovering modules from configuration...');
-    const moduleResult = await discoverModulesFromConfig(
-      mergedConfig,
-      options.baseDirs || []
-    );
-
-    if (moduleResult.errors.length > 0) {
-      debug('Module discovery errors:');
-      for (const error of moduleResult.errors) {
-        debug(`- ${error}`);
-      }
-    }
-
-    debug('Extracting tools from configuration and discovered modules...');
-    // Extract all tools from the configuration and discovered modules
-    let tools = extractAllTools(
-      mergedConfig, 
-      moduleResult.modules,
-      parentConfigPath ? path.basename(path.dirname(parentConfigPath)) : ''
-    );
-    
-    // Apply filters
-    tools = filterTools(tools, {
-      filterSource: options.filterSource,
-      filterCheck: options.filterCheck,
-      filterInstall: options.filterInstall
-    });
-    
-    // Handle JSON or YAML output
-    if (options.json) {
-      if (toolName) {
-        const tool = tools.get(toolName);
-        if (tool) {
-          console.log(JSON.stringify({ [toolName]: tool.config }, null, 2));
-        } else {
-          console.error(`Tool '${toolName}' not found`);
-          process.exit(1);
-        }
-      } else {
-        console.log(JSON.stringify(Object.fromEntries(
-          Array.from(tools.entries()).map(([id, data]) => [id, data.config])
-        ), null, 2));
-      }
-      return;
-    } else if (options.yaml) {
-      if (toolName) {
-        const tool = tools.get(toolName);
-        if (tool) {
-          console.log(serializeToYaml({ [toolName]: tool.config }));
-        } else {
-          console.error(`Tool '${toolName}' not found`);
-          process.exit(1);
-        }
-      } else {
-        const toolsObj = Object.fromEntries(
-          Array.from(tools.entries()).map(([id, data]) => [id, data.config])
-        );
-        console.log(serializeToYaml({ tools: toolsObj }));
-      }
-      return;
-    }
-
-    // If a specific tool name was provided, only display that one
-    if (toolName) {
-      const tool = tools.get(toolName);
-      if (tool) {
-        if (options.status) {
-          const status = await checkToolStatus(toolName, tool.config);
-          await displaySingleTool(toolName, tool, { ...options, statusResult: status });
-        } else {
-          await displaySingleTool(toolName, tool, options);
-        }
-      } else {
-        console.error(`Tool '${toolName}' not found`);
-        process.exit(1);
-      }
-      return;
-    }
-
-    // Display all tools
-    await displayTools(tools, { 
-      detailed: options.detailed, 
-      status: options.status, 
-      missing: options.missing,
-      filterSource: options.filterSource,
-      filterCheck: options.filterCheck,
-      filterInstall: options.filterInstall
-    });
-    
-    // Ensure all processes are terminated
-    processRegistry.killAll();
-    debug('All command operations completed and processes terminated');
-  } catch (error) {
-    // Clean up even on error
-    processRegistry.killAll();
-    console.error('Error:', error instanceof Error ? error.message : String(error));
+  // Load all tools from config
+  const configResult = await loadAndValidateConfig({ 
+    userConfigPath: options.path,
+    exitOnError: false
+  });
+  
+  const userConfig = configResult.config;
+  const moduleResult = await discoverModulesFromConfig(userConfig, options.baseDirs);
+  const tools = extractAllTools(userConfig, moduleResult.modules);
+  
+  if (tools.size === 0) {
+    console.error('No tools found in the configuration.');
     process.exit(1);
   }
+  
+  // If a specific tool name was provided, only display that one
+  if (toolName) {
+    const tool = tools.get(toolName);
+    if (!tool) {
+      console.error(`Tool '${toolName}' not found.`);
+      process.exit(1);
+    }
+    
+    // If status flag is set, check status
+    if (options.status) {
+      await handleGetStatusCommand({ ...options, toolName });
+      return;
+    }
+    
+    await displaySingleTool(toolName, tool, { 
+      detailed: options.detailed
+    });
+    return;
+  }
+  
+  // Handle status checking specially
+  if (options.status) {
+    await handleGetStatusCommand(options);
+    return;
+  }
+  
+  // Apply filters
+  const filteredTools = filterTools(tools, {
+    filterSource: options.filterSource,
+    filterCheck: options.filterCheck,
+    filterInstall: options.filterInstall
+  });
+  
+  // Output in the specified format
+  if (options.json) {
+    const toolsObj: Record<string, any> = {};
+    for (const [id, { config }] of filteredTools) {
+      toolsObj[id] = config;
+    }
+    console.log(JSON.stringify(toolsObj, null, 2));
+    return;
+  }
+  
+  if (options.yaml) {
+    const toolsObj: Record<string, any> = {};
+    for (const [id, { config }] of filteredTools) {
+      toolsObj[id] = config;
+    }
+    console.log(serializeToYaml(toolsObj));
+    return;
+  }
+  
+  // Display tools in the formatted view
+  await displayTools(filteredTools, {
+    detailed: options.detailed,
+    filterSource: options.filterSource,
+    filterCheck: options.filterCheck,
+    filterInstall: options.filterInstall,
+    skipStatusWarning: false // Add this with default value false
+  });
 }
 
 /**
@@ -1441,7 +1331,7 @@ async function displaySingleTool(
     const statusEmoji = getStatusEmoji(options.statusResult);
     console.log(`  ${statusEmoji} 🔧 ${toolId}`);
   } else {
-    console.log(`  ${DISPLAY.EMOJIS.TOOL} ${toolId}`);
+    console.log(`  🔧 ${toolId}`);
   }
   
   console.log('');
@@ -1504,17 +1394,24 @@ async function displaySingleTool(
  */
 async function displayTools(
   tools: Map<string, { config: ToolConfig, source: string }>,
-  options: { detailed?: boolean, status?: boolean, missing?: boolean, filterSource?: string, filterCheck?: string, filterInstall?: string }
+  options: { 
+    detailed?: boolean, 
+    status?: boolean, 
+    missing?: boolean, 
+    statusResults?: Map<string, ToolStatusResult>,
+    filterSource?: string, 
+    filterCheck?: string, 
+    filterInstall?: string,
+    skipStatusWarning?: boolean  // Add this new option
+  }
 ): Promise<void> {
   console.log('Legend: 🔧 = tool   🔍 = check method   🏗️ = install method   🔗 = reference');
   if (options.status) {
-    console.log(`Status: ${DISPLAY.EMOJIS.ENABLED} = installed   ${DISPLAY.EMOJIS.DISABLED} = not installed   ${DISPLAY.EMOJIS.WARNING} = error   ${DISPLAY.EMOJIS.UNKNOWN} = unknown`);
-    
-    if (options.missing) {
-      console.log('Showing only missing/not installed tools');
-    }
+    console.log('Status: 🟢 = installed   🔴 = not installed   ⚠️ = error   ⚪ = unknown');
   }
-  console.log('');
+  
+  let toolCount = 0;
+  const statusResults = options.statusResults || new Map<string, ToolStatusResult>();
   
   if (tools.size === 0) {
     console.log('No tools configured.');
@@ -1552,8 +1449,8 @@ async function displayTools(
     const toolStatuses = new Map<string, ToolStatusResult>();
     
     if (options.status) {
-      // Warn if checking a large number of tools
-      if (toolNames.length > 10) {
+      // Warn if checking a large number of tools - but only if we haven't already shown the warning
+      if (toolNames.length > 10 && !options.skipStatusWarning) {
         const activeFilters = [];
         if (options.filterSource) activeFilters.push(`source=${options.filterSource}`);
         if (options.filterCheck) activeFilters.push(`check=${options.filterCheck}`);
@@ -1761,7 +1658,7 @@ async function displayTools(
           console.log(`  Check Time: ${status.checkDuration.toFixed(2)}ms`);
         }
       } else {
-        console.log(`  ${DISPLAY.EMOJIS.TOOL} ${toolId}`);
+        console.log(`  🔧 ${toolId}`);
       }
       
       console.log('');
@@ -1797,13 +1694,13 @@ async function displayTools(
       console.log('');
     }
     
-    // After displaying all tools, show a summary of check times if status was checked
-    if (options.status && totalCheckTime > 0) {
-      const averageTime = totalCheckTime / toolNames.length;
-      console.log(`\nStatus check timing summary:`);
-      console.log(`- Total check time: ${totalCheckTime.toFixed(2)}ms`);
-      console.log(`- Average check time: ${averageTime.toFixed(2)}ms per tool`);
-    }
+    // We only show the timing summary at the end to avoid duplication
+
+
+
+
+
+
   }
   
   // Display tool references only if not showing missing tools
@@ -2088,14 +1985,14 @@ class ShellPool {
   private poolSize: number;
   private initialized = false;
 
-  constructor(poolSize = 5) {
+  constructor(poolSize = 10) {  // Restore original pool size
     this.poolSize = poolSize;
   }
 
   async initialize(): Promise<void> {
     if (this.initialized) return;
     
-    // Create initial pool of shells
+    // Create initial pool of shells - eagerly initialize all shells
     for (let i = 0; i < this.poolSize; i++) {
       await this.createShell();
     }
@@ -2107,22 +2004,57 @@ class ShellPool {
 
   private async createShell(): Promise<void> {
     try {
-      // Start a persistent shell process
-      const shell = execa('bash', ['-i'], { 
-        shell: true, 
+      // Start a persistent shell process with proper stream handling
+      const shell = execa('bash', [], { 
+        shell: false, 
         stdio: ['pipe', 'pipe', 'pipe'],
-        cleanup: true
+        cleanup: true,
+        reject: false, // Don't throw on non-zero exit codes
+        detached: false, // Ensure child process is properly managed
+        killSignal: 'SIGINT' // Use SIGINT instead of SIGTERM for cleaner termination
       });
       
-      // Initialize the shell environment if we can
-      if (shell.stdin) {
-        await shell.stdin.write(`eval "$(/opt/homebrew/bin/brew shellenv)"\n`);
+      // Make sure all streams are available
+      if (!shell.stdin || !shell.stdout || !shell.stderr) {
+        throw new Error("Failed to initialize shell streams");
       }
       
+      // Better error handling for streams
+      shell.stdout.on('error', (err) => debug(`Shell stdout error: ${err}`));
+      shell.stderr.on('error', (err) => debug(`Shell stderr error: ${err}`));
+      shell.stdin.on('error', (err) => debug(`Shell stdin error: ${err}`));
+      
+      // Initialize the shell immediately
+      try {
+        // Initialize shell environment - first run eval "$(/opt/homebrew/bin/brew shellenv)"
+        await shell.stdin.write(`eval "$(/opt/homebrew/bin/brew shellenv)"\n`);
+        
+        // Explicitly set environment variables as backup
+        await shell.stdin.write(`export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:$PATH"\n`);
+        
+        // Disable command history in shell
+        await shell.stdin.write(`export HISTFILE=/dev/null\n`);
+        
+        // Improve shell stability with better signal handling
+        await shell.stdin.write(`trap 'exit 0' SIGTERM SIGINT\n`);
+        
+        // Keep shell in a neutral state
+        await shell.stdin.write(`cd "${process.cwd()}"\n`);
+      } catch (writeError) {
+        debug(`Error initializing shell: ${writeError}`);
+        try { shell.kill('SIGKILL'); } catch (e) {}
+        throw writeError;
+      }
+      
+      // Add shell to the pool
       this.shells.push({process: shell, active: false});
+      
+      if (isDebugMode()) {
+        debug(`Created new shell process (${this.shells.length} total)`);
+      }
     } catch (error) {
       debug(`Error creating shell: ${error}`);
-      // Just continue - we'll create more shells on demand if needed
+      // Just log the error but don't add the shell to the array
     }
   }
 
@@ -2140,23 +2072,35 @@ class ShellPool {
     }
     
     // If all shells are in use and we're below max, create a new one
-    if (this.shells.length < this.poolSize * 2) {
+    if (this.shells.length < this.poolSize * 2) {  // Restore original limit logic
       await this.createShell();
+      // Check if shell was successfully created and added to the array
       const newIndex = this.shells.length - 1;
-      this.shells[newIndex].active = true;
-      return {process: this.shells[newIndex].process, index: newIndex};
+      if (newIndex >= 0 && this.shells[newIndex]) {
+        this.shells[newIndex].active = true;
+        return {process: this.shells[newIndex].process, index: newIndex};
+      }
+      // If something went wrong, try to get another shell
+      return this.getShell();
     }
     
-    // Wait for a shell to become available
-    return new Promise(resolve => {
+    // Wait for a shell to become available with a timeout
+    return new Promise((resolve, reject) => {
       const checkInterval = setInterval(() => {
         const index = this.shells.findIndex(s => !s.active);
         if (index >= 0) {
           clearInterval(checkInterval);
+          clearTimeout(timeout);
           this.shells[index].active = true;
           resolve({process: this.shells[index].process, index});
         }
-      }, 50);
+      }, 50);  // Check more frequently
+      
+      // Add a timeout to prevent indefinite waiting
+      const timeout = setTimeout(() => {
+        clearInterval(checkInterval);
+        reject(new Error('Timed out waiting for an available shell'));
+      }, 5000); // 5 second timeout
     });
   }
 
@@ -2167,428 +2111,538 @@ class ShellPool {
   }
 
   async executeCommand(command: string, timeoutMs: number = 5000): Promise<{ stdout: string; stderr: string; exitCode: number }> {
-    const {process: shell, index} = await this.getShell();
+    let shell: ReturnType<typeof execa>;
+    let index = -1;
     
-    return new Promise(async (resolve, reject) => {
+    try {
+      // Get a shell from the pool
+      const shellInfo = await this.getShell();
+      shell = shellInfo.process;
+      index = shellInfo.index;
+      
       if (!shell.stdout || !shell.stderr || !shell.stdin) {
         this.releaseShell(index);
-        reject(new Error('Shell process does not have valid stdio streams'));
-        return;
+        throw new Error('Shell process does not have valid stdio streams');
       }
       
-      const commandId = Math.random().toString(36).substring(7);
-      const startMarker = `START_CMD_${commandId}`;
-      const endMarker = `END_CMD_${commandId}`;
-      
-      // Prepare output collectors
-      let stdout = '';
-      let stderr = '';
-      let commandComplete = false;
-      
-      // Set up output handlers
-      const stdoutHandler = (data: Buffer) => {
-        const text = data.toString();
-        if (text.includes(startMarker)) {
-          // Start collecting output
-          stdout = '';
-        } else if (text.includes(endMarker)) {
-          // Extract the exit code
-          const match = text.match(/EXIT_CODE_(\d+)/);
-          const exitCode = match ? parseInt(match[1], 10) : 1;
+      // Use a fast, minimal command execution approach
+      return new Promise((resolve, reject) => {
+        // Prepare output collectors
+        let stdout = '';
+        let stderr = '';
+        let commandComplete = false;
+        
+        // Error handler
+        const errorHandler = (err: Error) => {
+          if (!commandComplete) {
+            commandComplete = true;
+            cleanup();
+            reject(new Error(`Shell error: ${err.message}`));
+          }
+        };
+        
+        // Handle process exit
+        const exitHandler = () => {
+          if (!commandComplete) {
+            commandComplete = true;
+            cleanup();
+            reject(new Error('Shell process unexpectedly exited'));
+          }
+        };
+        
+        // Setup cleanup function
+        const cleanup = () => {
+          clearTimeout(timeout);
           
-          // Command is complete
-          commandComplete = true;
+          // Safely remove all listeners
+          if (shell) {
+            if (shell.stdout) shell.stdout.removeListener('data', stdoutHandler);
+            if (shell.stderr) shell.stderr.removeListener('data', stderrHandler);
+            shell.removeListener('error', errorHandler);
+            shell.removeListener('exit', exitHandler);
+          }
+          
+          // Release the shell back to the pool
           this.releaseShell(index);
+        };
+        
+        // Fast command approach - use echo to get exit code
+        let commandOutput = '';
+        let exitCodeLine = '';
+        const commandId = Date.now().toString(36);
+        
+        const stdoutHandler = (data: Buffer) => {
+          const text = data.toString();
+          if (text.includes(`EXITCODE_BEGIN_${commandId}`)) {
+            exitCodeLine = '';
+          } else if (text.includes(`EXITCODE_END_${commandId}`)) {
+            commandComplete = true;
+            
+            // Parse exit code
+            const match = exitCodeLine.match(/^(\d+)$/);
+            const exitCode = match ? parseInt(match[1], 10) : 1;
+            
+            cleanup();
+            resolve({ 
+              stdout: commandOutput,
+              stderr: stderr, 
+              exitCode: exitCode 
+            });
+          } else if (text.includes(`CMD_OUTPUT_BEGIN_${commandId}`)) {
+            commandOutput = '';
+          } else if (text.includes(`CMD_OUTPUT_END_${commandId}`)) {
+            // Command output complete, waiting for exit code
+          } else if (exitCodeLine !== null) {
+            exitCodeLine += text;
+          } else {
+            commandOutput += text;
+          }
+        };
+        
+        const stderrHandler = (data: Buffer) => {
+          stderr += data.toString();
+        };
+        
+        // Set up output listeners
+        if (shell.stdout) shell.stdout.on('data', stdoutHandler);
+        if (shell.stderr) shell.stderr.on('data', stderrHandler);
+        shell.on('error', errorHandler);
+        shell.on('exit', exitHandler);
+        
+        // Set a timeout
+        const timeout = setTimeout(() => {
+          if (!commandComplete) {
+            commandComplete = true;
+            cleanup();
+            reject(new Error(`Command timed out after ${timeoutMs}ms: ${command}`));
+          }
+        }, timeoutMs);
+        
+        // Execute the fast command
+        try {
+          if (!shell.stdin) {
+            throw new Error("Shell stdin not available for command execution");
+          }
           
-          // Clean up listeners
-          shell.stdout?.removeListener('data', stdoutHandler);
-          shell.stderr?.removeListener('data', stderrHandler);
-          
-          resolve({ stdout, stderr, exitCode });
-        } else if (!commandComplete) {
-          stdout += text;
+          // Ultra-fast command approach - minimal overhead
+          const cmd = `
+echo "CMD_OUTPUT_BEGIN_${commandId}"
+{ ${command}; }
+echo "CMD_OUTPUT_END_${commandId}"
+echo "EXITCODE_BEGIN_${commandId}"
+echo $?
+echo "EXITCODE_END_${commandId}"
+`;
+          shell.stdin.write(cmd + '\n');
+        } catch (err) {
+          if (!commandComplete) {
+            commandComplete = true;
+            cleanup();
+            reject(new Error(`Failed to execute command: ${err}`));
+          }
         }
-      };
-      
-      const stderrHandler = (data: Buffer) => {
-        stderr += data.toString();
-      };
-      
-      // Set up output listeners
-      shell.stdout.on('data', stdoutHandler);
-      shell.stderr.on('data', stderrHandler);
-      
-      // Set a timeout
-      const timeout = setTimeout(() => {
-        if (!commandComplete) {
-          shell.stdout?.removeListener('data', stdoutHandler);
-          shell.stderr?.removeListener('data', stderrHandler);
-          this.releaseShell(index);
-          reject(new Error(`Command timed out after ${timeoutMs}ms: ${command}`));
-        }
-      }, timeoutMs);
-      
-      // Execute the command with markers to identify output
-      const fullCommand = `
-        echo "${startMarker}"
-        { ${command}; } 2>&1
-        echo "EXIT_CODE_$?"
-        echo "${endMarker}"
-      `;
-      
-      try {
-        await shell.stdin.write(fullCommand + '\n');
-      } catch (err) {
-        clearTimeout(timeout);
-        shell.stdout?.removeListener('data', stdoutHandler);
-        shell.stderr?.removeListener('data', stderrHandler);
+      });
+    } catch (error) {
+      // If we couldn't get a shell or there was an error before setting up the promise
+      if (index >= 0) {
         this.releaseShell(index);
-        reject(err);
       }
-    });
+      throw error;
+    }
   }
   
   async shutdown(): Promise<void> {
-    // Terminate all shells
-    for (const {process} of this.shells) {
-      try {
-        process.kill();
-      } catch (e) {
-        // Ignore errors when killing shells
-      }
-    }
+    debug(`Shutting down shell pool with ${this.shells.length} shells`);
+    
+    // Create a copy of shells array
+    const shellsToTerminate = [...this.shells];
     this.shells = [];
     this.initialized = false;
+    
+    // Terminate all shells quickly
+    for (const {process} of shellsToTerminate) {
+      try {
+        if (!process.killed) {
+          process.kill('SIGKILL');
+        }
+      } catch (e) {
+        // Ignore errors during cleanup
+      }
+    }
+    
+    debug('Shell pool shutdown complete');
   }
 }
 
-// Create a global shell pool
+// Create a global shell pool with original size
 const shellPool = new ShellPool(10);
-
-// Update the existing _checkToolStatus function to use the shell pool for command checks
-async function _checkToolStatus(
-  toolId: string, 
-  config: ToolConfig, 
-  timeoutMs: number = 2000,
-  signal?: AbortSignal
-): Promise<ToolStatusResult> {
-  // If this is an optional tool, mark as UNKNOWN if not otherwise determined
-  const isOptional = config.optional === true;
-  
-  // Start with default unknown status
-  let result: ToolStatusResult = {
-    status: ToolStatus.UNKNOWN,
-  };
-
-  try {
-    // Check for abort signal
-    if (signal?.aborted) {
-      throw signal.reason || new Error('Operation aborted');
-    }
-    
-    // First handle explicit check commands if provided
-    if (config.checkCommand) {
-      debug(`Checking ${toolId} with command: ${config.checkCommand}`);
-      const startTime = Date.now();
-      try {
-        // Use shell pool for command execution instead of safeExecaCommand
-        const result = await shellPool.executeCommand(config.checkCommand, timeoutMs);
-        const duration = Date.now() - startTime;
-        
-        // Status is based on exit code, not stderr content
-        if (result.exitCode === 0) {
-          return {
-            status: ToolStatus.INSTALLED,
-            message: 'Tool command check succeeded',
-            checkDuration: duration
-          };
-        } else {
-          return {
-            status: ToolStatus.NOT_INSTALLED,
-            message: 'Tool command check failed',
-            output: result.stderr || result.stdout,
-            checkDuration: duration
-          };
-        }
-      } catch (error: any) {
-        const duration = Date.now() - startTime;
-        return {
-          status: ToolStatus.ERROR,
-          message: `Error checking tool: ${error.message}`,
-          error: error as Error,
-          checkDuration: duration
-        };
-      }
-    }
-    
-    // Check using path if specified
-    if (config.checkPath) {
-      const checkPath = config.checkPath;
-      debug(`Checking tool ${toolId} using path: ${checkPath}`);
-      
-      try {
-        // First try the exact path as specified
-        let exists = fs.existsSync(checkPath);
-        
-        // If not found and we have a git target, try to resolve against that
-        if (!exists && config.git && config.git.target) {
-          const gitTarget = config.git.target;
-          
-          // Try a few common patterns for git installations
-          const possiblePaths = [
-            path.join(gitTarget, checkPath),
-            path.join(gitTarget, '..', checkPath),
-            path.join(gitTarget, '..', '..', checkPath),
-            path.join(path.dirname(gitTarget), checkPath),
-            // Handle the special case where localshare is used
-            path.join(process.env.HOME || '~', '.local/share', checkPath),
-            // For target paths like localshare/zinit/zinit.git
-            ...(gitTarget.includes('localshare') 
-              ? [path.join(process.env.HOME || '~', '.local/share', gitTarget.split('localshare/')[1], checkPath)] 
-              : [])
-          ];
-          
-          debug(`Path not found at ${checkPath}, trying git target paths:`);
-          for (const tryPath of possiblePaths) {
-            debug(`- Trying ${tryPath}`);
-            if (fs.existsSync(tryPath)) {
-              debug(`Found at ${tryPath}`);
-              exists = true;
-              break;
-            }
-          }
-        }
-        
-        if (exists) {
-          result.status = ToolStatus.INSTALLED;
-          result.message = `Path exists: "${checkPath}"`;
-          return result;
-        } else {
-          result.status = ToolStatus.NOT_INSTALLED;
-          result.message = `Path not found: "${checkPath}"`;
-          return result;
-        }
-      } catch (error) {
-        result.status = ToolStatus.ERROR;
-        result.message = `Error checking path: ${error instanceof Error ? error.message : String(error)}`;
-        result.error = error instanceof Error ? error : new Error(String(error));
-        return result;
-      }
-    }
-    
-    // Check if checkEval is specified
-    if (config.checkEval) {
-      debug(`Checking tool ${toolId} using eval: ${config.checkEval}`);
-      
-      try {
-        // Execute the eval command
-        const { exitCode } = await safeExecaCommand(config.checkEval, {
-          shell: true,
-          reject: false,
-          cancelSignal: signal
-        });
-        
-        if (exitCode === 0) {
-          result.status = ToolStatus.INSTALLED;
-          result.message = `Eval check successful`;
-          return result;
-        } else {
-          result.status = ToolStatus.NOT_INSTALLED;
-          result.message = `Eval check failed with exit code ${exitCode}`;
-          return result;
-        }
-      } catch (error) {
-        result.status = ToolStatus.ERROR;
-        result.message = `Error executing eval check: ${error instanceof Error ? error.message : String(error)}`;
-        result.error = error instanceof Error ? error : new Error(String(error));
-        return result;
-      }
-    }
-    
-    // Check for Homebrew package
-    const shouldCheckBrew = config[BREW.CHECK_PREFIX] || (config.brew && !config.artifact && !config.pipx);
-    if (shouldCheckBrew) {
-      debug(`Checking tool ${toolId} as Homebrew package`);
-      
-      // Determine if this is a cask
-      const isCask = config[BREW.CHECK_PREFIX]
-        ? isBrewCask(config[BREW.CHECK_PREFIX])
-        : isBrewCask(config.brew || {});
-      
-      // Get the package name
-      const brewName = config[BREW.CHECK_PREFIX]
-        ? getBrewPackageName(config[BREW.CHECK_PREFIX], toolId)
-        : getBrewPackageName(config.brew || {}, toolId);
-      
-      debug(`Checking if Homebrew ${isCask ? 'cask' : 'formula'} "${brewName}" is installed using cache...`);
-      
-      try {
-        // Make sure Homebrew caches are initialized
-        if (!brewCacheInitialized) {
-          const cacheInitialized = await initializeBrewCaches(timeoutMs * 0.5);
-          if (!cacheInitialized) {
-            throw new Error("Failed to initialize Homebrew caches");
-          }
-        }
-        
-        // Check against cached lists instead of running brew command
-        const isInstalled = isBrewPackageInstalledFromCache(brewName, isCask);
-        
-        if (isInstalled) {
-          result.status = ToolStatus.INSTALLED;
-          result.message = `Found as Homebrew ${isCask ? BREW.CASK : BREW.FORMULA} "${brewName}"`;
-          return result;
-        } else {
-          result.status = ToolStatus.NOT_INSTALLED;
-          result.message = `Homebrew ${isCask ? BREW.CASK : BREW.FORMULA} "${brewName}" not found`;
-          return result;
-        }
-      } catch (error) {
-        if (signal?.aborted) {
-          throw signal.reason || new Error('Operation aborted');
-        }
-        
-        // If there's an error with the cache method, fall back to direct check
-        debug(`Error using cache, falling back to direct Homebrew check for ${brewName}: ${error}`);
-        
-        try {
-          // Initialize Homebrew environment
-          await initBrewEnvironment(timeoutMs * 0.2);
-          
-          // Set proper environment
-          const env = {
-            ...process.env,
-            PATH: `/opt/homebrew/bin:/opt/homebrew/sbin:${process.env.PATH || ''}`
-          };
-          
-          // Direct check using 'brew list' as fallback
-          const cmd = `brew list ${isCask ? '--cask' : '--formula'} | grep -q "^${brewName}$"`;
-          debug(`Executing fallback: ${cmd}`);
-          
-          const { exitCode } = await safeExecaCommand(cmd, {
-            shell: true,
-            reject: false,
-            env,
-            timeout: timeoutMs * 0.5,
-            cancelSignal: signal
-          });
-          
-          if (exitCode === 0) {
-            result.status = ToolStatus.INSTALLED;
-            result.message = `Found as Homebrew ${isCask ? BREW.CASK : BREW.FORMULA} "${brewName}" (direct check)`;
-            return result;
-          } else {
-            result.status = ToolStatus.NOT_INSTALLED;
-            result.message = `Homebrew ${isCask ? BREW.CASK : BREW.FORMULA} "${brewName}" not found (direct check)`;
-            return result;
-          }
-        } catch (fallbackError) {
-          result.status = ToolStatus.ERROR;
-          result.message = `Error checking Homebrew: ${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`;
-          result.error = fallbackError instanceof Error ? fallbackError : new Error(String(fallbackError));
-          return result;
-        }
-      }
-    }
-    
-    // Check if artifact exists
-    if (config.artifact) {
-      debug(`Checking tool ${toolId} as artifact`);
-      
-      try {
-        // Implementation would depend on how artifacts are managed
-        // This is a placeholder
-        result.status = ToolStatus.UNKNOWN;
-        result.message = `Artifact check not fully implemented`;
-        return result;
-      } catch (error) {
-        result.status = ToolStatus.ERROR;
-        result.message = `Error checking artifact: ${error instanceof Error ? error.message : String(error)}`;
-        result.error = error instanceof Error ? error : new Error(String(error));
-        return result;
-      }
-    }
-    
-    // Default: Check if the command exists in PATH, matching Chitin's behavior
-    debug(`Checking if tool '${toolId}' exists in PATH (default behavior)`);
-    try {
-      // Set up environment with Homebrew paths
-      const env = {
-        ...process.env,
-        PATH: `/opt/homebrew/bin:/opt/homebrew/sbin:${process.env.PATH || ''}`
-      };
-      
-      const checkCmd = getCheckCommand(toolId);
-      debug(`Executing '${checkCmd}'`);
-      
-      const { exitCode, stdout, stderr } = await safeExecaCommand(checkCmd, {
-        shell: true,
-        reject: false,
-        env,
-        cancelSignal: signal
-      });
-      
-      debug(`Exit code: ${exitCode}, Stdout: ${stdout}, Stderr: ${stderr}`);
-      
-      if (exitCode === 0) {
-        result.status = ToolStatus.INSTALLED;
-        result.message = `Command '${toolId}' found in PATH: ${stdout}`;
-        return result;
-      } else {
-        result.status = ToolStatus.NOT_INSTALLED;
-        result.message = `Command '${toolId}' not found in PATH`;
-        return result;
-      }
-    } catch (error) {
-      result.status = ToolStatus.ERROR;
-      result.message = `Error checking command in PATH: ${error instanceof Error ? error.message : String(error)}`;
-      result.error = error instanceof Error ? error : new Error(String(error));
-      return result;
-    }
-  } catch (error) {
-    // Catch-all for any unexpected errors
-    return {
-      status: ToolStatus.ERROR,
-      message: `Unexpected error: ${error instanceof Error ? error.message : String(error)}`,
-      error: error instanceof Error ? error : new Error(String(error))
-    };
-  }
-}
 
 // Modify the existing handleGetStatusCommand function to initialize and shutdown the shell pool
 // This replaces the handleCheckToolsStatus function that was causing a duplicate error
 async function handleGetStatusCommand(options: any): Promise<void> {
-  const config = await loadAndValidateConfig();
-  const modules = await discoverModulesFromConfig(config);
-  const tools = extractAllTools(config, modules);
+  const configResult = await loadAndValidateConfig({ 
+    userConfigPath: options.path,
+    exitOnError: false
+  });
+  
+  const userConfig = configResult.config;
+  const moduleResult = await discoverModulesFromConfig(userConfig, options.baseDirs);
+  const tools = extractAllTools(userConfig, moduleResult.modules);
+  
+  // Pre-initialize brew caches before any status checks
+  debug('Pre-initializing Homebrew caches for tool status checks...');
+  await initializeBrewCaches(10000);
+  
+  // If a specific tool name was provided, only display that one
+  if (options.toolName) {
+    const toolData = tools.get(options.toolName);
+    if (!toolData) {
+      console.error(`Tool '${options.toolName}' not found.`);
+      process.exit(1);
+    }
+    
+    const filteredTools = new Map();
+    filteredTools.set(options.toolName, toolData);
+    
+    // Initialize the shell pool before checking tools
+    await shellPool.initialize();
+    
+    try {
+      let statusResults = new Map<string, ToolStatusResult>();
+      console.error(`Checking status for tool '${options.toolName}'...`);
+      
+      try {
+        const result = await checkToolStatus(options.toolName, toolData.config, 15000);
+        statusResults.set(options.toolName, result);
+      } catch (error) {
+        statusResults.set(options.toolName, {
+          status: ToolStatus.ERROR,
+          message: error instanceof Error ? error.message : String(error),
+          error: error instanceof Error ? error : new Error(String(error))
+        });
+      }
+      
+      // Display the tool with its status
+      await displayTools(filteredTools, { 
+        status: true,
+        detailed: options.detailed,
+        missing: options.missing,
+        statusResults,
+        filterSource: options.filterSource,
+        filterCheck: options.filterCheck,
+        filterInstall: options.filterInstall,
+        skipStatusWarning: true
+      });
+      
+      return;
+    } finally {
+      // Always shut down the shell pool when done
+      try {
+        await shellPool.shutdown();
+      } catch (error) {
+        debug(`Error shutting down shell pool: ${error}`);
+      }
+    }
+  }
   
   // Apply filters if specified
   const filteredTools = filterTools(tools, {
-    filterSource: options.source,
-    filterCheck: options.check,
-    filterInstall: options.install
+    filterSource: options.filterSource,
+    filterCheck: options.filterCheck,
+    filterInstall: options.filterInstall
   });
+  
+  const toolCount = filteredTools.size;
+  
+  // Show warning if checking many tools
+  if (toolCount > 10 && !options.yes) {
+    console.error(`\n⚠️ Warning: Checking status for ${toolCount} tools may take a while.`);
+    console.error('   Consider using filters (--filter-source, --filter-check, --filter-install) or');
+    console.error('   specifying a single tool: tools get <toolname> --status\n');
+  }
+  
+  if (filteredTools.size === 0) {
+    console.error('No tools found matching the specified filters.');
+    process.exit(0);
+  }
+  
+  console.error('Checking tool status...');
   
   // Initialize the shell pool before checking tools
   await shellPool.initialize();
   
   try {
-    let statusResults = new Map<string, ToolStatusResult>();
+    // Pre-group tools by check type for optimized batch processing
+    const homebrewTools = new Map();
+    const commandTools = new Map();
+    const pathTools = new Map();
+    const otherTools = new Map();
     
-    // Implement the rest of the status checking logic using the shell pool
-    // ... existing code ...
+    // Categorize tools by check method
+    for (const [toolId, toolData] of filteredTools.entries()) {
+      const config = toolData.config;
+      
+      // Determine check type
+      const shouldCheckBrew = config[BREW.CHECK_PREFIX] || (config.brew && !config.artifact && !config.pipx);
+      
+      if (shouldCheckBrew) {
+        homebrewTools.set(toolId, toolData);
+      } else if (config.checkPath) {
+        pathTools.set(toolId, toolData);
+      } else if (config.checkCommand || (!config.checkPath && !config.checkEval && !shouldCheckBrew)) {
+        // Default to command check if no specific check method
+        commandTools.set(toolId, toolData);
+      } else {
+        otherTools.set(toolId, toolData);
+      }
+    }
     
-    // Display the tools with their status
-    await displayTools(filteredTools, { 
-      status: true,
-      detailed: options.detailed,
-      missing: options.missing,
-      filterSource: options.source,
-      filterCheck: options.check,
-      filterInstall: options.install
-    });
+    debug(`Categorized tools: ${homebrewTools.size} homebrew, ${commandTools.size} command, ${pathTools.size} path, ${otherTools.size} other`);
+    
+    const statusResults = new Map<string, ToolStatusResult>();
+    const startTime = performance.now();
+    
+    // 1. Process Homebrew tools in a batch (fastest)
+    if (homebrewTools.size > 0) {
+      debug(`Processing ${homebrewTools.size} Homebrew tools in batch...`);
+      
+      // Ensure brew caches are initialized
+      if (!brewCacheInitialized) {
+        await initializeBrewCaches(10000);
+      }
+      
+      // Process all homebrew tools at once using cache
+      for (const [toolId, toolData] of homebrewTools.entries()) {
+        // Determine if cask or formula
+        const config = toolData.config;
+        const isCask = config[BREW.CHECK_PREFIX]
+          ? isBrewCask(config[BREW.CHECK_PREFIX])
+          : isBrewCask(config.brew || {});
+        
+        // Get the package name
+        const brewName = config[BREW.CHECK_PREFIX]
+          ? getBrewPackageName(config[BREW.CHECK_PREFIX], toolId)
+          : getBrewPackageName(config.brew || {}, toolId);
+        
+        // Check against cache
+        const isInstalled = isBrewPackageInstalledFromCache(brewName, isCask);
+        
+        if (isInstalled) {
+          statusResults.set(toolId, {
+            status: ToolStatus.INSTALLED,
+            message: `Found as Homebrew ${isCask ? BREW.CASK : BREW.FORMULA} "${brewName}"`,
+            checkDuration: 0.1 // Negligible time for cache lookup
+          });
+        } else {
+          statusResults.set(toolId, {
+            status: ToolStatus.NOT_INSTALLED,
+            message: `Homebrew ${isCask ? BREW.CASK : BREW.FORMULA} "${brewName}" not found`,
+            checkDuration: 0.1
+          });
+        }
+      }
+    }
+    
+    // 2. Process path checks in batch (second fastest)
+    if (pathTools.size > 0) {
+      debug(`Processing ${pathTools.size} path checks in batch...`);
+      
+      for (const [toolId, toolData] of pathTools.entries()) {
+        const config = toolData.config;
+        const checkPath = config.checkPath;
+        const pathStartTime = performance.now();
+        
+        try {
+          // First try the exact path as specified
+          let exists = fs.existsSync(checkPath);
+          
+          // If not found and we have a git target, try to resolve against that
+          if (!exists && config.git && config.git.target) {
+            const gitTarget = config.git.target;
+            
+            // Try a few common patterns for git installations
+            const possiblePaths = [
+              path.join(gitTarget, checkPath),
+              path.join(gitTarget, '..', checkPath),
+              path.join(gitTarget, '..', '..', checkPath),
+              path.join(path.dirname(gitTarget), checkPath),
+              // Handle the special case where localshare is used
+              path.join(process.env.HOME || '~', '.local/share', checkPath),
+              // For target paths like localshare/zinit/zinit.git
+              ...(gitTarget.includes('localshare') 
+                ? [path.join(process.env.HOME || '~', '.local/share', gitTarget.split('localshare/')[1], checkPath)] 
+                : [])
+            ];
+            
+            for (const tryPath of possiblePaths) {
+              if (fs.existsSync(tryPath)) {
+                exists = true;
+                break;
+              }
+            }
+          }
+          
+          const pathDuration = performance.now() - pathStartTime;
+          
+          if (exists) {
+            statusResults.set(toolId, {
+              status: ToolStatus.INSTALLED,
+              message: `Path exists: "${checkPath}"`,
+              checkDuration: pathDuration
+            });
+          } else {
+            statusResults.set(toolId, {
+              status: ToolStatus.NOT_INSTALLED,
+              message: `Path not found: "${checkPath}"`,
+              checkDuration: pathDuration
+            });
+          }
+        } catch (error) {
+          const pathDuration = performance.now() - pathStartTime;
+          statusResults.set(toolId, {
+            status: ToolStatus.ERROR,
+            message: `Error checking path: ${error instanceof Error ? error.message : String(error)}`,
+            error: error instanceof Error ? error : new Error(String(error)),
+            checkDuration: pathDuration
+          });
+        }
+      }
+    }
+    
+    // 3. Process command checks in parallel batches
+    if (commandTools.size > 0) {
+      debug(`Processing ${commandTools.size} command checks...`);
+      
+      // Process commands in parallel with reasonable concurrency
+      const COMMAND_BATCH_SIZE = 20;
+      const commandEntries = Array.from(commandTools.entries());
+      
+      for (let i = 0; i < commandEntries.length; i += COMMAND_BATCH_SIZE) {
+        const batch = commandEntries.slice(i, i + COMMAND_BATCH_SIZE);
+        
+        // Process batch in parallel
+        const promises = batch.map(async ([toolId, toolData]) => {
+          const config = toolData.config;
+          const commandStartTime = performance.now();
+          
+          try {
+            // If there's a defined command, use that, otherwise use tool ID
+            const command = config.command || toolId;
+            
+            // Use a lightweight which command to check existence
+            const { exitCode, stdout } = await shellPool.executeCommand(`which "${command}" 2>/dev/null`, 2000);
+            
+            const commandDuration = performance.now() - commandStartTime;
+            
+            if (exitCode === 0) {
+              statusResults.set(toolId, {
+                status: ToolStatus.INSTALLED,
+                message: `Command '${command}' found in PATH: ${stdout.trim()}`,
+                checkDuration: commandDuration
+              });
+            } else {
+              statusResults.set(toolId, {
+                status: ToolStatus.NOT_INSTALLED,
+                message: `Command '${command}' not found in PATH`,
+                checkDuration: commandDuration
+              });
+            }
+          } catch (error) {
+            const commandDuration = performance.now() - commandStartTime;
+            statusResults.set(toolId, {
+              status: ToolStatus.ERROR,
+              message: `Error checking command: ${error instanceof Error ? error.message : String(error)}`,
+              error: error instanceof Error ? error : new Error(String(error)),
+              checkDuration: commandDuration
+            });
+          }
+        });
+        
+        await Promise.all(promises);
+      }
+    }
+    
+    // 4. Process remaining tools normally
+    if (otherTools.size > 0) {
+      debug(`Processing ${otherTools.size} other tools...`);
+      
+      // Process tools with explicit check commands or eval
+      const otherEntries = Array.from(otherTools.entries());
+      
+      // Process others in parallel with reasonable concurrency
+      const OTHER_BATCH_SIZE = 10;
+      
+      for (let i = 0; i < otherEntries.length; i += OTHER_BATCH_SIZE) {
+        const batch = otherEntries.slice(i, i + OTHER_BATCH_SIZE);
+        
+        // Process batch in parallel
+        const promises = batch.map(async ([toolId, toolData]) => {
+          try {
+            const result = await checkToolStatus(toolId, toolData.config, 10000);
+            statusResults.set(toolId, result);
+          } catch (error) {
+            statusResults.set(toolId, {
+              status: ToolStatus.ERROR,
+              message: `Error checking tool: ${error instanceof Error ? error.message : String(error)}`,
+              error: error instanceof Error ? error : new Error(String(error))
+            });
+          }
+        });
+        
+        await Promise.all(promises);
+      }
+    }
+    
+    const totalDuration = performance.now() - startTime;
+    debug(`Completed all tool status checks in ${totalDuration.toFixed(2)}ms`);
+    
+    // When --missing is specified, filter out installed tools
+    if (options.missing) {
+      const missingTools = new Map();
+      for (const [toolId, toolData] of filteredTools.entries()) {
+        const status = statusResults.get(toolId);
+        if (status && status.status === ToolStatus.NOT_INSTALLED) {
+          missingTools.set(toolId, toolData);
+        }
+      }
+      
+      if (missingTools.size === 0) {
+        console.log('All tools are installed! 🎉');
+        return;
+      }
+      
+      console.log(`Found ${missingTools.size} missing tools out of ${filteredTools.size} total tools.`);
+      
+      // Display only missing tools
+      await displayTools(missingTools, { 
+        status: true,
+        detailed: options.detailed,
+        missing: true,
+        statusResults,
+        filterSource: options.filterSource,
+        filterCheck: options.filterCheck,
+        filterInstall: options.filterInstall,
+        skipStatusWarning: true
+      });
+    } else {
+      // Display all tools with their status
+      await displayTools(filteredTools, { 
+        status: true,
+        detailed: options.detailed,
+        missing: false,
+        statusResults,
+        filterSource: options.filterSource,
+        filterCheck: options.filterCheck,
+        filterInstall: options.filterInstall,
+        skipStatusWarning: true
+      });
+    }
   } finally {
     // Always shut down the shell pool when done
-    await shellPool.shutdown();
+    try {
+      await shellPool.shutdown();
+    } catch (error) {
+      debug(`Error shutting down shell pool: ${error}`);
+    }
   }
 }
