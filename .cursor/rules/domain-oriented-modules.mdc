@@ -1,0 +1,49 @@
+# Domain-oriented Module Organization
+
+When refactoring or creating new functionality, organize code by domain rather than by technical function:
+
+## Key Principles
+
+1. **Co-locate Related Code**: Place related utilities in the same directory as the feature they support rather than in a separate global utilities directory. For example, if a utility is only used by the `tools` command, it should live in `commands/tools/` rather than `utils/`.
+
+2. **Domain-specific Directories**: Create domain-specific directories that contain all related code:
+   ```
+   commands/tools/            # Domain-specific directory
+     ├── index.ts             # Main entry point
+     ├── discovery.ts         # Tool discovery functionality
+     ├── filter.ts            # Filtering utilities
+     ├── ui.ts                # Display utilities
+     └── homebrew.ts          # Domain-specific brew utilities
+   ```
+
+3. **Avoid Utility Proliferation**: Don't create general utility files that mix concerns from different domains. Instead, split utilities by domain and place them with the code that uses them.
+
+4. **Name Domain-specific Utilities Clearly**: When a domain-specific utility has a similar function to a general utility, use a clear naming convention to distinguish them:
+   ```typescript
+   // General utility
+   function getBrewPackageName(brewConfig, toolId) { ... }
+
+   // Domain-specific utility with clearer name
+   function getToolBrewPackageName(brewConfig, toolId) { ... }
+   ```
+
+5. **Handling Duplication**: When facing duplication between general and domain-specific utilities:
+   - Consider if the general utility is actually needed or if it could be replaced by the domain-specific one
+   - Add proper deprecation notices to outdated general utilities
+   - If both are needed, make the relationship explicit through documentation
+
+## Benefits
+
+- **Improved Discoverability**: Related code is easier to find since it's grouped by domain
+- **Better Testability**: Domain-specific modules are easier to test in isolation
+- **Reduced Coupling**: Dependencies flow in a more manageable direction
+- **Clearer Boundaries**: Domain logic isn't spread across various utility files
+- **Easier Maintenance**: Changes to a domain's behavior don't require modifying shared utilities
+
+## Anti-patterns to Avoid
+
+- **Utility Soup**: Avoid large generic utility files that mix concerns from multiple domains
+- **Distant Dependencies**: Avoid modules that depend on utilities spread across many different files
+- **Function Name Collisions**: Don't use the same function name for different behaviors across domains
+
+Apply this approach especially to complex domains with specific business logic, like the tools command which has its own way of handling configurations, filtering, and UI concerns. 
