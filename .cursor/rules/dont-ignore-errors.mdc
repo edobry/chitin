@@ -1,0 +1,6 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+When you run ingto errors that are seemingly unrelated to the change you're making, do not ignore them; instead, take the opportunity to fix them, especially if they interfere with testing your changes. When this happens, make sure to explicitly mention what you're doing and record the context of the change you're making prior to switching over to working on the error.

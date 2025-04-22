@@ -1,0 +1,6 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+Keep an eye out for opportunities to extract repeated strings/characters/emoji/numbers to reusable constants. If there are >= 3 instances of repetition, even as a substring of a longer string, make sure to extract.
