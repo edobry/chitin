@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import { createConfigCommand } from './config';
 import { createInitCommand } from './init';
 import { createFibersCommand } from './fibers';
-import { createToolsCommand } from './tools';
+import { createToolsCommand } from './tools/index';
 
 /**
  * Creates the root CLI program with all commands registered

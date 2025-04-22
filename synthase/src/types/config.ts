@@ -22,14 +22,15 @@ export interface ToolConfig {
   // Installation method
   brew?: boolean | {
     name?: string;
-    cask?: boolean;
+    cask?: boolean | string;
     tap?: string;
     tapUrl?: string;
+    formula?: string;
   };
   git?: {
     url: string;
     target: string;
-  };
+  } | string;
   script?: string;
   artifact?: {
     url: string;
@@ -37,9 +38,19 @@ export interface ToolConfig {
     appendFilename?: boolean;
   };
   command?: string;
-  // Pipx package installation
+  
+  // Additional installation methods
+  npm?: string | boolean | { package?: string; global?: boolean };
+  pip?: string | boolean | { package?: string; user?: boolean };
   pipx?: string | boolean;
+  curl?: string | { url: string; target?: string };
+  
+  // Check methods
   checkPipx?: boolean;
+  
+  // Dependencies and relationships
+  deps?: string[];
+  provides?: string[];
   
   // Additional configuration
   optional?: boolean;

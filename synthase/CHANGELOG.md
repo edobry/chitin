@@ -3,6 +3,12 @@
 ## [Unreleased]
 
 ### Fixed
+- Fixed shell termination errors by:
+  - Removing the interactive flag (-i) from bash processes to improve cleanup
+  - Adding graceful shell termination before forced killing
+  - Implementing a multi-stage shutdown process with increasing levels of force (exit, SIGTERM, SIGKILL)
+  - Adding better error handling for shell termination errors in the tools command
+  - Fixing error message formatting to properly handle various error types
 - Fixed duplicate module processing in discovery process that was causing "Processing chain module: dotfiles" to repeat multiple times in debug output
 - Simplified module discovery implementation with cleaner code organization and reduced duplication
 - Fixed race condition in ShellPool's getShell method when creating new shells, resolving "undefined is not an object (evaluating 'this.shells[newIndex].active = !0')" error
@@ -36,6 +42,31 @@
   - Updated `constants/index.ts` to directly re-export from main constants.ts file
   - Removed redundant `constants/commands.ts` file that duplicated constants
   - Centralized all constants in the main `constants.ts` file
+- Improved code organization with shared utility modules:
+  - Created shared logging module in `utils/logger.ts`
+  - Created process management utilities in `utils/process.ts`
+  - Extracted ShellPool to a standalone module in `utils/shell-pool.ts`
+  - Created Homebrew utilities in `utils/homebrew.ts`
+  - Created tool management utilities in `utils/tools.ts`
+  - Added UI display utilities in `utils/ui.ts`
+  - Enhanced ToolConfig interface with additional properties
+- **Improved Code Organization and Reduced Duplication**
+  - Renamed `commands/tools/config.ts` to `commands/tools/discovery.ts` to better reflect its purpose
+  - Created domain-specific homebrew utilities in `commands/tools/homebrew.ts`
+  - Moved brew configuration normalization from `utils/tool-config.ts` to the tools domain
+  - Added proper deprecation notices to general utilities that have domain-specific alternatives
+  - Reduced duplication between general and domain-specific utilities
+  - Made tools command code more maintainable with better domain separation
+  - Renamed functions in domain-specific modules to avoid naming conflicts with general utilities
+- **Domain-oriented Tools Command Structure**
+  - Refactored the tools command into a domain-oriented structure in `commands/tools/` directory
+  - Extracted configuration utilities to `commands/tools/config.ts`
+  - Extracted filtering utilities to `commands/tools/filter.ts`
+  - Extracted UI & display utilities to `commands/tools/ui.ts`
+  - Moved the main command implementation to `commands/tools/index.ts`
+  - Improved code organization with better separation of concerns
+  - Maintained compatibility with existing command interface
+  - Made tool code more maintainable and easier to extend
 
 ### Fixed
 - Fixed issue with `tools get --status` command exiting prematurely before displaying results by:
