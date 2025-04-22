@@ -1,6 +1,8 @@
 import { UserConfig, ChainConfig, FiberConfig, ToolConfig, ConfigValidationResult } from '../types';
 import { expandPath, fileExists, isDirectory } from '../utils/file';
 import { statSync } from 'fs';
+import { join } from 'path';
+import { CHECK_CMD } from '../constants';
 
 /**
  * Synchronously checks if a file exists
@@ -202,7 +204,7 @@ export function validateToolConfig(config: ToolConfig, toolName?: string): Confi
   if (!hasCheckMethod && config.optional !== true) {
     if (toolName) {
       // Apply the default check method (command -v toolName)
-      const defaultCheck = `command -v ${toolName}`;
+      const defaultCheck = `${CHECK_CMD.COMMAND_EXISTS} ${toolName}`;
       // Actually modify the config to set the default check method
       config.checkCommand = defaultCheck;
     } else {
@@ -253,4 +255,35 @@ export function validateToolConfig(config: ToolConfig, toolName?: string): Confi
     valid: errors.length === 0,
     errors,
   };
-} 
+}
+
+/**
+ * Normalizes a tool configuration by filling in defaults and ensuring
+ * a check method exists
+ * @param toolName Name of the tool
+ * @param config Tool configuration
+ * @returns Normalized configuration
+ */
+export function normalizeToolConfig(toolName: string, config: ToolConfig): ToolConfig {
+  // Deep clone to avoid modifying the original
+  const normalized = JSON.parse(JSON.stringify(config || {})) as ToolConfig;
+  
+  // Apply the default check method (command -v toolName)
+  const defaultCheck = `${CHECK_CMD.COMMAND_EXISTS} ${toolName}`;
+  
+  // If not explicitly marked as optional and no check method is defined,
+  // add the default check method
+  const isOptional = normalized.optional === true;
+  const hasCheckMethod = Boolean(
+    normalized.checkCommand || 
+    normalized.checkBrew || 
+    normalized.checkPath ||
+    normalized.checkEval
+  );
+  
+  if (!isOptional && !hasCheckMethod) {
+    normalized.checkCommand = defaultCheck;
+  }
+  
+  return normalized;
+}

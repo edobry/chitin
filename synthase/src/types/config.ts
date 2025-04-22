@@ -37,6 +37,9 @@ export interface ToolConfig {
     appendFilename?: boolean;
   };
   command?: string;
+  // Pipx package installation
+  pipx?: string | boolean;
+  checkPipx?: boolean;
   
   // Additional configuration
   optional?: boolean;

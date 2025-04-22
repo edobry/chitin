@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 import { createCLI } from './commands';
+import { initBrewEnvironment } from './commands/tools.js';
 
 // Debug utility to show logs only when DEBUG environment variable is set
 const DEBUG = process.env.DEBUG === 'true';

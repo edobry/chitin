@@ -66,14 +66,67 @@ export const PATH_PREFIXES = {
 } as const;
 
 /**
+ * Homebrew constants
+ */
+export const BREW = {
+  COMMAND: 'brew',
+  CASK: 'cask',
+  FORMULA: 'formula',
+  TAP: 'tap',
+  NAME: 'name',
+  CHECK_PREFIX: 'checkBrew'
+} as const;
+
+/**
+ * Command constants to reduce duplication
+ */
+export const BREW_CMD = {
+  LIST_CASK: `${BREW.COMMAND} ls --cask`,
+  LIST_FORMULA: `${BREW.COMMAND} ls --formula`,
+  LIST_ALL: `${BREW.COMMAND} ls -1`,
+  LIST_CASKS_ONLY: `${BREW.COMMAND} list --cask`,
+  LIST_FORMULAS_ONLY: `${BREW.COMMAND} list --formula`
+} as const;
+
+/**
+ * Homebrew environment variables to make commands faster
+ */
+export const BREW_ENV = {
+  HOMEBREW_NO_ANALYTICS: '1',
+  HOMEBREW_NO_AUTO_UPDATE: '1', 
+  HOMEBREW_NO_INSTALL_CLEANUP: '1',
+  HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK: '1'
+} as const;
+
+/**
+ * Shell command check constants
+ */
+export const CHECK_CMD = {
+  COMMAND_EXISTS: 'command -v'
+} as const;
+
+/**
  * Display constants
  */
 export const DISPLAY = {
   EMOJIS: {
+    // Entities
     FIBER: '🧬',
     CHAIN: '⛓️',
+    TOOL: '🔧',
+    REFERENCE: '🔗',
+    
+    // Status indicators
     ENABLED: '🟢',
     DISABLED: '🔴',
+    WARNING: '⚠️',  // Warning/error symbol
+    ERROR: '⚠️',    // Error symbol (same as warning)
+    UNKNOWN: '⚪',
     DEPENDS_ON: '⬆️',
+    
+    // Tool properties
+    CHECK: '🔍',
+    INSTALL: '🏗️',
+    ADDITIONAL_INFO: '📋',
   },
 } as const; 

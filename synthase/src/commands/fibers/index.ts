@@ -18,7 +18,8 @@ import {
   getDependentFibers,
   isFiberEnabled,
   getChainDependencies,
-  countDisplayedModules
+  countDisplayedModules,
+  ensureCoreDependencies
 } from './utils';
 
 import {
@@ -41,7 +42,7 @@ import {
 import { join } from 'path';
 import fs from 'fs';
 import yaml from 'js-yaml';
-import { FIBER_NAMES, CONFIG_FIELDS, FILE_NAMES } from '../../constants';
+import { FIBER_NAMES, CONFIG_FIELDS, FILE_NAMES, DISPLAY } from '../../constants';
 
 /**
  * Find a module in a list of modules by ID and optionally by type
@@ -262,7 +263,7 @@ function createGetCommand(): Command {
         }
 
         // Display legend at the beginning
-        console.log('Legend: 🧬 = fiber   ⛓️ = chain   🟢 = enabled   🔴 = disabled   ⬆️ = depends on\n');
+        console.log(`Legend: ${DISPLAY.EMOJIS.FIBER} = fiber   ${DISPLAY.EMOJIS.CHAIN} = chain   ${DISPLAY.EMOJIS.ENABLED} = enabled   ${DISPLAY.EMOJIS.DISABLED} = disabled   ${DISPLAY.EMOJIS.DEPENDS_ON} = depends on\n`);
 
         // Output fibers and chains in a structured format
         for (const fiberId of fibersToDisplay) {
@@ -313,7 +314,7 @@ function createGetCommand(): Command {
           if (fiberChains.length > 0) {
             // Add plural "s" when count is not 1
             const pluralS = fiberChains.length === 1 ? '' : 's';
-            console.log(`  ${fiberChains.length} ⛓️${pluralS}:`);
+            console.log(`  ${fiberChains.length} ${DISPLAY.EMOJIS.CHAIN}${pluralS}:`);
             
             for (const chainId of fiberChains) {
               const chainConfig = config[fiberId]?.moduleConfig?.[chainId];
@@ -341,8 +342,8 @@ function createGetCommand(): Command {
               );
             }
           } else {
-            // Show "0 ⛓️s" for empty fibers
-            console.log(`  0 ⛓️s`);
+            // Show "0 ${DISPLAY.EMOJIS.CHAIN}s" for empty fibers
+            console.log(`  0 ${DISPLAY.EMOJIS.CHAIN}s`);
           }
         }
         
@@ -457,17 +458,8 @@ function createDepsCommand(): Command {
           dependencyDetectionInfo.set(fiberId, []);
         }
         
-        // Load the test-user-config.yaml file directly to get proper fiberDeps
-        // This matches the same loading logic used in orderFibersByDependencies
-        let rawUserConfig: Record<string, any> = {};
-        const configPath = join(process.cwd(), FILE_NAMES.TEST_USER_CONFIG);
-        if (fs.existsSync(configPath)) {
-          const rawConfig = fs.readFileSync(configPath, 'utf8');
-          rawUserConfig = yaml.load(rawConfig) as Record<string, any>;
-          if (options.detailed) {
-            console.log(`Loaded raw user config from ${configPath}`);
-          }
-        }
+        // Ensure all fibers have an implicit dependency on core
+        ensureCoreDependencies(fibersToShow, dependencyMap, dependencyDetectionInfo, reverseDependencyMap);
         
         // Collect all possible dependency sources
         for (const fiberId of fibersToShow) {
@@ -488,79 +480,76 @@ function createDepsCommand(): Command {
             }
           }
           
-          // Try the raw user config for fiberDeps (which should include config from fiber-specific config.yaml files)
-          if (rawUserConfig[fiberId] && rawUserConfig[fiberId][CONFIG_FIELDS.FIBER_DEPS]) {
-            const rawConfigDeps = rawUserConfig[fiberId][CONFIG_FIELDS.FIBER_DEPS]
-              .filter((depId: string) => fibersToShow.includes(depId));
-              
-            if (rawConfigDeps.length > 0) {
-              detectionSources.push({
-                source: 'config.fiberDeps (from test-user-config.yaml)',
-                deps: rawConfigDeps
-              });
-            }
+          // Check direct fiber dependencies from discovered module config and merged config
+          const fiberConfig = fiberModule?.config || {};
+          const moduleFiberDeps = fiberConfig[CONFIG_FIELDS.FIBER_DEPS] || [];
+          
+          if (moduleFiberDeps.length > 0) {
+            detectionSources.push({
+              source: 'fiber.config.fiberDeps',
+              deps: moduleFiberDeps.filter((depId: string) => fibersToShow.includes(depId))
+            });
           }
           
-          // Fallback to merged config if needed
-          if (config[fiberId]) {
-            // Check direct fiber dependencies from config fiberDeps
-            const configFiberDeps = (config[fiberId] as any)?.fiberDeps || [];
-            if (configFiberDeps.length > 0) {
-              detectionSources.push({
-                source: 'config.fiberDeps (from merged config)',
-                deps: configFiberDeps.filter((depId: string) => fibersToShow.includes(depId))
-              });
-            }
+          // Check direct fiber dependencies from user config (merged)
+          const configFiberDeps = (config[fiberId] as any)?.fiberDeps || [];
+          if (configFiberDeps.length > 0 && 
+              !detectionSources.some(source => source.source === 'fiber.config.fiberDeps' && 
+                                             JSON.stringify(source.deps) === JSON.stringify(configFiberDeps))) {
+            detectionSources.push({
+              source: 'config.fiberDeps',
+              deps: configFiberDeps.filter((depId: string) => fibersToShow.includes(depId))
+            });
+          }
+          
+          // Check tool dependencies that might map to fibers
+          const configToolDeps = (config[fiberId] as any)?.toolDeps || [];
+          if (configToolDeps.length > 0) {
+            // Find fibers that provide these tools
+            const toolToFiberMap = new Map<string, string[]>();
             
-            // Check tool dependencies that might map to fibers
-            const configToolDeps = (config[fiberId] as any)?.toolDeps || [];
-            if (configToolDeps.length > 0) {
-              // Find fibers that provide these tools
-              const toolToFiberMap = new Map<string, string[]>();
+            // Build map of tool providers
+            for (const otherFiberId of fibersToShow) {
+              if (otherFiberId === fiberId) continue; // Skip self
               
-              // Build map of tool providers
-              for (const otherFiberId of fibersToShow) {
-                if (otherFiberId === fiberId) continue; // Skip self
-                
-                // Check for provides in fiber config
-                const provides = (config[otherFiberId] as any)?.provides || [];
-                for (const tool of provides) {
+              // Check for provides in fiber config
+              const provides = (config[otherFiberId] as any)?.provides || [];
+              for (const tool of provides) {
+                if (!toolToFiberMap.has(tool)) {
+                  toolToFiberMap.set(tool, []);
+                }
+                toolToFiberMap.get(tool)?.push(otherFiberId);
+              }
+              
+              // Check for provides in chains
+              const moduleConfig = (config[otherFiberId] as any)?.moduleConfig || {};
+              for (const [chainId, chainConfig] of Object.entries(moduleConfig)) {
+                const chainProvides = (chainConfig as any)?.provides || [];
+                for (const tool of chainProvides) {
                   if (!toolToFiberMap.has(tool)) {
                     toolToFiberMap.set(tool, []);
                   }
                   toolToFiberMap.get(tool)?.push(otherFiberId);
                 }
-                
-                // Check for provides in chains
-                const moduleConfig = (config[otherFiberId] as any)?.moduleConfig || {};
-                for (const [chainId, chainConfig] of Object.entries(moduleConfig)) {
-                  const chainProvides = (chainConfig as any)?.provides || [];
-                  for (const tool of chainProvides) {
-                    if (!toolToFiberMap.has(tool)) {
-                      toolToFiberMap.set(tool, []);
-                    }
-                    toolToFiberMap.get(tool)?.push(otherFiberId);
-                  }
+              }
+            }
+            
+            // Find fibers providing tools we depend on
+            const toolDerivedDeps: string[] = [];
+            for (const tool of configToolDeps) {
+              const providers = toolToFiberMap.get(tool) || [];
+              for (const provider of providers) {
+                if (!toolDerivedDeps.includes(provider)) {
+                  toolDerivedDeps.push(provider);
                 }
               }
-              
-              // Find fibers providing tools we depend on
-              const toolDerivedDeps: string[] = [];
-              for (const tool of configToolDeps) {
-                const providers = toolToFiberMap.get(tool) || [];
-                for (const provider of providers) {
-                  if (!toolDerivedDeps.includes(provider)) {
-                    toolDerivedDeps.push(provider);
-                  }
-                }
-              }
-              
-              if (toolDerivedDeps.length > 0) {
-                detectionSources.push({
-                  source: 'config.toolDeps (via provides)',
-                  deps: toolDerivedDeps
-                });
-              }
+            }
+            
+            if (toolDerivedDeps.length > 0) {
+              detectionSources.push({
+                source: 'config.toolDeps (via provides)',
+                deps: toolDerivedDeps
+              });
             }
           }
           
@@ -639,8 +628,15 @@ function createDepsCommand(): Command {
           for (const fiberId of sortedFibers) {
             const isCore = fiberId === 'core';
             const isEnabled = isCore || isFiberEnabled(fiberId, config);
-            const statusSymbol = isEnabled ? '🟢' : '🔴';
-            const deps = activeMap.get(fiberId) || [];
+            const statusSymbol = isEnabled ? DISPLAY.EMOJIS.ENABLED : DISPLAY.EMOJIS.DISABLED;
+            
+            // Get explicit dependencies
+            const deps = [...(activeMap.get(fiberId) || [])];
+            
+            // Add implicit core dependency for non-core fibers
+            if (!isCore && fibersToShow.includes('core') && !deps.includes('core')) {
+              deps.push('core');
+            }
             
             // Sort dependencies alphabetically for consistent display
             const sortedDeps = [...deps].sort((a, b) => {
@@ -660,7 +656,18 @@ function createDepsCommand(): Command {
             }
             
             if (options.detailed) {
-              const sources = dependencyDetectionInfo.get(fiberId) || [];
+              // Get dependency sources
+              const sources = [...(dependencyDetectionInfo.get(fiberId) || [])];
+              
+              // Add implicit core dependency source if not already present
+              if (!isCore && fibersToShow.includes('core') && 
+                  !sources.some(s => s.deps.includes('core'))) {
+                sources.push({
+                  source: 'implicit.core',
+                  deps: ['core']
+                });
+              }
+              
               if (sources.length > 0) {
                 for (const source of sources) {
                   console.log(`   Source: ${source.source}`);
@@ -692,7 +699,7 @@ function createDepsCommand(): Command {
             // Get enabled/disabled status symbol
             const isCore = fiberId === 'core';
             const isEnabled = isCore || isFiberEnabled(fiberId, config);
-            const statusSymbol = isEnabled ? '🟢' : '🔴';
+            const statusSymbol = isEnabled ? DISPLAY.EMOJIS.ENABLED : DISPLAY.EMOJIS.DISABLED;
             
             // Display fiber with status
             console.log(`${prefix}${connector}${statusSymbol} ${fiberId}`);
@@ -750,7 +757,42 @@ function createDepsCommand(): Command {
                 (reverseDependencyMap.get(id) || []).length === 0
               );
             } else {
-              // For normal mode, roots are fibers with no dependencies
+              // For normal mode, we want to show dependency providers at the top
+              // Find fibers with dependents but no dependencies of their own,
+              // or fibers that have the most dependents (foundational fibers)
+              const fibersWithDependents = fibersToShow.filter(id => 
+                (reverseDependencyMap.get(id) || []).length > 0
+              );
+              
+              if (fibersWithDependents.length > 0) {
+                // Find fibers that don't have dependencies themselves
+                const selfContainedFibers = fibersWithDependents.filter(id => 
+                  (dependencyMap.get(id) || []).length === 0
+                );
+                
+                if (selfContainedFibers.length > 0) {
+                  return selfContainedFibers;
+                }
+                
+                // Fall back to fibers with the most dependents
+                const dependentCounts = fibersWithDependents.map(id => ({
+                  id,
+                  count: (reverseDependencyMap.get(id) || []).length
+                }));
+                
+                // Sort by number of dependents (descending)
+                dependentCounts.sort((a, b) => b.count - a.count);
+                
+                // Group fibers with the same number of dependents
+                const maxDependents = dependentCounts[0].count;
+                const mostDependedOn = dependentCounts
+                  .filter(item => item.count === maxDependents)
+                  .map(item => item.id);
+                  
+                return mostDependedOn;
+              }
+              
+              // Fallback for if no fibers have dependents
               return fibersToShow.filter(id => 
                 (dependencyMap.get(id) || []).length === 0
               );
@@ -760,8 +802,7 @@ function createDepsCommand(): Command {
           // Get root fibers to start the tree
           let rootFibers = getRootFibers();
           
-          // If no clear roots, pick fibers with the most dependents (reverse mode) or
-          // least dependencies (normal mode)
+          // If no clear roots, pick the most foundational fibers
           if (rootFibers.length === 0) {
             if (options.reverse) {
               // Find fibers with most dependents
@@ -815,7 +856,7 @@ function createDepsCommand(): Command {
               // Get enabled/disabled status symbol
               const isCore = fiberId === 'core';
               const isEnabled = isCore || isFiberEnabled(fiberId, config);
-              const statusSymbol = isEnabled ? '🟢' : '🔴';
+              const statusSymbol = isEnabled ? DISPLAY.EMOJIS.ENABLED : DISPLAY.EMOJIS.DISABLED;
               
               // Display connector
               const connector = isLast ? '└── ' : '├── ';
@@ -835,15 +876,30 @@ function createDepsCommand(): Command {
                 }
               }
               
-              // Get child dependencies
+              // Get child dependencies - in normal mode, children are fibers that depend on this fiber
+              // In reverse mode, children are the fibers this fiber depends on
               let children: string[] = [];
               
               if (options.reverse) {
-                // In reverse mode, children are fibers that depend on this fiber
-                children = reverseDependencyMap.get(fiberId) || [];
-              } else {
-                // In normal mode, children are fibers this fiber depends on
+                // In reverse mode, children are fibers that this fiber depends on
                 children = dependencyMap.get(fiberId) || [];
+              } else {
+                // In normal mode, children are fibers that depend on this fiber
+                children = reverseDependencyMap.get(fiberId) || [];
+                
+                // Filter out children that depend on other fibers already drawn
+                // This ensures proper nesting of fibers in the hierarchy
+                children = children.filter(childId => {
+                  const childDeps = dependencyMap.get(childId) || [];
+                  // If this child depends on anything that's not core and not already seen,
+                  // don't show it as a direct child - it'll appear nested later
+                  return !childDeps.some(depId => 
+                    depId !== FIBER_NAMES.CORE && 
+                    depId !== fiberId &&
+                    fibersToShow.includes(depId) && 
+                    !allSeen.has(depId)
+                  );
+                });
               }
               
               // Filter out already processed children
@@ -856,20 +912,6 @@ function createDepsCommand(): Command {
                 return a.localeCompare(b);
               });
               
-              // Include cycle references for dependencies we've already seen
-              const cycles = (options.reverse ? reverseDependencyMap : dependencyMap)
-                .get(fiberId)
-                ?.filter(id => allSeen.has(id) && id !== fiberId) || [];
-                
-              if (cycles.length > 0) {
-                cycles.sort((a, b) => a.localeCompare(b));
-                cycles.forEach((cycleId, cycleIndex) => {
-                  const isLastCycle = cycleIndex === cycles.length - 1 && children.length === 0;
-                  const cycleConnector = isLastCycle ? '└── ' : '├── ';
-                  console.log(`${prefix}${childPrefix}${cycleConnector}${cycleId} (cyclic reference)`);
-                });
-              }
-              
               // Process child fibers recursively
               if (children.length > 0) {
                 buildTree(children, new Set(seen), prefix + childPrefix, true);
@@ -877,57 +919,27 @@ function createDepsCommand(): Command {
             });
           };
           
-          // Start building the tree from root fibers
-          buildTree(rootFibers);
+          // Find fibers that aren't included in the initial roots
+          // but should be displayed at the top level
+          const allRootFibers = [...rootFibers];
           
-          // If some fibers weren't included in the tree, add them at the root level
-          const remainingFibers = fibersToShow.filter(id => !allSeen.has(id));
+          // Get all fibers that don't already have a place in the hierarchy
+          const independentFibers = fibersToShow.filter(id => 
+            !rootFibers.includes(id) && 
+            // Not a dependent of any root fiber
+            !rootFibers.some(root => 
+              (reverseDependencyMap.get(root) || []).includes(id)
+            )
+          );
           
-          if (remainingFibers.length > 0) {
-            console.log('\nIndependent Fibers:');
-            
-            // Sort remaining fibers alphabetically
-            remainingFibers.sort((a, b) => a.localeCompare(b));
-            
-            buildTree(remainingFibers, new Set(), '', true);
-          }
-        }
-
-        // Show stats
-        console.log('\nStats:');
-        console.log(`- ${fibersToShow.length} fibers in diagram`);
-        
-        // Count total dependency relationships
-        let totalRelationships = 0;
-        for (const deps of dependencyMap.values()) {
-          totalRelationships += deps.length;
-        }
-        console.log(`- ${totalRelationships} dependencies between fibers`);
-        
-        // Find fibers with the most dependencies
-        const mostDeps = [...dependencyMap.entries()]
-          .sort((a, b) => b[1].length - a[1].length)
-          .slice(0, 3)
-          .filter(([_, deps]) => deps.length > 0);
+          // Sort independent fibers alphabetically
+          independentFibers.sort((a, b) => a.localeCompare(b));
           
-        if (mostDeps.length > 0) {
-          console.log('\nFibers requiring the most dependencies:');
-          mostDeps.forEach(([fiberId, deps]) => {
-            console.log(`- ${fiberId}: ${deps.length} dependencies`);
-          });
-        }
-        
-        // Find fibers that the most other fibers depend on
-        const mostRequired = [...reverseDependencyMap.entries()]
-          .sort((a, b) => b[1].length - a[1].length)
-          .slice(0, 3)
-          .filter(([_, deps]) => deps.length > 0);
+          // Add independent fibers to the root set
+          allRootFibers.push(...independentFibers);
           
-        if (mostRequired.length > 0) {
-          console.log('\nMost required fibers:');
-          mostRequired.forEach(([fiberId, deps]) => {
-            console.log(`- ${fiberId}: required by ${deps.length} fibers`);
-          });
+          // Build the tree from the combined root fibers
+          buildTree(allRootFibers);
         }
       } catch (error) {
         console.error('Error displaying fiber dependencies:', error);

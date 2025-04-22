@@ -3,6 +3,7 @@ import { findChitinDir } from '../../utils/path';
 import { isFiberEnabled, getChainDependencies, getDependentFibers } from './utils';
 import { areFiberDependenciesSatisfied } from '../../fiber/manager';
 import { UserConfig, ConfigValidationResult, Module, FiberConfig } from '../../types';
+import { DISPLAY } from '../../constants';
 
 /**
  * Display options for fibers command
@@ -76,13 +77,13 @@ export function getFiberStatus(
   if (fiberId === 'core') {
     return '(core)';
   } else if (!isEnabled) {
-    return '🔴';  // Red circle emoji for disabled
+    return DISPLAY.EMOJIS.DISABLED;  // Red circle emoji for disabled
   } else if (!isSatisfied) {
     return '(unsatisfied dependencies)';
   } else if (!inConfig) {
     return '(unconfigured)';
   } else if (!hideDisabled) {
-    return '🟢';  // Green circle emoji for enabled (only when not hiding disabled)
+    return DISPLAY.EMOJIS.ENABLED;  // Green circle emoji for enabled (only when not hiding disabled)
   }
   return '';
 }
@@ -131,7 +132,7 @@ export function displayValidationResults(validationResult: ExtendedValidationRes
     if (filteredWarnings.length > 0) {
       console.log(`  Warnings:`);
       for (const warning of filteredWarnings) {
-        console.log(`    ⚠️  ${warning}`);
+        console.log(`    ${DISPLAY.EMOJIS.WARNING}  ${warning}`);
       }
     }
   }
@@ -201,9 +202,9 @@ export function getChainStatus(
   hideDisabled: boolean = false
 ): string {
   if (!isEnabled) {
-    return '🔴';  // Red circle emoji for disabled, no space
+    return DISPLAY.EMOJIS.DISABLED;  // Red circle emoji for disabled, no space
   } else if (!hideDisabled) {
-    return '🟢';  // Green circle emoji for enabled, no space
+    return DISPLAY.EMOJIS.ENABLED;  // Green circle emoji for enabled, no space
   }
   return '';
 }
@@ -280,7 +281,7 @@ export function displayChain(
     }
     if (result.warnings && result.warnings.length > 0) {
       for (const warning of result.warnings) {
-        console.log(`       ⚠️  ${warning}`);
+        console.log(`       ${DISPLAY.EMOJIS.WARNING}  ${warning}`);
       }
     }
   }

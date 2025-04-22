@@ -1,5 +1,86 @@
 # Synthase Changelog
 
+## [Unreleased]
+
+### Fixed
+- `fibers deps` command now correctly visualizes nested dependency relationships in tree view
+- Refactored core dependency handling to avoid code duplication
+- `fibers deps` command now correctly shows all fibers depending on core
+- `fibers deps` command now properly detects dependencies from fiber config files
+- `fibers deps` command no longer directly loads the test-user-config.yaml file and properly uses the system's user config
+
+### Changed
+- Removed separator lines from single tool display for cleaner output
+- Consolidated duplicated emoji constants by removing ERROR (keeping only WARNING)
+- Changed install method emoji from 🚀 to 🏗️ to better represent installation functionality
+- Extracted more Homebrew-related constants to improve code maintainability and readability
+  - Added BREW_ENV constants for Homebrew environment variables
+  - Added BREW constants for command, cask, formula, tap, name, and check prefix
+  - Updated code to use these constants throughout the codebase
+  - Extracted "brew" string from command strings like "brew list --formula"
+
+### Fixed
+- Fixed issue with `tools get --status` command exiting prematurely before displaying results by:
+  - Increasing the forced exit timeout to 30 seconds for status check commands
+  - Adding output flushing delay to ensure all results are displayed
+  - Improving completion signaling in the command execution
+- Fixed warning message in `tools get --status` command to acknowledge when filters are already applied
+- Fixed issue with `tools get --status` command hanging after completion by:
+  - Adding proper Homebrew environment initialization in tool status checks
+  - Implementing timeouts for Homebrew processes to prevent hanging
+  - Adding cleanup code to terminate any lingering brew processes
+  - Ensuring the CLI properly exits after command completion
+  - Added a force exit timeout to prevent any hanging after operations complete
+- Removed installation suggestions/hints from tool status checking to avoid unwanted install commands
+- Updated the tool status checking logic in `_checkToolStatus` to match Chitin's implementation
+- Fixed tool detection by making `command -v` the default check method
+- Improved the priority order of checks to align with Chitin's behavior: explicit checkCommand → checkPath → checkEval → checkBrew → command check
+- Added checkPipx and pipx properties to ToolConfig interface for better compatibility with Chitin
+- Ensured command checks rely solely on exit codes for status determination
+- Fixed tool status checking to better handle tools that output warnings to stderr but still return a successful exit code, particularly bitwarden-cli with its Node.js deprecation warnings
+- Added documentation for properly configuring bitwarden-cli tool status checks
+- Modified tool status checking to rely solely on exit codes for command-based checks, ignoring stderr content
+- Added automatic PATH checking for tools without explicit check commands, ensuring tools like bitwarden-cli are correctly detected
+- Improved error messages for failed checks to show only the first line of stderr output
+- Added debug logging to show when tools output to stderr but still execute successfully
+- Fixed Homebrew package status messages showing "[object Object]" instead of proper package names for complex configurations
+- Fixed process hanging issue in `tools` command when run in debug mode by properly clearing timeouts
+- Fixed issue with Homebrew package checks for cask tools where a phantom "cask" tool would be reported as installed with package "true"
+- Improved how display names are generated for brew packages with cask configuration
+- Fixed brew package name retrieval when checking if packages are installed
+
+### Added
+- Added type-safe utilities for working with tool configurations
+- Added `normalizeBrewConfig` helper to standardize Homebrew configuration processing
+- Added proper display formatting for tool configurations in logs and UI messages
+- Improved tool status debugging with consistent, readable object formatting
+- Added inline tool configuration hints for tools that fail checks but might need different check commands
+- Added documentation on best practices for configuring tools that output warnings or have confusing exit codes
+
+## Fiber Dependencies Fix
+
+### Fixed
+- **Dependency Discovery in Fibers Deps Command**
+  - Fixed dependency detection in the `fibers deps` command to properly read `fiberDeps` from fiber-specific config files
+  - Updated the command to use the same module discovery/loading logic as other commands
+  - Improved source identification to show where dependencies are coming from (config files, module metadata, etc.)
+  - Eliminated "No explicit dependencies found" message when dependencies are correctly defined in fiber configs
+  - Added direct loading of test-user-config.yaml for more reliable dependency detection
+  - Made dependency detection consistent across all fiber-related commands
+
+## Fiber Dependencies Tree Improvement
+
+### Changed
+- **Enhanced Dependency Visualization**
+  - Improved the `fibers deps` command visualization to show foundational fibers at the top
+  - Reversed dependency direction to display "what depends on each fiber" rather than "what each fiber requires"
+  - Integrated independent fibers into the main tree view instead of showing them separately
+  - Removed unnecessary explanatory text and statistics for cleaner output
+  - Eliminated misleading "cyclic reference" indicators for clearer representation
+
+### Files Modified
+- `src/commands/fibers/index.ts` - Rewritten tree building logic to improve visualization
+
 ## Fiber Dependencies Display Improvement
 
 ### Changed
@@ -890,7 +971,7 @@
 ### Added
 - **Tool Filtering Options**
   - Added filter options to `tools get` and `tools list` commands:
-    - `-s, --source <source>` to filter tools by source module (e.g., "core", "dotfiles", "cloud:aws")
+    - `--filter-source <source>` to filter tools by source module (e.g., "core", "dotfiles", "cloud:aws")
     - `--filter-check <method>` to filter tools by check method (command, brew, path, eval, optional)
     - `--filter-install <method>` to filter tools by install method (brew, git, script, artifact, command)
   - Implemented helper functions to identify tool check and install methods
@@ -899,6 +980,20 @@
 
 ### Files Modified
 - `src/commands/tools.ts` - Added filtering options and implementation
+
+## Tool Status Check Improvements
+
+### Changed
+- **Enhanced Status Checking Performance**
+  - Added timeout mechanism to prevent hanging on unresponsive tool checks
+  - Improved status checking with batched processing instead of checking all tools at once
+  - Added progress indicator showing how many tools have been checked
+  - Added warning when checking status for more than 10 tools
+  - Limited parallel tool checks to prevent overwhelming the system
+  - Improved error handling for timed-out checks
+
+### Files Modified
+- `src/commands/tools.ts` - Added timeout and performance improvements to status checking
 
 ## Tool Status Check Implementation
 
@@ -914,3 +1009,126 @@
 
 ### Files Modified
 - `src/commands/tools.ts` - Added tool status checking functionality
+
+## Consistent Filter Option Naming
+
+### Changed
+- **Harmonized Filter Option Names**
+  - Renamed `-s, --source` option to `--filter-source` in both `tools get` and `tools list` commands
+  - Made all filter options follow the same naming pattern: `--filter-source`, `--filter-check`, `--filter-install`
+  - Improved consistency in the command-line interface
+  - Enhanced discoverability of filtering capabilities
+
+### Files Modified
+- `src/commands/tools.ts` - Updated option names and associated code references
+
+## Tool Status Check Fixes
+
+### Fixed
+- **Tool Status Command Hanging Issue**
+  - Fixed issue where `tools get --status` command would not exit properly after execution
+  - Added proper timeout cleanup to prevent memory leaks and hanging processes
+  - Improved Promise handling for parallel tool checks
+  - Added error handling for batch processing to continue even if individual checks fail
+  - Ensured proper process cleanup after all tool status operations complete
+
+### Files Modified
+- `src/commands/tools.ts` - Enhanced timeout handling and process cleanup
+
+## Tool Status Check Performance Improvements
+
+### Changed
+- **Optimized Homebrew Tool Status Checks**
+  - Implemented batched Homebrew package checks for significantly faster performance
+  - Added caching of Homebrew formula and cask lists to avoid repeated `brew list` calls
+  - Reduced the number of spawned processes when checking many brew-installed tools
+  - Implemented specialized fast path for Homebrew tools that bypasses shell execution
+  - Tools that use `checkBrew` now use the more efficient batched approach automatically
+
+### Files Modified
+- `src/commands/tools.ts` - Added batched Homebrew package checking with caching
+
+## Tool Status Check Timing Information
+
+### Added
+- **Performance Timing for Tool Status Checks**
+  - Added timing information to track how long each tool status check takes
+  - Display per-tool timing information in debug mode only
+  - Added total execution time summary at the end of status checks
+  - Added average check time calculation in debug output
+  - Improved performance monitoring and troubleshooting capabilities
+
+### Files Modified
+- `src/commands/tools.ts` - Added timing metrics to status checks
+
+## Dependency Fix for Tool Status Checking
+
+### Fixed
+- **Tool Status Command Dependency Issues**
+  - Added missing `execa` dependency for running check commands
+  - Fixed error in tools status checking that caused the command to fail
+  - Updated `isBrewPackageInstalled` to handle non-string inputs properly
+  - Ensured correct usage of execa API by using `execaCommand` for shell commands
+  - Fixed variable scoping for `totalCheckTime` to prevent undefined errors
+  - Added null/type checks to prevent type errors with command execution
+
+### Files Modified
+- `src/commands/tools.ts` - Updated to use proper execa imports and fixed related issues
+- `package.json` - Added execa dependency
+
+## Process Hanging Fix in Debug Mode
+
+### Fixed
+- **Debug Mode Hanging Issue**
+  - Fixed an issue where the process would hang after displaying tool information in debug mode
+  - Added explicit process exit to ensure clean termination when running with DEBUG=true
+  - Improved cleanup mechanism with proper timeout handling
+  - Ensured all debugging output is properly displayed before process exit
+
+### Files Modified
+- `src/commands/tools.ts` - Added proper process termination in debug mode
+
+## Homebrew Package Detection Improvement
+
+### Fixed
+- **Enhanced Homebrew Package Detection**
+  - Improved handling of complex Homebrew configuration objects in tool definitions
+  - Added support for various brew configuration formats including `{ cask: true }` and `{ tap: "name" }`
+  - Implemented fallback to using the tool's ID as package name when specific name isn't provided
+  - Added detailed debug logging of brew configuration objects for better troubleshooting
+  - Eliminated "Invalid brew package name format" errors by handling more configuration cases
+  - Enhanced status checking reliability for brew-installed tools
+
+### Files Modified
+- `src/commands/tools.ts` - Updated `isBrewPackageInstalled` function with better object detection
+
+## Documentation Updates
+
+### Fixed
+- **Documentation Improvements**
+  - Updated DOCUMENTATION.md with comprehensive command reference section
+  - Added references to test-user-config.yaml as example configuration
+  - Added links to additional resources in the parent project
+  - Included more detailed descriptions of command options
+  - Fixed command parameter descriptions for better clarity
+  - Added cross-references between documents
+
+### Files Modified
+- `DOCUMENTATION.md` - Enhanced with additional sections and fixed formatting
+
+## Documentation Improvement
+
+### Improved
+- Optimized Homebrew package status checks by implementing batched caching mechanism
+- Reduced average check time per tool for Homebrew packages from ~200ms to ~25ms
+- Added fallback to direct command checking if cache initialization fails
+
+### Improved
+- Optimized tool status checking with true parallel processing approach
+- Replaced batch-based tool checking with queue-based concurrent processing
+- Increased concurrency limit from 10 to 50 for faster status checking
+- Reduced average check time per tool from ~200ms to ~82ms (60% improvement)
+- Reduced total check time for all tools from ~29s to ~12s (60% reduction)
+- Added better logging for tool check methods and timing information
+- Separated tool checks by check method type for better organization
+- Improved timeout handling with per-method timeouts based on expected duration

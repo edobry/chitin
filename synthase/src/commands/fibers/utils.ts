@@ -6,6 +6,67 @@ import { join } from 'path';
 import { FIBER_NAMES, CONFIG_FIELDS, FILE_NAMES } from '../../constants';
 
 /**
+ * Ensures all fibers have an implicit dependency on core
+ * @param fibers List of fiber IDs to process
+ * @param dependencyMap Optional dependency map to update (for deps command)
+ * @param dependencyInfo Optional dependency detection info to update (for deps command)
+ * @param reverseDependencyMap Optional reverse dependency map to update
+ * @param graph Optional dependency graph to update (for ordering function)
+ */
+export function ensureCoreDependencies(
+  fibers: string[],
+  dependencyMap?: Map<string, string[]>,
+  dependencyInfo?: Map<string, {source: string, deps: string[]}[]>,
+  reverseDependencyMap?: Map<string, string[]>,
+  graph?: ReturnType<typeof createDependencyGraph<string>>
+): void {
+  // Only process if core is in the fiber list
+  if (!fibers.includes(FIBER_NAMES.CORE)) {
+    return;
+  }
+  
+  // Make everything depend on core except core itself
+  for (const fiberId of fibers) {
+    if (fiberId !== FIBER_NAMES.CORE) {
+      // Update dependency graph if provided
+      if (graph) {
+        graph.addDependency(fiberId, FIBER_NAMES.CORE);
+      }
+      
+      // Update dependency map if provided
+      if (dependencyMap) {
+        const deps = dependencyMap.get(fiberId) || [];
+        if (!deps.includes(FIBER_NAMES.CORE)) {
+          deps.push(FIBER_NAMES.CORE);
+          dependencyMap.set(fiberId, deps);
+        }
+      }
+      
+      // Update reverse dependency map if provided
+      if (reverseDependencyMap) {
+        const reverseDeps = reverseDependencyMap.get(FIBER_NAMES.CORE) || [];
+        if (!reverseDeps.includes(fiberId)) {
+          reverseDeps.push(fiberId);
+          reverseDependencyMap.set(FIBER_NAMES.CORE, reverseDeps);
+        }
+      }
+      
+      // Update dependency info if provided
+      if (dependencyInfo) {
+        const info = dependencyInfo.get(fiberId) || [];
+        if (!info.some(entry => entry.deps.includes(FIBER_NAMES.CORE))) {
+          info.push({
+            source: 'implicit.core',
+            deps: [FIBER_NAMES.CORE]
+          });
+          dependencyInfo.set(fiberId, info);
+        }
+      }
+    }
+  }
+}
+
+/**
  * Orders fibers by their dependencies with foundational fibers first
  * @param fibers Fiber IDs to order
  * @param config Configuration object
@@ -28,19 +89,6 @@ export function orderFibersByDependencies(
     graph.addNode(fiberId, fiberId);
   }
   
-  // Load the test-user-config.yaml file directly to get proper fiberDeps
-  // FIXME: This is a temporary fix, proper solution would be to fix the config loader
-  let rawUserConfig: Record<string, any> = {};
-  try {
-    const configPath = join(process.cwd(), FILE_NAMES.TEST_USER_CONFIG);
-    if (fs.existsSync(configPath)) {
-      const rawConfig = fs.readFileSync(configPath, 'utf8');
-      rawUserConfig = yaml.load(rawConfig) as Record<string, any>;
-    }
-  } catch (err) {
-    // Silently continue if file can't be loaded
-  }
-  
   // Add dependency relationships
   for (const fiberId of fibersToSort) {
     // First try to get dependencies from module metadata
@@ -50,13 +98,12 @@ export function orderFibersByDependencies(
     if (fiberModule && fiberModule.metadata && fiberModule.metadata.dependencies) {
       fiberDeps = fiberModule.metadata.dependencies.map(dep => dep.moduleId);
     }
-    
-    // Try the raw user config
-    if (fiberDeps.length === 0 && rawUserConfig[fiberId] && rawUserConfig[fiberId][CONFIG_FIELDS.FIBER_DEPS]) {
-      fiberDeps = rawUserConfig[fiberId][CONFIG_FIELDS.FIBER_DEPS];
-    }
-    // Fallback to config if needed
-    else if (fiberDeps.length === 0 && config[fiberId] && config[fiberId][CONFIG_FIELDS.FIBER_DEPS]) {
+    // Then try to get dependencies from the module's config 
+    else if (fiberModule && fiberModule.config && fiberModule.config[CONFIG_FIELDS.FIBER_DEPS]) {
+      fiberDeps = fiberModule.config[CONFIG_FIELDS.FIBER_DEPS];
+    } 
+    // Fallback to merged config if needed
+    else if (config[fiberId] && config[fiberId][CONFIG_FIELDS.FIBER_DEPS]) {
       fiberDeps = config[fiberId][CONFIG_FIELDS.FIBER_DEPS];
     }
     
@@ -69,10 +116,13 @@ export function orderFibersByDependencies(
     }
   }
   
+  // Ensure all fibers have an implicit dependency on core
+  ensureCoreDependencies(fibersToSort, undefined, undefined, undefined, graph);
+  
   // Get topologically sorted fibers (dependencies come before dependents)
   let sortedFibers = graph.getTopologicalSort();
   
-  // Handle special case fibers - core must be first and dotfiles second
+  // Handle special case fibers - core must be first and dotfiles second (depending on core)
   // Remove core and dotfiles from the sorted list
   sortedFibers = sortedFibers.filter(id => id !== FIBER_NAMES.CORE && id !== FIBER_NAMES.DOTFILES);
   
