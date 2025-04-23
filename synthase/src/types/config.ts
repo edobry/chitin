@@ -48,6 +48,10 @@ export interface ToolConfig {
   // Check methods
   checkPipx?: boolean;
   
+  // Alternative identification methods
+  tool?: string | boolean; // Tool name to check in PATH
+  app?: string | boolean;  // macOS app bundle to check
+  
   // Dependencies and relationships
   deps?: string[];
   provides?: string[];

@@ -1,6 +1,9 @@
 import { findChitinDir } from '../utils/path';
 import { loadUserConfig, getFullConfig, validateUserConfig, getCoreConfigValue } from '../config';
-import { UserConfig, ConfigValidationResult } from '../types';
+import { UserConfig, ConfigValidationResult, Module } from '../types';
+import { discoverModulesFromConfig } from '../modules/discovery';
+import { debug, setLogLevel, LogLevel } from '../utils/logger';
+import { shellPool } from '../utils/shell-pool';
 
 /**
  * Removes empty objects from a configuration object
@@ -88,4 +91,82 @@ export function createEnvironmentVariables(
     CHI_CHECK_TOOLS: (options.tools !== false && getCoreConfigValue(config, 'checkTools')) ? 'true' : 'false',
     CHI_AUTOINIT_DISABLED: getCoreConfigValue(config, 'autoInitDisabled') ? 'true' : 'false',
   };
+}
+
+/**
+ * Context object returned by withConfig
+ */
+export interface ConfigContext {
+  config: UserConfig;
+  validation: ConfigValidationResult;
+  modules: Module[];
+  moduleErrors: string[];
+  options: any;
+}
+
+/**
+ * Higher-order function to handle common config loading, module discovery, and cleanup
+ * @param callback Function to execute with the loaded configuration
+ * @param options Command options including any config paths
+ * @returns Promise resolving to the callback's return value
+ */
+export async function withConfig<T>(
+  callback: (context: ConfigContext) => Promise<T>,
+  options: any = {}
+): Promise<T> {
+  // Initialize shell pool if needed
+  const useShell = options.useShell !== false;
+  if (useShell) {
+    await shellPool.initialize();
+  }
+  
+  try {
+    // Set log level from environment
+    if (process.env.DEBUG === 'true') {
+      setLogLevel(LogLevel.DEBUG);
+    }
+    
+    // Load and validate configuration
+    const { config, validation } = await loadAndValidateConfig({
+      userConfigPath: options.path || options.config,
+      exitOnError: options.exitOnError !== false
+    });
+    
+    // Discover modules if needed
+    let modules: Module[] = [];
+    let moduleErrors: string[] = [];
+    
+    if (options.discoverModules !== false) {
+      debug('Discovering modules');
+      const moduleResult = await discoverModulesFromConfig(
+        config, 
+        options.baseDirs || []
+      );
+      modules = moduleResult.modules || [];
+      moduleErrors = moduleResult.errors || [];
+      debug(`Found ${modules.length} modules`);
+    }
+    
+    // Call the callback with the config context
+    return await callback({
+      config,
+      validation,
+      modules,
+      moduleErrors,
+      options
+    });
+  } catch (error) {
+    console.error(`Error: ${error instanceof Error ? error.message : String(error)}`);
+    process.exit(1);
+    throw new Error('Unreachable code - process.exit was called');
+  } finally {
+    // Clean up shell resources
+    if (useShell) {
+      try {
+        await shellPool.shutdown();
+      } catch (err) {
+        debug(`Error shutting down shell pool: ${err}`);
+      }
+    }
+  }
 } 

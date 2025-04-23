@@ -3,6 +3,83 @@
 ## [Unreleased]
 
 ### Fixed
+- Fixed issue where warning about checking many tools is displayed twice in `tools get --status` command
+- Fixed duplicate implementation of `_checkToolStatus` function that was causing type errors and inconsistent behavior
+- Resolved TypeScript errors with configurable command checks by properly handling string/boolean type checking
+- Fixed compatibility issues in `handleGetStatusCommand` by correctly handling ModuleDiscoveryResult type
+- Fixed issue where status check timing summary appears twice when running `tools get --status` command
+- Fixed TypeScript errors in src/index.ts related to ambiguous re-exports
+- Fixed import.meta comparison in src/index.ts by using the correct property
+- Fixed import with .ts extension that wasn't allowed by TypeScript
+- Fixed spacing issue with the Install label in tools status display and legend
+- Fixed `tools get --status` command appearing to hang when checking many tools by using a shorter timeout
+- Fixed issues with hanging tool status checks for commands like gpg and bitwarden-cli by:
+  - Using dedicated non-interactive execution for status check commands
+  - Adding environment variables to prevent tools from trying to read from TTY
+  - Fixing stdin handling to properly redirect stdin to /dev/null
+  - Properly separating command check executions from the shared shell pool
+
+### Improved
+- Refactored tools display code to use emoji constants from DISPLAY.EMOJIS instead of hardcoded values
+- Consolidated Homebrew code by removing deprecated utility functions and deleted redundant `utils/tool-config.ts` file
+- Reorganized domain-specific utilities to improve co-location and maintainability:
+  - Moved Homebrew tool utility functions from `commands/tools/homebrew.ts` to `utils/homebrew.ts`
+  - Merged `utils/tool-status.ts` into `utils/tools.ts` to consolidate tool status management
+  - Updated ToolConfig interface to add `tool` and `app` properties for more explicit tool checks
+  - Added improved performance batch status checking with concurrency control
+- Improved tools command output by grouping tools by source
+- Added summary statistics showing tool counts by status and source
+
+### To Fix
+- Status check timing summary appears twice when running `tools get --status` command - once before the final separator and once in the summary section 
+
+### Changed
+- Refactored constants management to move domain-specific constants into their relevant modules:
+  - Homebrew constants moved to `utils/homebrew.ts`
+  - Display constants moved to `utils/ui.ts`
+  - Command check constants moved to `utils/tools.ts`
+  - Fiber-related constants moved to `fiber/types.ts`
+  - Config and file constants moved to `config/types.ts`
+  - Original `constants.ts` maintained for backward compatibility
+- Modified import structure in src/index.ts to avoid type ambiguities
+
+- Restored original display format for `tools get --status` command to maintain backward compatibility
+- Added back progress indicator showing current tool being checked during status check
+- Fixed duplicate "Checking tool status..." message
+- Improved display formatting for tool configurations to match original format
+- Fixed inconsistent spacing around separator lines in tool display
+- Fixed issue with `tools get --status` command hanging by implementing a robust shell resource cleanup mechanism with process lifecycle hooks
+- Removed detailed information after check/install methods for cleaner output in `tools get --status` command
+- Enhanced `tools get` command to support multiple tool names (e.g., `tools get tool1 tool2 tool3`)
+
+### Added
+- Support for multiple tool names in the `tools get` command
+- New utility `withConfig` for standardized configuration loading across commands
+- Command factory for creating commands with consistent structure and error handling
+- Unified tool status checking utility with better error handling and concurrency
+- Batch tool status checking with optimized performance and progress tracking
+
+### Changed
+- Increased the default timeout for tool status checks to 15 seconds to prevent timeouts with slower tools like xcode-dev-tools
+- Improved shell resource cleanup to prevent resource leaks
+- Refactored tools command to eliminate code duplication between `list` and `get` subcommands through a shared helper function
+- Refactored `config` command to use the new command factory and `withConfig` utility
+
+### Future Improvements (Code Consolidation Opportunities)
+- Extract common config loading patterns into a shared `withConfig` helper across all commands
+- Create a unified tool status checking utility with standardized timeout handling
+- Consolidate duplicate display logic between tools and fibers commands
+- Implement a shared command factory function for creating commands with common patterns
+- Standardize module discovery and preparation across commands
+- Extract shell management logic into a higher-level abstraction
+- Create a shared setup/teardown utility for all commands that require shell or resource management
+
+## [0.8.0] - 2023-08-07
+
+- Fixed issue where warning about checking many tools is displayed twice in `tools get --status` command
+- Added support for caching Homebrew package lists to significantly improve performance
+
+### Fixed
 - Fixed shell termination errors by:
   - Removing the interactive flag (-i) from bash processes to improve cleanup
   - Adding graceful shell termination before forced killing
@@ -105,6 +182,16 @@
 - Improved tool status debugging with consistent, readable object formatting
 - Added inline tool configuration hints for tools that fail checks but might need different check commands
 - Added documentation on best practices for configuring tools that output warnings or have confusing exit codes
+- Added `--graphviz` option to the `fibers deps` command to output dependency graph in GraphViz DOT format
+  - This allows generating visual dependency graphs using Graphviz tools
+  - Colored nodes indicate status: core (blue), enabled (green), disabled (red/dashed)
+  - Works with both regular and reverse dependency display modes
+  - Shows dependencies matching the regular tree view without redundant connections
+  - Properly visualizes the dependency hierarchy with direct connections only
+  - Refactored into a reusable utility function using template literals
+  - Improved with extracted constants, modular design, and streamlined logic
+  - Moved to the fiber module for better code organization
+- Added justfile with a `fiber-deps-graph` recipe to generate dependency graphs as SVG
 
 ## Fiber Dependencies Fix
 
@@ -381,310 +468,4 @@
   - Improved error handling during module creation
 
 ### Files Modified
-- `src/modules/discovery.ts` - Updated file operations and module creation logic
-
-## Fiber Display Dependency Indicator Enhancement
-
-### Changed
-- **Improved Dependency Visualization**
-  - Replaced "Depends on:" text with ⬆️ (up arrow) emoji for more visual representation of dependencies
-  - Maintained consistent emoji usage throughout the interface
-  - Further reduced text clutter in favor of visual indicators
-  - Made dependency relationships easier to identify at a glance
-
-### Files Modified
-- `src/commands/fibers/display.ts` - Updated dependency display to use emoji
-
-## Fiber Display Visual Layout Improvement
-
-### Changed
-- **Enhanced Visual Layout**
-  - Moved status indicators before fiber and chain names for easier visual scanning
-  - Added full-width separator lines around fiber sections for clearer visual grouping
-  - Created more distinct visual hierarchy between fiber sections and their content
-  - Improved overall readability and information density
-  - Maintained special handling for core fiber status
-
-### Files Modified
-- `src/commands/fibers/display.ts` - Restructured display functions
-- `src/commands/fibers/index.ts` - Added bottom separator line for fiber sections
-
-## Fiber Display Status Improvement
-
-### Changed
-- **Enhanced Status Indicators**
-  - Replaced "(disabled)" text with 🔴 emoji for better visual distinction
-  - Added 🟢 emoji for enabled fibers and chains
-  - Color-coded status indicators show enabled/disabled state at a glance
-  - Only shows status indicators when not filtering out disabled modules
-  - Improved readability of fibers and chains with visual indicators
-  - Made status indicators more concise and visually appealing
-  - Enhanced the overall aesthetics of the fibers command output
-
-### Files Modified
-- `src/commands/fibers/display.ts` - Updated status indicator functions to use emojis
-- `src/commands/fibers/index.ts` - Modified caller code to pass display options
-
-## Fiber Display Formatting Improvement
-
-### Changed
-- **Chain Display Formatting**
-  - Removed numbering from chains in the fiber display for cleaner output
-  - Eliminated "No chains in this fiber" message for empty fibers
-  - Simplified the visual presentation of chains in fibers
-  - Improved readability of the fibers command output
-  - Made output more consistent across different fiber types
-  - Removed unused chain counter variable and parameter
-
-### Files Modified
-- `src/commands/fibers/display.ts` - Removed chain numbering and counter parameter
-- `src/commands/fibers/index.ts` - Removed empty chains message and counter variable
-
-## Fiber Display Order Improvement
-
-### Changed
-- **Fiber Output Order**
-  - Modified fiber display order to ensure dotfiles always appears immediately after core
-  - Updated `orderFibersByDependencies` function to prioritize dotfiles after core
-  - Added comprehensive test coverage for the new ordering behavior
-  - Maintained proper dependency ordering for all other fibers
-  - Ensures consistent fiber ordering in the fibers command output
-
-### Files Modified
-- `src/commands/fibers/utils.ts` - Updated fiber ordering logic
-- `tests/commands/fibers/utils.test.ts` - Added tests for fiber ordering
-
-## Fiber Repository Config Integration
-
-### Added
-- **Additional Base Directories Support**
-  - Added --base-dirs option to specify additional directories to scan for modules
-  - Enhanced discoverModulesFromConfig to accept custom base directories
-  - Improved testing capabilities for fiber repository configurations
-  - Made it easier to test and debug fiber dependencies in custom locations
-
-### Fixed
-- **Repository Config Dependencies**
-  - Fixed dependency discovery to read from fiber repository config.yaml files
-  - Updated fiber ordering to use dependencies defined in each fiber's repository
-  - Modified dependency display to prioritize repository-defined dependencies
-  - Implemented fallback to user config when repository config is unavailable
-  - Ensured dependency resolution properly respects fiber repository configurations
-
-### Files Modified
-- `src/modules/discovery.ts` - Updated to accept additional base directories
-- `src/commands/fibers/utils.ts` - Updated orderFibersByDependencies to use module metadata
-- `src/commands/fibers/display.ts` - Updated displayFiberDependencies to read from module metadata
-- `src/commands/fibers/index.ts` - Modified to pass module information and added base-dirs option
-
-## Fiber Dependencies Display Enhancement
-
-### Changed
-- **Improved Fiber Information Display**
-  - Modified the fibers command to always show fiber dependencies
-  - Added "Depends on" and "Required by" information for each fiber
-  - Provided clearer visibility into the dependency structure of fibers
-  - Made dependency information visible in standard mode, not just with --detailed flag
-
-### Added
-- **Custom Config Path Support**
-  - Added --path option to the fibers command to allow specifying a custom config file
-  - Enhanced testing capability for different fiber dependency configurations
-  - Ensured consistent behavior with the load-config command
-
-### Files Modified
-- `src/commands/fibers/display.ts` - Updated to always show fiber dependencies
-- `src/commands/fibers/index.ts` - Added support for custom config path
-
-## Dependency Management and Fiber Ordering Enhancement
-
-### Changed
-- **Improved Fiber Ordering Logic**
-  - Modified the `orderFibersByDependencies` function to use topological sorting
-  - Removed hardcoded priority fibers ('dev', 'dotfiles') in favor of dependency-based ordering
-  - Ensured fibers that other fibers depend on appear BEFORE their dependents
-  - Utilized the existing dependency resolution system for consistent ordering
-
-### Fixed
-- **Dependency Module Type Imports**
-  - Updated dependency module to import types from local dependency-types.ts
-  - Added export for dependency-types in modules/index.ts
-  - Fixed potential issues with circular dependencies between modules
-- **Topological Sort Order**
-  - Fixed the `getTopologicalSort` function to properly reverse the result array
-  - Ensured dependencies actually come before their dependents in the sorted list
-  - Corrected the order of fibers in the fibers command output
-
-### Files Modified
-- `src/modules/dependency.ts` - Updated imports to use local type definitions and fixed topological sort
-- `src/modules/index.ts` - Added export for dependency-types
-- `src/commands/fibers/utils.ts` - Reimplemented ordering logic using topological sort
-
-## Type System Improvement
-
-### Changed
-- **Enhanced Type Safety**
-  - Properly imported and used UserConfig and other types from the types module
-  - Replaced generic 'any' types with proper type definitions
-  - Fixed handling of optional properties with proper null checks
-  - Created specific interface for validation results with warnings
-  - Added proper type constraints to function parameters
-  - Improved typings in display and organization utilities
-
-### Files Modified
-- `src/commands/utils.ts` - Improved type definitions for shared command utilities
-- `src/commands/fibers/display.ts` - Enhanced type safety for UI components
-- `src/commands/fibers/organization.ts` - Added proper types for organization functions
-
-## Code Structure Improvement - Deep Refactoring
-
-### Changed
-- **Comprehensive Code Restructuring**
-  - Extracted common utilities across command modules
-  - Refactored fibers command into smaller, more focused modules
-  - Created dedicated display functions for UI concerns
-  - Created organization utilities to handle module grouping
-  - Removed duplicate code by centralizing shared functions
-  - Applied single responsibility principle throughout the codebase
-
-### Files Modified/Created
-- `src/commands/utils.ts` - New shared utilities for all commands
-- `src/commands/fibers/display.ts` - Display-focused utilities
-- `src/commands/fibers/organization.ts` - Module organization utilities
-- `src/commands/fibers/utils.ts` - Fiber-specific utilities
-- `src/commands/fibers/index.ts` - Streamlined command implementation
-- `src/commands/load-config.ts` - Simplified to use shared utilities
-- `src/commands/init.ts` - Simplified to use shared utilities
-
-## Code Structure Improvement - CLI Modularization
-
-### Changed
-- **CLI Code Restructuring**
-  - Refactored monolithic CLI into modular command structure
-  - Extracted each command (load-config, init, fibers) into its own module
-  - Moved utility functions to dedicated modules
-  - Created a cleaner main CLI entry point
-  - Improved maintainability and readability of code
-
-### Files Modified/Created
-- `src/cli.ts` - Simplified to only initialize and run the CLI
-- `src/commands/index.ts` - New central command registration
-- `src/commands/load-config.ts` - Extracted load-config command
-- `src/commands/init.ts` - Extracted init command
-- `src/commands/fibers/index.ts` - Extracted fibers command
-- `src/commands/fibers/utils.ts` - Extracted utility functions for fibers
-
-## Module Organization Improvement
-
-### Changed
-- **Unified Module Organization**
-  - Removed separate "Unconfigured Modules" section
-  - Organized all modules consistently by fiber, regardless of configuration state
-  - Integrated unconfigured chains within their respective fibers
-  - Added a "standalone" fiber for chains that cannot be associated with any fiber
-  - Maintained the ability to hide disabled fibers/chains with the `--hide-disabled` option
-
-### Fixed
-- **Special Fiber Locations**
-  - Fixed "dotfiles" fiber showing "Unknown" location by using dotfilesDir from core config
-  - Improved "core" fiber location display by using the Chitin directory path
-  - Ensured special fibers always show their correct locations
-
-### Files Modified
-- `src/cli.ts` - Redesigned module display to unify all modules under their fibers
-
-## CLI Output Formatting Improvement
-
-### Added
-- **Enhanced Module Information**
-  - Added filesystem location path to each fiber display
-  - Added `--all-modules` (`-A`) flag to show unconfigured modules
-  - Improved organization of unconfigured modules by type (fibers vs chains)
-  - Added clear explanations for module categories
-  - Displayed location paths for all modules when using --all-modules
-
-### Improved
-- **Enhanced Output Format**
-  - Simplified validation display - only showing markers for failed validations
-  - Reduced visual noise by removing checkmarks from valid modules
-  - Renamed "Other Discovered Modules" to "Unconfigured Modules" for clarity
-  - Separated unconfigured modules into Fibers and Chains sections
-  - Grouped chain modules by parent directory for better organization
-  - Removed redundant "All fibers" header text
-  - Replaced "FIBER N:" prefixes with cleaner visual separators
-  - Added horizontal dividers for better visual organization
-  - Improved summary section with more human-readable stats
-  - Used Unicode characters for more visually appealing separators
-  - Standardized formatting across the entire output
-
-### Fixed
-- **Numbering and Module Count Clarity**
-  - Changed chain numbering to be sequential within each fiber
-  - Added global load order display in detailed mode
-  - Improved summary to show both displayed and total module counts
-  - Added explanation when some validated modules aren't displayed
-  - Provided counts of hidden modules in detailed mode
-  - Fixed chain dependency display
-
-### Changed
-- **Streamlined Command Interface**
-  - Removed the standalone validate command
-  - Removed the --validate option as validation is now always performed
-  - Made validation integral to the fibers command for a more intuitive interface
-  - JSON/YAML output options now apply to validation results by default
-
-## CLI Command Structure Improvement
-
-### Added
-- **Built-in Validation in Fibers Command**
-  - Made validation an integral part of the fibers command
-  - Added visual status indicators (✓/✗) for each fiber and chain
-  - Added color-coded error and warning indicators (❌/⚠️) for better readability
-  - Included validation summary in the standard output
-  - Improved performance by eliminating redundant operations
-  - Added detailed dependency information display with `--detailed` flag
-
-### Improved
-- **Enhanced User Experience**
-  - Removed verbose discovery and validation logging for a cleaner output
-  - Ordered fibers by dependency relationships, with foundational fibers first
-  - Prioritized dev and dotfiles fibers for better usability
-  - Added explicit "Depends on" and "Required by" fiber dependency information
-  - Enhanced visual hierarchy with clear status indicators
-  - Aligned validation messages with their respective modules
-  - Added concise validation statistics in the summary section
-
-### Files Modified
-- `src/cli.ts` - Updated fibers command with cleaner output format, quieter operation, and dependency-based ordering
-
-## Module Discovery Performance Optimization
-
-### Improved
-- **Module Discovery Algorithm**
-  - Overhauled module discovery to match the original Chitin implementation's approach
-  - Eliminated deep recursive scanning in favor of targeted directory structure matching
-  - Improved performance of the `validate` command by reducing unnecessary file system operations
-  - Maintained proper dependency resolution while matching Chitin's directory traversal pattern
-  - Fixed support for chain files (direct shell scripts) and nested chain directories
-
-### Files Modified
-- `src/modules/discovery.ts` - Completely reworked discovery functions to follow Chitin's structure
-
-## Configuration Compatibility Fix
-
-### Fixed
-- **Configuration Compatibility Issue**
-  - Removed non-standard `failOnError` property which is not part of the original Chitin implementation
-  - Ensured strict compatibility with original Chitin configuration structure
-  - Prevented inadvertent introduction of new configuration features
-
-### Files Modified
-- `src/config/loader.ts` - Removed `failOnError` from default configuration
-- `src/utils/yaml.ts` - Removed `failOnError` from core properties list
-
-## Configuration Output Fix
-
-### Fixed
-- **Configuration Display Issue**
-  - Fixed duplication of fibers in configuration output
-  - Removed redundant `fibers`
+- `src/modules/discovery.ts` - Updated error handling and debug implementation

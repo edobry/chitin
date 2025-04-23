@@ -120,7 +120,6 @@ export interface ToolDisplayOptions {
 
 // For tracking total check time
 let totalCheckTime = 0;
-let timingSummaryDisplayed = false;
 
 /**
  * Clean up shell processes when the command completes
@@ -326,10 +325,7 @@ export async function displayTools(
     }
     
     // Show total check time only once
-    if (!timingSummaryDisplayed) {
-      console.log(`\nTotal status check time: ${(totalCheckTime / 1000).toFixed(2)}s`);
-      timingSummaryDisplayed = true;
-    }
+    console.log(`\nTotal status check time: ${(totalCheckTime / 1000).toFixed(2)}s`);
   }
 
   // Make sure we clean up before exiting

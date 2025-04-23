@@ -242,56 +242,116 @@ export async function isBrewPackageInstalled(packageName: string, isCask: boolea
   }
 }
 
+// ================================================================
+// Tool-specific Homebrew Utilities (moved from commands/tools/homebrew.ts)
+// ================================================================
+import { ToolConfig } from '../types';
+
 /**
- * Check if a brew config is for a cask
- * @param brewConfig Brew configuration
- * @returns True if it's a cask config
- * @deprecated Use domain-specific implementations like isToolBrewCask in commands/tools/homebrew.ts instead
+ * Represents a normalized Homebrew package configuration
  */
-export function isBrewCask(brewConfig: any): boolean {
-  if (!brewConfig) return false;
-  
-  if (typeof brewConfig === 'string') {
-    return false; // Simple string configs are formulas by default
-  }
-  
-  if (typeof brewConfig === 'object') {
-    return brewConfig.cask === true || (typeof brewConfig.cask === 'string' && brewConfig.cask !== '');
-  }
-  
-  return false;
+export interface NormalizedBrewConfig {
+  packageName: string;
+  isCask: boolean;
+  hasTap: boolean;
+  tapName?: string;
+  tapUrl?: string;
+  displayName: string;
 }
 
 /**
- * Get the package name from a brew configuration
- * @param brewConfig Brew configuration
- * @param toolId Tool ID to use as fallback
- * @returns Package name
- * @deprecated Use domain-specific implementations like getToolBrewPackageName in commands/tools/homebrew.ts instead
+ * Normalizes brew package configuration for consistent access
+ * @param brewConfig The raw brew configuration from tool config
+ * @param toolId The ID of the tool (used as fallback)
+ * @returns Normalized brew configuration with consistent access patterns
  */
-export function getBrewPackageName(brewConfig: any, toolId: string): string {
-  if (!brewConfig) return toolId;
+export function normalizeBrewConfig(brewConfig: any, toolId: string): NormalizedBrewConfig {
+  const result: NormalizedBrewConfig = {
+    packageName: '',
+    isCask: false,
+    hasTap: false,
+    displayName: ''
+  };
   
+  // Handle different types of brew configurations
   if (typeof brewConfig === 'string') {
-    return brewConfig; // Simple string config
-  }
-  
-  if (typeof brewConfig === 'object') {
-    // If it's a cask config with a name
-    if (isBrewCask(brewConfig) && typeof brewConfig.cask === 'string' && brewConfig.cask !== '') {
-      return brewConfig.cask;
+    // Simple string package name
+    result.packageName = brewConfig;
+    result.displayName = brewConfig;
+  } else if (typeof brewConfig === 'boolean' && brewConfig === true) {
+    // Boolean true - use toolId as the package name
+    result.packageName = toolId;
+    result.displayName = toolId;
+  } else if (typeof brewConfig === 'object' && brewConfig !== null) {
+    // Object configuration with various properties
+    
+    // Handle name property
+    if (brewConfig.name) {
+      result.packageName = brewConfig.name;
+      result.displayName = brewConfig.name;
+    } else {
+      // Fallback to toolId
+      result.packageName = toolId;
+      result.displayName = toolId;
     }
     
-    // Regular name field
-    if (typeof brewConfig.name === 'string' && brewConfig.name !== '') {
-      return brewConfig.name;
+    // Handle cask property
+    if (brewConfig.cask === true) {
+      result.isCask = true;
+    } else if (typeof brewConfig.cask === 'string') {
+      result.isCask = true;
+      result.packageName = brewConfig.cask;
+      result.displayName = brewConfig.cask;
     }
     
-    // Formula name
-    if (typeof brewConfig.formula === 'string' && brewConfig.formula !== '') {
-      return brewConfig.formula;
+    // Handle tap property
+    if (brewConfig.tap) {
+      result.hasTap = true;
+      result.tapName = brewConfig.tap;
+      
+      if (brewConfig.tapUrl) {
+        result.tapUrl = brewConfig.tapUrl;
+      }
     }
   }
   
-  return toolId; // Fallback to tool ID
+  return result;
+}
+
+/**
+ * Gets the display string for a brew configuration (for logs and UI)
+ */
+export function getBrewDisplayString(brewConfig: any, toolId: string): string {
+  const normalized = normalizeBrewConfig(brewConfig, toolId);
+  
+  let display = normalized.displayName;
+  
+  if (normalized.isCask) {
+    display += ' (cask)';
+  }
+  
+  if (normalized.hasTap && normalized.tapName) {
+    display += ` (from tap: ${normalized.tapName})`;
+  }
+  
+  return display;
+}
+
+/**
+ * Determines the package name to use for checking if a brew package is installed
+ * Domain-specific version that ensures consistent tool naming
+ */
+export function getToolBrewPackageName(brewConfig: any, toolId: string): string {
+  return normalizeBrewConfig(brewConfig, toolId).packageName;
+}
+
+/**
+ * Determines if a brew config specifies a cask
+ * Domain-specific version for tool configurations
+ */
+export function isToolBrewCask(brewConfig: any): boolean {
+  if (typeof brewConfig === 'object' && brewConfig !== null) {
+    return brewConfig.cask === true || typeof brewConfig.cask === 'string';
+  }
+  return false;
 } 

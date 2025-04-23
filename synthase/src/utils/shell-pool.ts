@@ -50,17 +50,38 @@ export class ShellPool {
     try {
       debug('Creating new shell process');
       
-      // Using bash without -i flag to avoid interactive shell issues
-      const shell = safeExeca('bash', [], {
+      // Use explicit environment variables to ensure non-interactive behavior
+      const shellEnv = {
+        ...process.env,
+        // Disable interactive prompts and history
+        BASH_SILENCE_DEPRECATION_WARNING: '1',
+        HISTFILE: '/dev/null',
+        HISTSIZE: '0',
+        PROMPT_COMMAND: '',
+        PS1: '',
+        PS2: '',
+        // Disable terminal features
+        TERM: 'dumb',
+        // Force disable interactive mode
+        BASH_ENV: '/dev/null',
+        // Other settings for better command execution
+        FORCE_COLOR: '1',
+        // GPG specific settings to avoid hanging on gpg commands
+        GPG_TTY: '/dev/null',
+        // Disable SSH agent prompts
+        SSH_ASKPASS: '/bin/true',
+      };
+      
+      // Create a completely non-interactive shell with proper stdio configuration
+      const shell = safeExeca('bash', ['--norc', '--noprofile'], {
+        // Explicitly redirect stdin to /dev/null and pipe stdout/stderr
         stdio: ['pipe', 'pipe', 'pipe'],
         shell: false,
-        env: {
-          ...process.env,
-          // Disable interactive prompts and startup files
-          BASH_SILENCE_DEPRECATION_WARNING: '1',
-          // Force color output
-          FORCE_COLOR: '1',
-        },
+        env: shellEnv,
+        // Disable input handling
+        input: '',
+        // Important: Do not set tty to true
+        // This prevents tools from thinking they're in an interactive environment
       });
 
       this.shells.push({
@@ -162,6 +183,15 @@ export class ShellPool {
    * @returns Command output
    */
   async executeCommand(command: string, timeoutMs: number = 5000): Promise<{ stdout: string; stderr: string; exitCode: number }> {
+    // For status check commands, use direct execution instead of shell pool
+    // This provides better isolation and prevents hanging on interactive commands
+    if (command.startsWith('command -v') || 
+        command.includes(' --version') || 
+        command.includes('gpg') || 
+        command.includes('bw')) {
+      return this.executeDirectCommand(command, timeoutMs);
+    }
+    
     if (!this.initialized) {
       await this.initialize();
     }
@@ -313,6 +343,71 @@ echo '${endMarker}'
         this.releaseShell(shellIndex);
       }
       throw error;
+    }
+  }
+  
+  /**
+   * Execute a command directly without using the shell pool
+   * This is more reliable for simple check commands that might hang in a reused shell
+   */
+  private async executeDirectCommand(command: string, timeoutMs: number): Promise<{ stdout: string; stderr: string; exitCode: number }> {
+    debug(`Executing direct command: ${command}`);
+    
+    const startTime = performance.now();
+    
+    // Use a shorter timeout for direct command execution to avoid excessive waiting
+    // This is especially important for tools that might hang waiting for user input
+    const effectiveTimeout = Math.min(timeoutMs, 5000);
+    
+    try {
+      // For simple command checks, run directly with execa instead of through shell pool
+      const result = await execa('bash', ['-c', command], {
+        timeout: effectiveTimeout,
+        stdio: ['pipe', 'pipe', 'pipe'],
+        env: {
+          ...process.env,
+          // Disable interactive prompts
+          BASH_SILENCE_DEPRECATION_WARNING: '1',
+          HISTFILE: '/dev/null',
+          HISTSIZE: '0',
+          // GPG specific settings
+          GPG_TTY: '/dev/null',
+          // Prevent SSH prompts
+          SSH_ASKPASS: '/bin/true',
+          // Bitwarden specific settings
+          BW_NOINTERACTION: 'true',
+        },
+        // Reject on error for cleaner error handling
+        reject: false,
+      });
+      
+      const duration = performance.now() - startTime;
+      debug(`Direct command completed in ${duration.toFixed(2)}ms with exit code ${result.exitCode}: ${command}`);
+      
+      return {
+        stdout: result.stdout || '',
+        stderr: result.stderr || '',
+        exitCode: result.exitCode != null ? result.exitCode : -1
+      };
+    } catch (error) {
+      const duration = performance.now() - startTime;
+      debug(`Direct command execution error after ${duration.toFixed(2)}ms: ${error instanceof Error ? error.message : String(error)}`);
+      
+      // If it's a timeout error
+      if (error instanceof Error && error.message.includes('timed out')) {
+        return {
+          stdout: '',
+          stderr: `Command timed out after ${timeoutMs}ms`,
+          exitCode: 124 // Standard timeout exit code
+        };
+      }
+      
+      // For other errors, return error information
+      return {
+        stdout: '',
+        stderr: error instanceof Error ? error.message : String(error),
+        exitCode: 1
+      };
     }
   }
 

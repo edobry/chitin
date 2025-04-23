@@ -4,13 +4,21 @@
 import { Command } from 'commander';
 import { loadAndValidateConfig } from '../utils';
 import { UserConfig, Module } from '../../types';
+import { ToolConfig } from '../../types';
 import { discoverModulesFromConfig } from '../../modules/discovery';
 
 // Import shared utilities
 import { debug, error, info, setLogLevel, LogLevel } from '../../utils/logger';
 import { setupProcessCleanup } from '../../utils/process';
 import { shellPool } from '../../utils/shell-pool';
-import { initBrewEnvironment, initializeBrewCaches } from '../../utils/homebrew';
+import { 
+  initBrewEnvironment, 
+  initializeBrewCaches,
+  normalizeBrewConfig,
+  getBrewDisplayString,
+  getToolBrewPackageName,
+  isToolBrewCask
+} from '../../utils/homebrew';
 import { ToolStatus, ToolStatusResult, checkToolStatus } from '../../utils/tools';
 
 // Import domain-specific utilities
@@ -23,12 +31,6 @@ import {
   displayToolsAsYaml,
   ToolDisplayOptions
 } from './ui';
-import {
-  normalizeBrewConfig,
-  getBrewDisplayString,
-  getToolBrewPackageName,
-  isToolBrewCask
-} from './homebrew';
 
 /**
  * Creates a tools command
@@ -50,6 +52,7 @@ export function createToolsCommand(): Command {
         .option('-y, --yes', 'Skip confirmation when checking many tools')
         .option('--json', 'Output in JSON format')
         .option('--yaml', 'Output in YAML format')
+        .option('--concurrency <number>', 'Number of tools to check in parallel', '5')
         .action(handleToolsCommand)
     )
     .addCommand(
@@ -61,9 +64,9 @@ export function createToolsCommand(): Command {
         .action(handleListCommand)
     );
   
-  // Make 'get' the default subcommand when none is specified
-  cmd.action((options) => {
-    handleToolsCommand([], options);
+  // Display help when no subcommand is specified instead of defaulting to 'get'
+  cmd.action(() => {
+    cmd.help();
   });
   
   // Set up process cleanup
@@ -73,10 +76,19 @@ export function createToolsCommand(): Command {
 }
 
 /**
- * Handle the list command
+ * Shared helper function for tool commands to handle common setup and cleanup tasks
+ * @param callback Function that will be called with the tools and other context
  * @param options Command options
  */
-async function handleListCommand(options: any): Promise<void> {
+async function withToolSetup<T>(
+  callback: (context: { 
+    tools: Map<string, { config: ToolConfig, source: string }>,
+    filteredTools: Map<string, { config: ToolConfig, source: string }>,
+    modules: Module[],
+    options: any
+  }) => Promise<T>,
+  options: any
+): Promise<T> {
   try {
     if (process.env.DEBUG === 'true') {
       setLogLevel(LogLevel.DEBUG);
@@ -110,14 +122,33 @@ async function handleListCommand(options: any): Promise<void> {
       filterInstall: options.filterInstall
     });
     
+    // Call the specific handler with the prepared context
+    return await callback({ tools, filteredTools, modules, options });
+  } catch (err) {
+    console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
+    process.exit(1);
+    throw new Error('This code is unreachable due to process.exit(1)');
+  } finally {
+    // Make sure to clean up the shell pool
+    try {
+      await shellPool.shutdown();
+    } catch (err) {
+      debug(`Error shutting down shell pool: ${err}`);
+    }
+  }
+}
+
+/**
+ * Handle the list command
+ * @param options Command options
+ */
+async function handleListCommand(options: any): Promise<void> {
+  await withToolSetup(async ({ filteredTools }) => {
     // Output tool names one per line for scripting use
     for (const toolId of filteredTools.keys()) {
       console.log(toolId);
     }
-  } catch (err) {
-    console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
-    process.exit(1);
-  }
+  }, options);
 }
 
 /**
@@ -125,8 +156,62 @@ async function handleListCommand(options: any): Promise<void> {
  * @returns Timeout in milliseconds
  */
 function getToolTimeout(): number {
-  // Use a longer default timeout for all tools to prevent timeouts
-  return 15000; // 15 seconds timeout for all tools
+  // Use a reasonable timeout for all tools to prevent hanging
+  return 5000; // 5 seconds timeout for all tools
+}
+
+/**
+ * Check status of multiple tools in parallel with concurrency control
+ * @param tools Tools to check
+ * @param concurrency Maximum number of concurrent checks
+ * @returns Map of tool status results
+ */
+async function checkToolsStatusInParallel(
+  tools: Map<string, { config: ToolConfig; source: string }>,
+  concurrency: number
+): Promise<Map<string, ToolStatusResult>> {
+  const results = new Map<string, ToolStatusResult>();
+  const toolEntries = Array.from(tools.entries());
+  const total = toolEntries.length;
+  let completed = 0;
+  
+  // Process tools in chunks based on concurrency
+  for (let i = 0; i < toolEntries.length; i += concurrency) {
+    const chunk = toolEntries.slice(i, i + concurrency);
+    const chunkPromises = chunk.map(async ([toolId, { config }]) => {
+      const timeout = getToolTimeout();
+      try {
+        const result = await checkToolStatus(toolId, config, timeout);
+        completed++;
+        // Update progress
+        process.stdout.write(`\r\x1b[KChecking tools: ${completed}/${total} (${Math.round(completed/total*100)}%)`);
+        return { toolId, result };
+      } catch (err) {
+        completed++;
+        process.stdout.write(`\r\x1b[KChecking tools: ${completed}/${total} (${Math.round(completed/total*100)}%)`);
+        return { 
+          toolId, 
+          result: { 
+            status: ToolStatus.NOT_INSTALLED, 
+            method: 'unknown', 
+            error: err instanceof Error ? err : new Error(String(err)) 
+          } 
+        };
+      }
+    });
+    
+    // Wait for all tools in this chunk to complete
+    const chunkResults = await Promise.all(chunkPromises);
+    
+    // Store results
+    for (const { toolId, result } of chunkResults) {
+      results.set(toolId, result);
+    }
+  }
+  
+  // Clear the progress line
+  process.stdout.write('\r\x1b[K');
+  return results;
 }
 
 /**
@@ -135,31 +220,9 @@ function getToolTimeout(): number {
  * @param options Command options
  */
 async function handleToolsCommand(toolNames: string[] | undefined, options: any): Promise<void> {
-  try {
-    if (process.env.DEBUG === 'true') {
-      setLogLevel(LogLevel.DEBUG);
-    }
-    
-    // Initialize the shell pool early
-    await shellPool.initialize();
-    
-    // Load configuration and validate
-    const { config } = await loadAndValidateConfig();
-    
-    debug('Discovering modules');
-    
-    // Discover modules
-    const discoveryResult = await discoverModulesFromConfig(config);
-    const modules: Module[] = discoveryResult.modules || [];
-    
-    debug(`Found ${modules.length} modules`);
-    
-    // Initialize the parent project configuration
-    // Always try to find the parent first
-    let parentConfig = loadParentConfig(process.cwd());
-    
-    // Extract tools from all sources
-    const tools = extractAllTools(config, modules);
+  await withToolSetup(async ({ tools, filteredTools, options }) => {
+    // Parse concurrency option
+    const concurrency = parseInt(options.concurrency, 10) || 5;
     
     // If specific tools are requested
     if (toolNames && toolNames.length > 0) {
@@ -185,12 +248,26 @@ async function handleToolsCommand(toolNames: string[] | undefined, options: any)
       
       // If all tools should be checked for status together
       if (options.status) {
-        const statusResults = new Map<string, ToolStatusResult>();
+        // Initialize Homebrew environment if needed
+        const hasBrewTools = Array.from(toolsToDisplay.values()).some(
+          tool => tool.config.brew || tool.config.checkBrew
+        );
         
-        // Check status for all requested tools
-        for (const [toolId, toolData] of toolsToDisplay.entries()) {
+        if (hasBrewTools) {
+          debug('Initializing Homebrew environment for status checks');
+          await initBrewEnvironment();
+          await initializeBrewCaches();
+        }
+        
+        // Use parallel checking for status if there are multiple tools
+        const statusResults = toolsToDisplay.size > 1 
+          ? await checkToolsStatusInParallel(toolsToDisplay, concurrency)
+          : new Map<string, ToolStatusResult>();
+        
+        // For a single tool, just check directly
+        if (toolsToDisplay.size === 1) {
+          const [toolId, toolData] = Array.from(toolsToDisplay.entries())[0];
           debug(`Checking status of ${toolId}`);
-          // Use appropriate timeout for the tool
           const timeout = getToolTimeout();
           statusResults.set(toolId, await checkToolStatus(toolId, toolData.config, timeout));
         }
@@ -222,13 +299,6 @@ async function handleToolsCommand(toolNames: string[] | undefined, options: any)
       return;
     }
     
-    // Apply filters to all tools
-    const filteredTools = filterTools(tools, {
-      filterSource: options.filterSource,
-      filterCheck: options.filterCheck,
-      filterInstall: options.filterInstall
-    });
-    
     // Check if any tools were found
     if (filteredTools.size === 0) {
       console.log('No tools found matching the criteria.');
@@ -250,8 +320,6 @@ async function handleToolsCommand(toolNames: string[] | undefined, options: any)
     if (options.json) {
       // If we need status information, get it first
       if (options.status) {
-        const statusResults = new Map<string, ToolStatusResult>();
-        
         // Initialize Homebrew environment if needed
         const hasBrewTools = Array.from(filteredTools.values()).some(
           tool => tool.config.brew || tool.config.checkBrew
@@ -263,12 +331,7 @@ async function handleToolsCommand(toolNames: string[] | undefined, options: any)
           await initializeBrewCaches();
         }
         
-        // Check each tool with appropriate timeout
-        for (const [toolId, { config }] of filteredTools.entries()) {
-          const timeout = getToolTimeout();
-          statusResults.set(toolId, await checkToolStatus(toolId, config, timeout));
-        }
-        
+        const statusResults = await checkToolsStatusInParallel(filteredTools, concurrency);
         displayToolsAsJson(filteredTools, statusResults, { missing: options.missing });
       } else {
         // No status information
@@ -282,8 +345,6 @@ async function handleToolsCommand(toolNames: string[] | undefined, options: any)
     if (options.yaml) {
       // If we need status information, get it first
       if (options.status) {
-        const statusResults = new Map<string, ToolStatusResult>();
-        
         // Initialize Homebrew environment if needed
         const hasBrewTools = Array.from(filteredTools.values()).some(
           tool => tool.config.brew || tool.config.checkBrew
@@ -295,12 +356,7 @@ async function handleToolsCommand(toolNames: string[] | undefined, options: any)
           await initializeBrewCaches();
         }
         
-        // Check each tool with appropriate timeout
-        for (const [toolId, { config }] of filteredTools.entries()) {
-          const timeout = getToolTimeout();
-          statusResults.set(toolId, await checkToolStatus(toolId, config, timeout));
-        }
-        
+        const statusResults = await checkToolsStatusInParallel(filteredTools, concurrency);
         displayToolsAsYaml(filteredTools, statusResults, { missing: options.missing });
       } else {
         displayToolsAsYaml(filteredTools, new Map(), { missing: false });
@@ -311,7 +367,8 @@ async function handleToolsCommand(toolNames: string[] | undefined, options: any)
     
     // Default display - set up status checks if needed
     if (options.status) {
-      options.statusResults = new Map<string, ToolStatusResult>();
+      // Show initial progress message
+      console.log("Checking tool status...");
       
       // Initialize Homebrew environment if needed
       const hasBrewTools = Array.from(filteredTools.values()).some(
@@ -324,24 +381,15 @@ async function handleToolsCommand(toolNames: string[] | undefined, options: any)
         await initializeBrewCaches();
       }
       
-      // Check each tool with appropriate timeout
-      for (const [toolId, { config }] of filteredTools.entries()) {
-        const timeout = getToolTimeout();
-        options.statusResults.set(toolId, await checkToolStatus(toolId, config, timeout));
-      }
+      // Check all tools in parallel with concurrency control
+      const startTime = performance.now();
+      options.statusResults = await checkToolsStatusInParallel(filteredTools, concurrency);
+      const endTime = performance.now();
+      const duration = ((endTime - startTime) / 1000).toFixed(2);
+      debug(`Completed all tool status checks in ${duration} seconds`);
     }
     
     // Display tools
     await displayTools(filteredTools, displayOptions);
-  } catch (err) {
-    console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
-    process.exit(1);
-  } finally {
-    // Make sure to clean up the shell pool
-    try {
-      await shellPool.shutdown();
-    } catch (err) {
-      debug(`Error shutting down shell pool: ${err}`);
-    }
-  }
+  }, options);
 } 
