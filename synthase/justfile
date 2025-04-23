@@ -1,0 +1,19 @@
+# Synthase justfile - command runner for common tasks
+
+# Generate a fiber dependency graph as SVG image
+fiber-deps-graph:
+    #!/bin/bash
+    set -euo pipefail
+    echo "Generating fiber dependency graph..."
+    
+    # Make sure Graphviz is installed
+    if ! command -v dot &> /dev/null; then
+        echo "Error: Graphviz is required but not installed."
+        echo "Please install it with: brew install graphviz"
+        exit 1
+    fi
+    
+    # Generate the DOT file and pipe it to the dot command
+    bun run src/cli.ts fibers deps --graphviz | dot -Tsvg -o fiber-dependencies.svg
+    
+    echo "Success! Fiber dependency graph saved to: fiber-dependencies.svg" 

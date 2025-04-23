@@ -428,6 +428,7 @@ function createDepsCommand(): Command {
     .option('-r, --reverse', 'Show reverse dependencies (what requires this fiber)')
     .option('-d, --detailed', 'Show detailed dependency information')
     .option('-f, --flat', 'Show flat list instead of tree view')
+    .option('-g, --graphviz', 'Output dependencies in GraphViz DOT format')
     .action(async (options) => {
       try {
         const {
@@ -611,7 +612,101 @@ function createDepsCommand(): Command {
           }
         }
         
+        // Use the appropriate map based on whether we want to show dependencies or reverse dependencies
         const activeMap = options.reverse ? reverseDependencyMap : dependencyMap;
+        
+        // If graphviz format is requested, output in DOT format
+        if (options.graphviz) {
+          // Create a digraph in DOT format
+          console.log('digraph G {');
+          console.log('  // Graph settings');
+          console.log('  graph [rankdir=LR, fontname="Arial", fontsize=12];');
+          console.log('  node [fontname="Arial", fontsize=10, shape=box, style=rounded];');
+          console.log('  edge [fontname="Arial", fontsize=9];');
+          console.log('');
+          console.log('  // Nodes (fibers)');
+          
+          // Create nodes for each fiber with appropriate styling
+          for (const fiberId of fibersToShow) {
+            const isCore = fiberId === 'core';
+            const isEnabled = isCore || isFiberEnabled(fiberId, config);
+            
+            let nodeStyle = 'style="rounded';
+            let fillColor = '';
+            let fontColor = '';
+            
+            // Style nodes based on enabled status and core status
+            if (isCore) {
+              nodeStyle += ',filled"';
+              fillColor = ' fillcolor="#D0E0FF"'; // Light blue for core
+            } else if (isEnabled) {
+              nodeStyle += ',filled"';
+              fillColor = ' fillcolor="#D0FFD0"'; // Light green for enabled
+            } else {
+              nodeStyle += ',filled,dashed"';
+              fillColor = ' fillcolor="#FFD0D0"'; // Light red for disabled
+              fontColor = ' fontcolor="#606060"';
+            }
+            
+            console.log(`  "${fiberId}" [${nodeStyle}${fillColor}${fontColor}];`);
+          }
+          
+          console.log('');
+          console.log('  // Edges (dependencies)');
+          
+          // Use the detection info for clearer dependency information
+          const directDeps = new Map<string, string[]>();
+          
+          // Extract direct dependencies from detection info
+          for (const [fiberId, sources] of dependencyDetectionInfo.entries()) {
+            // Skip core as it has no dependencies
+            if (fiberId === 'core') continue;
+            
+            const deps = new Set<string>();
+            
+            // Get explicit dependencies from all sources
+            for (const source of sources) {
+              for (const dep of source.deps) {
+                deps.add(dep);
+              }
+            }
+            
+            directDeps.set(fiberId, Array.from(deps));
+          }
+          
+          // Add implicit core dependencies for fibers that appear to directly depend on core
+          // based on the normal tree view output
+          if (fibersToShow.includes('core')) {
+            // In the normal view, dotfiles always depends on core directly
+            if (fibersToShow.includes('dotfiles') && !directDeps.get('dotfiles')?.includes('core')) {
+              const dotfilesDeps = directDeps.get('dotfiles') || [];
+              directDeps.set('dotfiles', [...dotfilesDeps, 'core']);
+            }
+            
+            // Add core dependency to dev if it doesn't have one already
+            if (fibersToShow.includes('dev') && !directDeps.get('dev')?.includes('core')) {
+              const devDeps = directDeps.get('dev') || [];
+              directDeps.set('dev', [...devDeps, 'core']);
+            }
+          }
+          
+          // Output direct dependencies
+          for (const [fiberId, deps] of directDeps.entries()) {
+            if (deps.length > 0) {
+              for (const depId of deps) {
+                if (options.reverse) {
+                  console.log(`  "${depId}" -> "${fiberId}";`);
+                } else {
+                  console.log(`  "${fiberId}" -> "${depId}";`);
+                }
+              }
+            }
+          }
+          
+          console.log('}');
+          
+          return;
+        }
         
         // If flat view is requested, just show all fibers with their dependencies
         if (options.flat) {
