@@ -3,7 +3,8 @@ import { findChitinDir, getUserConfigPath } from '../utils/path';
 import { loadYamlFile } from '../utils/yaml';
 import { UserConfig, FiberConfig, ChainConfig, CoreConfig } from '../types';
 import { expandPath, fileExists, ensureDir, writeFile } from '../utils/file';
-import { FILE_NAMES, FIBER_NAMES, CONFIG_FIELDS } from '../constants';
+import { FILE_NAMES, CONFIG_FIELDS, PATH_PREFIXES } from './types';
+import { FIBER_NAMES } from '../fiber/types';
 
 /**
  * Default file names for configuration files

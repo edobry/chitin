@@ -1,4 +1,21 @@
 /**
+ * Module type constants
+ */
+export const MODULE_TYPES = {
+  FIBER: 'fiber',
+  CHAIN: 'chain',
+  TOOL: 'tool',
+} as const;
+
+/**
+ * Special fiber names
+ */
+export const FIBER_NAMES = {
+  CORE: 'core',
+  DOTFILES: 'dotfiles',
+} as const;
+
+/**
  * Represents a fiber state
  */
 export interface FiberState {

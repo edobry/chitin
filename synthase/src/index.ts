@@ -4,20 +4,47 @@ import { deepMerge, mergeToolConfigs, mergeModuleConfigs } from './config/merger
 import { expandPath, getOriginalPath } from './utils/file';
 import { importEnvironmentFromBash, exportEnvironmentToBash } from './shell/environment';
 
-// Re-export types
+// Export base types
 export * from './types';
-// Re-export config module
-export * from './config';
-// Re-export utils
-export * from './utils';
+
+// Selectively re-export from config to avoid duplicate exports with ./types
+export {
+  // Config loading and validation functions are already imported above
+  // and re-exported below, so don't re-export them here
+} from './config';
+
+// Selectively re-export from utils
+export {
+  // Path handling functions are already imported above
+  // and re-exported below, so don't re-export them here
+} from './utils';
+
 // Re-export shell functionality
 export * from './shell/environment';
-// Export module system
-export * from './modules';
-// Export fiber system
-export * from './fiber';
 
-// Export individual functions for backward compatibility
+// Selectively re-export from modules
+export {
+  discoverModulesFromConfig,
+  discoverModules,
+  loadModule,
+  validateModule
+} from './modules';
+
+// Selectively re-export from fiber
+export {
+  getFiberIds,
+  getLoadableFibers,
+  isFiberEnabled,
+  areFiberDependenciesSatisfied,
+  getChainIds,
+  getChainDependencies,
+  orderChainsByDependencies,
+  createChainFilter,
+  createFiberManager,
+  createFiberFilter
+} from './fiber';
+
+// Export individual functions (these are the main exports)
 export {
   // Configuration
   loadUserConfig,
@@ -39,10 +66,13 @@ export {
   exportEnvironmentToBash
 };
 
-// If this file is run directly, execute the CLI
-if (import.meta.url === import.meta.main) {
+// Fix comparison of import.meta.url and import.meta.main
+// since they have different types (string vs boolean)
+if (import.meta.main) {
   console.log("Index.ts running as main, executing CLI...");
-  import('./cli.ts').then(() => {
+  
+  // Fix TypeScript error about importing file with .ts extension
+  import('./cli.js').then(() => {
     console.log("CLI execution complete");
   }).catch(err => {
     console.error("Error executing CLI:", err);

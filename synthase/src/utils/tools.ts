@@ -2,12 +2,19 @@
  * Shared tool utilities for handling tool configuration and status
  */
 import { ToolConfig } from '../types';
-import { CHECK_CMD, DISPLAY } from '../constants';
+import { DISPLAY } from './ui';
 import { debug } from './logger';
 import { shellPool } from './shell-pool';
 import { isBrewPackageInstalled, isBrewCask, getBrewPackageName } from './homebrew';
 import * as fs from 'fs';
 import * as path from 'path';
+
+/**
+ * Shell command check constants
+ */
+export const CHECK_CMD = {
+  COMMAND_EXISTS: 'command -v'
+} as const;
 
 /**
  * Tool status enum representing installation state

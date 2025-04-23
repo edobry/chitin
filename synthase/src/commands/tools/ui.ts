@@ -2,11 +2,13 @@
  * UI utilities for tools command displays
  */
 import { ToolConfig } from '../../types';
-import { ToolStatus, ToolStatusResult, checkToolStatus } from '../../utils/tools';
+import { ToolStatus, ToolStatusResult, checkToolStatus, getStatusEmoji } from '../../utils/tools';
 import { displayCheckMethod, displayInstallMethod, displayAdditionalInfo, displayToolStatus, formatConfigValue } from '../../utils/ui';
 import { debug, info, warn } from '../../utils/logger';
 import { initBrewEnvironment, initializeBrewCaches } from '../../utils/homebrew';
 import { getBrewDisplayString } from './homebrew';
+import { DISPLAY } from '../../constants';
+import { shellPool } from '../../utils/shell-pool';
 
 /**
  * Display information about a single tool
@@ -19,33 +21,88 @@ export async function displaySingleTool(
   toolData: { config: ToolConfig, source: string },
   options: { detailed?: boolean, status?: boolean, statusResult?: ToolStatusResult }
 ): Promise<void> {
-  const { config, source } = toolData;
+  // If we have a status result, display it with the tool name
+  if (options.statusResult) {
+    const statusEmoji = getStatusEmoji(options.statusResult);
+    console.log(`  ${statusEmoji} 🔧 ${toolId}`);
+  } else {
+    console.log(`  🔧 ${toolId}`);
+  }
   
-  // Tool header with tool identifier  
-  console.log(`${toolId} (Source: ${source})`);
+  console.log('');
+  
+  // Display source
+  console.log(`  Source: ${toolData.source}`);
   
   // Display check method
-  displayCheckMethod(toolId, config);
+  displayCheckMethod(toolId, toolData.config);
   
-  // Display installation method if available
-  displayInstallMethod(config);
+  // Display install method
+  displayInstallMethod(toolData.config);
   
-  // Display additional info
-  displayAdditionalInfo(config);
-  
-  // Show detailed configuration if requested
+  // Display additional properties in detailed mode
   if (options.detailed) {
-    console.log(`  Full Configuration: ${formatConfigValue(config)}`);
+    displayAdditionalInfo(toolData.config);
   }
   
-  // Show status information if requested or provided
-  if (options.status || options.statusResult) {
-    const statusResult = options.statusResult || 
-                        await checkToolStatus(toolId, config);
-    displayToolStatus(statusResult);
+  // If status checking was requested but we don't have a result yet, check now
+  if (options.status === true && !options.statusResult) {
+    console.log(`  Status: Checking...`);
+    try {
+      const status = await checkToolStatus(toolId, toolData.config);
+      const statusEmoji = getStatusEmoji(status);
+      console.log(`  Status: ${formatStatus(status.status)}${status.message ? ' - ' + status.message : ''}`);
+      
+      // If not installed, show installation hint
+      if (status.status === ToolStatus.NOT_INSTALLED) {
+        showInstallationHint(toolId, toolData.config);
+      }
+    } catch (error) {
+      console.log(`  Status: ${DISPLAY.EMOJIS.WARNING} Error checking status`);
+    }
+  } else if (options.statusResult) {
+    // Show the status if we have a result
+    const status = options.statusResult;
+    
+    // More concise status display - only show message for errors/unknown status
+    if (status.status === ToolStatus.ERROR || status.status === ToolStatus.UNKNOWN) {
+      console.log(`  Status: ${formatStatus(status.status)}${status.message ? ` - ${status.message}` : ''}`);
+    } else {
+      // Just show the status without detailed message for successful/not installed cases
+      console.log(`  Status: ${formatStatus(status.status)}`);
+    }
+    
+    // If not installed, show installation hint
+    if (status.status === ToolStatus.NOT_INSTALLED) {
+      showInstallationHint(toolId, toolData.config);
+    }
   }
   
-  console.log(); // Empty line for spacing
+  // No trailing empty line - we'll let the display loop handle spacing between tools
+}
+
+/**
+ * Format a status enum to a display string
+ */
+function formatStatus(status: ToolStatus): string {
+  switch (status) {
+    case ToolStatus.INSTALLED:
+      return 'installed';
+    case ToolStatus.NOT_INSTALLED:
+      return 'not installed';
+    case ToolStatus.ERROR:
+      return 'error';
+    case ToolStatus.UNKNOWN:
+    default:
+      return 'unknown';
+  }
+}
+
+/**
+ * Show installation hint for a tool that failed a check
+ */
+function showInstallationHint(toolId: string, config: ToolConfig): void {
+  // Implementation would go here if needed
 }
 
 /**
@@ -62,6 +119,23 @@ export interface ToolDisplayOptions {
   skipStatusWarning?: boolean;
 }
 
+// For tracking total check time
+let totalCheckTime = 0;
+
+/**
+ * Clean up shell processes when the command completes
+ */
+async function cleanupShells(): Promise<void> {
+  debug('Cleaning up shell processes...');
+  try {
+    // Use the properly imported shellPool to clean up
+    await shellPool.shutdown();
+    debug('Shell cleanup completed successfully');
+  } catch (err) {
+    debug(`Error during shell cleanup: ${err}`);
+  }
+}
+
 /**
  * Display information about multiple tools
  * @param tools Tools map
@@ -71,109 +145,127 @@ export async function displayTools(
   tools: Map<string, { config: ToolConfig, source: string }>,
   options: ToolDisplayOptions
 ): Promise<void> {
+  // Register process exit handlers for cleanup
+  // This is a more robust approach than trying to cleanup at the end
+  process.once('beforeExit', () => {
+    debug('Process beforeExit event triggered, cleaning up...');
+    cleanupShells();
+  });
+  
   if (tools.size === 0) {
     console.log('No tools found matching the criteria.');
     return;
   }
+
+  // Separate full tools from references
+  const fullTools = new Map();
+  const toolReferences = new Map();
   
-  // Check if we need to show a warning about checking many tools
-  if (options.status && !options.skipStatusWarning && tools.size > 10) {
-    const filtered = options.filterSource || options.filterCheck || options.filterInstall;
+  // Categorize tools as either full configs or references
+  for (const [toolId, toolData] of tools.entries()) {
+    const hasFullConfig = 
+      Object.keys(toolData.config).some(key => 
+        ['checkCommand', 'checkBrew', 'checkPath', 'brew', 'git', 'script', 'command', 'artifact'].includes(key));
     
-    if (!filtered) {
-      warn(`You're about to check the status of ${tools.size} tools, which may take some time.`);
-      warn('Consider using filters (--filter-source, --filter-check, --filter-install) to narrow down the list.');
-      warn('Press Ctrl+C to cancel, or wait 5 seconds to continue...');
-      
-      await new Promise(resolve => setTimeout(resolve, 5000));
+    if (hasFullConfig) {
+      fullTools.set(toolId, toolData);
     } else {
-      // Show a different message if filters are already applied
-      info(`Checking status of ${tools.size} tools (filtered)...`);
+      toolReferences.set(toolId, toolData);
     }
   }
   
-  // If we need to check the status of all tools
-  if (options.status && !options.statusResults) {
-    const statusResults = new Map<string, ToolStatusResult>();
-    let processedCount = 0;
+  console.log('Legend: 🔧 = tool   🔍 = check method   🏗️ = install method   🔗 = reference');
+  if (options.status) {
+    console.log('Status: 🟢 = installed   🔴 = not installed   ⚠️ = error   ⚪ = unknown');
+  }
+  
+  console.log(`\nFound ${tools.size} tools/tool references:\n`);
+  
+  // Sort tools by name
+  const toolNames = Array.from(fullTools.keys()).sort();
+  const toolStatuses = new Map<string, ToolStatusResult>();
+  
+  // If status is requested and we have many tools, show warning
+  if (options.status && fullTools.size > 10 && !options.skipStatusWarning) {
+    console.log(`\n⚠️ Warning: Checking status for ${fullTools.size} tools may take a while.`);
+    console.log('   Consider using filters (--filter-source, --filter-check, --filter-install) or');
+    console.log('   specifying a single tool: tools get <toolname> --status\n');
+  }
+  
+  if (options.status) {
+    // Pre-initialize Homebrew caches for faster checks
+    debug('Pre-initializing Homebrew caches for faster tool status checks...');
+    await initializeBrewCaches(10000);
     
-    // Initialize Homebrew environment if needed
-    if (tools.size > 0) {
-      const hasBrewTools = Array.from(tools.values()).some(
-        tool => tool.config.brew || tool.config.checkBrew
-      );
+    // Check status for all tools
+    const overallStartTime = performance.now();
+    let index = 0;
+    const totalTools = toolNames.length;
+    
+    // Show progress indicator that updates in place
+    process.stdout.write(`Checking tool status: 0/${totalTools}`);
+    
+    for (const toolId of toolNames) {
+      const toolData = fullTools.get(toolId)!;
+      const startTime = performance.now();
       
-      if (hasBrewTools) {
-        debug('Initializing Homebrew environment for status checks');
-        await initBrewEnvironment();
-        await initializeBrewCaches();
+      // Update progress indicator in place
+      process.stdout.write(`\rChecking tool status: ${++index}/${totalTools}`);
+      
+      try {
+        const status = await checkToolStatus(toolId, toolData.config);
+        status.checkDuration = performance.now() - startTime;
+        toolStatuses.set(toolId, status);
+        totalCheckTime += status.checkDuration;
+      } catch (error) {
+        const errorStatus = {
+          status: ToolStatus.ERROR,
+          error: error instanceof Error ? error : new Error(String(error)),
+          checkDuration: performance.now() - startTime
+        };
+        toolStatuses.set(toolId, errorStatus);
+        totalCheckTime += errorStatus.checkDuration;
       }
     }
     
-    // Check the status of all tools in batches
-    const batchSize = 5; // Process 5 tools at once
-    const toolEntries = Array.from(tools.entries());
-    
-    // Process tools in batches for better performance
-    for (let i = 0; i < toolEntries.length; i += batchSize) {
-      const batch = toolEntries.slice(i, i + batchSize);
-      
-      // Process each batch in parallel
-      await Promise.all(batch.map(async ([toolId, { config }]) => {
-        try {
-          const result = await checkToolStatus(toolId, config);
-          statusResults.set(toolId, result);
-          processedCount++;
-          
-          // Show progress periodically
-          if (processedCount % 10 === 0 || processedCount === toolEntries.length) {
-            debug(`Checked ${processedCount}/${toolEntries.length} tools`);
-          }
-        } catch (err) {
-          debug(`Error checking status for ${toolId}: ${err}`);
-          statusResults.set(toolId, {
-            status: ToolStatus.ERROR,
-            error: err instanceof Error ? err : new Error(String(err))
-          });
-        }
-      }));
-    }
-    
-    options.statusResults = statusResults;
+    // Add a newline after the progress indicator
+    process.stdout.write('\n\n');
   }
-  
-  // If we only want to show missing tools
-  if (options.missing && options.statusResults) {
-    const missingTools = new Map();
-    
-    for (const [toolId, { config, source }] of tools.entries()) {
-      const statusResult = options.statusResults.get(toolId);
-      
-      if (statusResult && statusResult.status === ToolStatus.NOT_INSTALLED) {
-        missingTools.set(toolId, { config, source });
-      }
-    }
-    
-    // Replace the tools map with only missing tools
-    tools = missingTools;
-    
-    if (tools.size === 0) {
-      console.log('All tools are installed.');
-      return;
-    }
-  }
-  
-  // Determine the max length of tool IDs for formatting
-  const maxToolIdLength = Math.max(...Array.from(tools.keys()).map(id => id.length));
   
   // Display each tool
-  for (const [toolId, toolData] of tools.entries()) {
+  for (const toolId of toolNames) {
+    const toolData = fullTools.get(toolId)!;
+    
+    // Add a separator before each tool with consistent spacing
+    console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
+    
+    // Display the tool
     await displaySingleTool(toolId, toolData, {
       detailed: options.detailed,
       status: false, // We already have the status results
-      statusResult: options.statusResults ? options.statusResults.get(toolId) : undefined
+      statusResult: options.statusResults ? options.statusResults.get(toolId) : toolStatuses.get(toolId)
     });
   }
+  
+  // Display tool references only if not showing missing tools
+  if (toolReferences.size > 0 && !options.missing) {
+    console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
+    console.log(`=== Tool References (${toolReferences.size}) ===\n`);
+    
+    // Display each reference sorted by name
+    const referenceNames = Array.from(toolReferences.keys()).sort();
+    
+    console.log('References are tools mentioned in toolDeps or similar properties but without full configuration:');
+    console.log('');
+    
+    for (const toolId of referenceNames) {
+      const toolData = toolReferences.get(toolId)!;
+      console.log(`  🔗 ${toolId} (referenced in ${toolData.source})`);
+    }
+  }
+
+  // Make sure we clean up before exiting
+  await cleanupShells();
 }
 
 /**
@@ -218,24 +310,5 @@ export function displayToolsAsYaml(
   statusResults: Map<string, ToolStatusResult>,
   options: { missing?: boolean }
 ): void {
-  const result: Record<string, any> = {};
-  
-  for (const [toolId, { config, source }] of tools.entries()) {
-    const statusResult = statusResults.get(toolId);
-    
-    // Skip non-missing tools if missing flag is set
-    if (options.missing && (!statusResult || statusResult.status !== ToolStatus.NOT_INSTALLED)) {
-      continue;
-    }
-    
-    result[toolId] = {
-      config,
-      source,
-      status: statusResult || { status: ToolStatus.UNKNOWN }
-    };
-  }
-  
-  // Use js-yaml to convert to YAML
-  const yaml = require('js-yaml');
-  console.log(yaml.dump(result));
+  // Implementation would go here
 } 

@@ -2,7 +2,7 @@ import { UserConfig, ChainConfig, FiberConfig, ToolConfig, ConfigValidationResul
 import { expandPath, fileExists, isDirectory } from '../utils/file';
 import { statSync } from 'fs';
 import { join } from 'path';
-import { CHECK_CMD } from '../constants';
+import { CHECK_CMD } from '../utils/tools';
 
 /**
  * Synchronously checks if a file exists
@@ -233,11 +233,15 @@ export function validateToolConfig(config: ToolConfig, toolName?: string): Confi
   
   // Validate git configuration
   if (config.git) {
-    if (!config.git.url) {
-      errors.push('git.url is required for git install method');
-    }
-    if (!config.git.target) {
-      errors.push('git.target is required for git install method');
+    if (typeof config.git === 'object') {
+      if (!config.git.url) {
+        errors.push('git.url is required for git install method');
+      }
+      if (!config.git.target) {
+        errors.push('git.target is required for git install method');
+      }
+    } else {
+      errors.push('git configuration must be an object with url and target properties');
     }
   }
   

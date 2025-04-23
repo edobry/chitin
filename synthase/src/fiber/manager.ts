@@ -1,5 +1,6 @@
 import { ToolDependencyChecker, ModuleFilter } from '../types';
-import { FIBER_NAMES, CONFIG_FIELDS } from '../constants';
+import { FIBER_NAMES } from './types';
+import { CONFIG_FIELDS } from '../config/types';
 
 /**
  * Get fiber IDs from the user config

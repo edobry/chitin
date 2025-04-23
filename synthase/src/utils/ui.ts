@@ -2,8 +2,33 @@
  * UI utilities for displaying information to the user
  */
 import { ToolConfig } from '../types';
-import { DISPLAY } from '../constants';
 import { ToolStatus, ToolStatusResult, getStatusEmoji, getToolCheckMethod, getToolInstallMethod } from './tools';
+
+/**
+ * Display constants
+ */
+export const DISPLAY = {
+  EMOJIS: {
+    // Entities
+    FIBER: '🧬',
+    CHAIN: '⛓️',
+    TOOL: '🔧',
+    REFERENCE: '🔗',
+    
+    // Status indicators
+    ENABLED: '🟢',
+    DISABLED: '🔴',
+    WARNING: '⚠️',  // Warning/error symbol
+    ERROR: '⚠️',    // Error symbol (same as warning)
+    UNKNOWN: '⚪',
+    DEPENDS_ON: '⬆️',
+    
+    // Tool properties
+    CHECK: '🔍',
+    INSTALL: '🏗️',
+    ADDITIONAL_INFO: '📋',
+  },
+} as const;
 
 /**
  * Format a status enum to a display string
@@ -34,7 +59,35 @@ export function formatConfigValue(value: any): string {
     return '';
   }
   
+  // For boolean values, just return "true" or "false" as a string
+  if (typeof value === 'boolean') {
+    return value.toString();
+  }
+  
+  // For simple strings, just return them directly
+  if (typeof value === 'string') {
+    return value;
+  }
+  
+  // For objects, try to format them cleanly
   if (typeof value === 'object') {
+    // For empty objects, just return an empty string
+    if (Object.keys(value).length === 0) {
+      return '';
+    }
+    
+    // For single key objects with a simple value, try to format more cleanly
+    if (Object.keys(value).length === 1) {
+      const key = Object.keys(value)[0];
+      const val = value[key];
+      
+      // For simple boolean flags like { cask: true }, return just the key
+      if (typeof val === 'boolean' && val === true) {
+        return key;
+      }
+    }
+    
+    // Otherwise fallback to standard JSON formatting
     try {
       return JSON.stringify(value, null, 2);
     } catch (e) {
@@ -53,19 +106,7 @@ export function formatConfigValue(value: any): string {
 export function displayCheckMethod(toolId: string, config: ToolConfig): void {
   console.log(`  ${DISPLAY.EMOJIS.CHECK} Check: ${getToolCheckMethod(config)}`);
   
-  // Show the specific check method details if available
-  if (config.checkCommand) {
-    console.log(`    Command: ${config.checkCommand}`);
-  } else if (config.checkPath) {
-    console.log(`    Path: ${config.checkPath}`);
-  } else if (config.checkEval) {
-    console.log(`    Eval: ${config.checkEval}`);
-  } else if (config.brew || config.checkBrew) {
-    const brewConfig = config.brew || config.checkBrew;
-    console.log(`    Homebrew: ${formatConfigValue(brewConfig)}`);
-  } else {
-    console.log(`    Default: command -v ${toolId}`);
-  }
+  // Remove detailed check method display
 }
 
 /**
@@ -79,18 +120,9 @@ export function displayInstallMethod(config: ToolConfig): void {
     return; // Don't display if no install method is available
   }
   
-  console.log(`  ${DISPLAY.EMOJIS.INSTALL} Install: ${installMethod}`);
+  console.log(`  ${DISPLAY.EMOJIS.INSTALL}  Install: ${installMethod}`);
   
-  // Show the specific installation method details if available
-  if (config.command) {
-    console.log(`    Command: ${config.command}`);
-  } else if (config.script) {
-    console.log(`    Script: ${config.script}`);
-  } else if (config.git) {
-    console.log(`    Git: ${formatConfigValue(config.git)}`);
-  } else if (config.brew) {
-    console.log(`    Homebrew: ${formatConfigValue(config.brew)}`);
-  }
+  // Remove detailed installation method display
 }
 
 /**

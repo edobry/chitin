@@ -40,7 +40,7 @@ export function createToolsCommand(): Command {
     .addCommand(
       new Command('get')
         .description('Get detailed information about configured tools')
-        .argument('[toolName]', 'Optional tool name to display')
+        .argument('[toolNames...]', 'Optional tool name(s) to display')
         .option('-d, --detailed', 'Show detailed tool configuration')
         .option('--status', 'Check if tools are installed')
         .option('--missing', 'Only show tools that are not installed')
@@ -63,7 +63,7 @@ export function createToolsCommand(): Command {
   
   // Make 'get' the default subcommand when none is specified
   cmd.action((options) => {
-    handleToolsCommand(undefined, options);
+    handleToolsCommand([], options);
   });
   
   // Set up process cleanup
@@ -121,11 +121,20 @@ async function handleListCommand(options: any): Promise<void> {
 }
 
 /**
+ * Get timeout for tool status checks
+ * @returns Timeout in milliseconds
+ */
+function getToolTimeout(): number {
+  // Use a longer default timeout for all tools to prevent timeouts
+  return 15000; // 15 seconds timeout for all tools
+}
+
+/**
  * Handle the tools command
- * @param toolName Optional tool name to display
+ * @param toolNames Optional tool name(s) to display
  * @param options Command options
  */
-async function handleToolsCommand(toolName: string | undefined, options: any): Promise<void> {
+async function handleToolsCommand(toolNames: string[] | undefined, options: any): Promise<void> {
   try {
     if (process.env.DEBUG === 'true') {
       setLogLevel(LogLevel.DEBUG);
@@ -152,34 +161,68 @@ async function handleToolsCommand(toolName: string | undefined, options: any): P
     // Extract tools from all sources
     const tools = extractAllTools(config, modules);
     
-    // If a specific tool is requested
-    if (toolName) {
-      if (!tools.has(toolName)) {
-        console.error(`Tool '${toolName}' not found.`);
-        process.exit(1);
+    // If specific tools are requested
+    if (toolNames && toolNames.length > 0) {
+      const toolsToDisplay = new Map();
+      const notFoundTools: string[] = [];
+      
+      // Check each tool name
+      for (const name of toolNames) {
+        if (tools.has(name)) {
+          toolsToDisplay.set(name, tools.get(name));
+        } else {
+          notFoundTools.push(name);
+        }
       }
       
-      // Get the tool data
-      const toolData = tools.get(toolName)!;
+      // Report any tools that weren't found
+      if (notFoundTools.length > 0) {
+        console.error(`Tool${notFoundTools.length > 1 ? 's' : ''} not found: ${notFoundTools.join(', ')}`);
+        if (toolsToDisplay.size === 0) {
+          process.exit(1);
+        }
+      }
       
-      // If we need to check the status
-      let statusResult: ToolStatusResult | undefined;
+      // If all tools should be checked for status together
       if (options.status) {
-        debug(`Checking status of ${toolName}`);
-        statusResult = await checkToolStatus(toolName, toolData.config);
+        const statusResults = new Map<string, ToolStatusResult>();
+        
+        // Check status for all requested tools
+        for (const [toolId, toolData] of toolsToDisplay.entries()) {
+          debug(`Checking status of ${toolId}`);
+          // Use appropriate timeout for the tool
+          const timeout = getToolTimeout();
+          statusResults.set(toolId, await checkToolStatus(toolId, toolData.config, timeout));
+        }
+        
+        // Display all tools with their status
+        await displayTools(toolsToDisplay, {
+          detailed: options.detailed,
+          status: options.status,
+          missing: options.missing,
+          statusResults,
+          filterSource: options.filterSource,
+          filterCheck: options.filterCheck,
+          filterInstall: options.filterInstall,
+          skipStatusWarning: true // Skip warning since we're explicitly requesting these tools
+        });
+      } else {
+        // Display tools without status
+        await displayTools(toolsToDisplay, {
+          detailed: options.detailed,
+          status: false,
+          missing: options.missing,
+          filterSource: options.filterSource,
+          filterCheck: options.filterCheck,
+          filterInstall: options.filterInstall,
+          skipStatusWarning: true
+        });
       }
-      
-      // Display the tool information
-      await displaySingleTool(toolName, toolData, {
-        detailed: options.detailed,
-        status: options.status,
-        statusResult
-      });
       
       return;
     }
     
-    // Apply filters
+    // Apply filters to all tools
     const filteredTools = filterTools(tools, {
       filterSource: options.filterSource,
       filterCheck: options.filterCheck,
@@ -220,9 +263,10 @@ async function handleToolsCommand(toolName: string | undefined, options: any): P
           await initializeBrewCaches();
         }
         
-        // Check each tool
+        // Check each tool with appropriate timeout
         for (const [toolId, { config }] of filteredTools.entries()) {
-          statusResults.set(toolId, await checkToolStatus(toolId, config));
+          const timeout = getToolTimeout();
+          statusResults.set(toolId, await checkToolStatus(toolId, config, timeout));
         }
         
         displayToolsAsJson(filteredTools, statusResults, { missing: options.missing });
@@ -251,24 +295,53 @@ async function handleToolsCommand(toolName: string | undefined, options: any): P
           await initializeBrewCaches();
         }
         
-        // Check each tool
+        // Check each tool with appropriate timeout
         for (const [toolId, { config }] of filteredTools.entries()) {
-          statusResults.set(toolId, await checkToolStatus(toolId, config));
+          const timeout = getToolTimeout();
+          statusResults.set(toolId, await checkToolStatus(toolId, config, timeout));
         }
         
         displayToolsAsYaml(filteredTools, statusResults, { missing: options.missing });
       } else {
-        // No status information
         displayToolsAsYaml(filteredTools, new Map(), { missing: false });
       }
       
       return;
     }
     
-    // Default text output
+    // Default display - set up status checks if needed
+    if (options.status) {
+      options.statusResults = new Map<string, ToolStatusResult>();
+      
+      // Initialize Homebrew environment if needed
+      const hasBrewTools = Array.from(filteredTools.values()).some(
+        tool => tool.config.brew || tool.config.checkBrew
+      );
+      
+      if (hasBrewTools) {
+        debug('Initializing Homebrew environment for status checks');
+        await initBrewEnvironment();
+        await initializeBrewCaches();
+      }
+      
+      // Check each tool with appropriate timeout
+      for (const [toolId, { config }] of filteredTools.entries()) {
+        const timeout = getToolTimeout();
+        options.statusResults.set(toolId, await checkToolStatus(toolId, config, timeout));
+      }
+    }
+    
+    // Display tools
     await displayTools(filteredTools, displayOptions);
   } catch (err) {
     console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
     process.exit(1);
+  } finally {
+    // Make sure to clean up the shell pool
+    try {
+      await shellPool.shutdown();
+    } catch (err) {
+      debug(`Error shutting down shell pool: ${err}`);
+    }
   }
 } 
