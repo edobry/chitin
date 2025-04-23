@@ -1,49 +1,67 @@
-# Domain-oriented Module Organization
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Domain-Oriented Module Organization
 
-When refactoring or creating new functionality, organize code by domain rather than by technical function:
+When organizing code in a modular application, follow these principles for better maintainability:
 
-## Key Principles
+## Principles
 
-1. **Co-locate Related Code**: Place related utilities in the same directory as the feature they support rather than in a separate global utilities directory. For example, if a utility is only used by the `tools` command, it should live in `commands/tools/` rather than `utils/`.
+- **Reduce cross-module dependencies and import cycles**
+  - Co-locate related functions to prevent circular imports
+  - Move utility functions to modules where they're most relevant
 
-2. **Domain-specific Directories**: Create domain-specific directories that contain all related code:
-   ```
-   commands/tools/            # Domain-specific directory
-     ├── index.ts             # Main entry point
-     ├── discovery.ts         # Tool discovery functionality
-     ├── filter.ts            # Filtering utilities
-     ├── ui.ts                # Display utilities
-     └── homebrew.ts          # Domain-specific brew utilities
-   ```
+- **Improve code understandability**
+  - Keep related functions together based on domain, not just technical category
+  - Group functions by what they operate on rather than how they operate
 
-3. **Avoid Utility Proliferation**: Don't create general utility files that mix concerns from different domains. Instead, split utilities by domain and place them with the code that uses them.
+- **Enhance maintainability**
+  - Organize code according to domain boundaries, not just technical layers
+  - Make it easier to update related functionality without needing to touch multiple files
 
-4. **Name Domain-specific Utilities Clearly**: When a domain-specific utility has a similar function to a general utility, use a clear naming convention to distinguish them:
-   ```typescript
-   // General utility
-   function getBrewPackageName(brewConfig, toolId) { ... }
+- **Clarify utility purposes**
+  - Make it obvious which utilities are general-purpose vs. domain-specific
+  - Place domain-specific utilities in relevant command/feature modules
 
-   // Domain-specific utility with clearer name
-   function getToolBrewPackageName(brewConfig, toolId) { ... }
-   ```
+## Examples
 
-5. **Handling Duplication**: When facing duplication between general and domain-specific utilities:
-   - Consider if the general utility is actually needed or if it could be replaced by the domain-specific one
-   - Add proper deprecation notices to outdated general utilities
-   - If both are needed, make the relationship explicit through documentation
+### ❌ Avoid: Cross-Module Dependencies
 
-## Benefits
+```typescript
+// utils/homebrew.ts
+export async function isBrewPackageInstalled() { /* ... */ }
 
-- **Improved Discoverability**: Related code is easier to find since it's grouped by domain
-- **Better Testability**: Domain-specific modules are easier to test in isolation
-- **Reduced Coupling**: Dependencies flow in a more manageable direction
-- **Clearer Boundaries**: Domain logic isn't spread across various utility files
-- **Easier Maintenance**: Changes to a domain's behavior don't require modifying shared utilities
+// commands/tools/homebrew.ts
+import { isBrewPackageInstalled } from '../../utils/homebrew.ts';
+export function getToolBrewPackageName(brewConfig, toolId) { /* ... */ }
 
-## Anti-patterns to Avoid
+// utils/tool-status.ts
+import { getToolBrewPackageName } from '../commands/tools/homebrew';
+import { isBrewPackageInstalled } from './homebrew';
+```
 
-- **Utility Soup**: Avoid large generic utility files that mix concerns from multiple domains
-- **Distant Dependencies**: Avoid modules that depend on utilities spread across many different files
-- **Function Name Collisions**: Don't use the same function name for different behaviors across domains
+### ✅ Better: Domain-Oriented Organization
 
-Apply this approach especially to complex domains with specific business logic, like the tools command which has its own way of handling configurations, filtering, and UI concerns. 
+```typescript
+// utils/homebrew.ts - Contains ALL homebrew-related functions
+export async function isBrewPackageInstalled() { /* ... */ }
+export function getToolBrewPackageName(brewConfig, toolId) { /* ... */ }
+export function normalizeBrewConfig(brewConfig, toolId) { /* ... */ }
+
+// Commands use the consolidated utility module
+import { isBrewPackageInstalled, getToolBrewPackageName } from '../../utils/homebrew';
+```
+
+## Guidelines
+
+1. **Identify Domain Boundaries**: Group code by what it operates on (tools, fibers, config) rather than how (utils, helpers)
+
+2. **Co-locate Related Functions**: Functions that work with the same data or concept should be in the same file
+
+3. **Minimize Cross-Layer Dependencies**: Avoid having utils depend on commands and vice versa
+
+4. **Consolidate Shared Interfaces**: Keep type definitions together with their primary implementation
+
+5. **Merge Fragmented Utilities**: If multiple utility files serve the same domain, consider merging them
