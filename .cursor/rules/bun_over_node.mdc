@@ -1,7 +1,7 @@
 ---
 description: 
-globs: synthase/**
-alwaysApply: false
+globs: 
+alwaysApply: true
 ---
 Always use `bun` instead of `node` when running JavaScript/TypeScript in the Synthase project. Bun is the preferred runtime for Synthase.
 
