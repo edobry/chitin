@@ -33,6 +33,12 @@ import { loadConfigAndModules } from './shared';
 // Import generateFiberDependencyGraph from fiber/graph.ts
 import { generateFiberDependencyGraph } from '../../fiber/graph';
 import { UserConfig } from '../../types';
+import { 
+  buildFiberDependencyGraph, 
+  dependencyGraphToJson,
+  FiberDependencyGraph,
+  FiberEnvironment
+} from '../../fiber/dependency-graph';
 
 /**
  * Create the 'deps' subcommand for showing fiber dependencies in a diagram
@@ -48,199 +54,29 @@ export function createDepsCommand(): Command {
     .option('-d, --detailed', 'Show detailed dependency information')
     .option('-f, --flat', 'Show flat list instead of tree view')
     .option('-g, --graphviz', 'Output dependencies in GraphViz DOT format')
+    .option('-j, --json', 'Output dependency information in JSON format')
     .action(async (options) => {
       try {
-        const {
-          config,
-          moduleResult,
-          displayFiberIds,
-          orderedFibers
-        } = await loadConfigAndModules(options);
+        const environment = await loadConfigAndModules(options);
+        const { config, moduleResult, displayFiberIds, orderedFibers } = environment;
 
-        // Filter out disabled fibers if requested
-        let fibersToShow = displayFiberIds;
-        if (options.hideDisabled) {
-          fibersToShow = fibersToShow.filter((fiberId: string) => {
-            const isCore = fiberId === FIBER_NAMES.CORE;
-            return isCore || isFiberEnabled(fiberId, config);
-          });
-        }
-        
-        // Get dependency map for each fiber
-        const dependencyMap = new Map<string, string[]>();
-        const reverseDependencyMap = new Map<string, string[]>();
-        const dependencyDetectionInfo = new Map<string, {source: string, deps: string[]}[]>();
-        
-        // Initialize maps with empty arrays
-        for (const fiberId of fibersToShow) {
-          dependencyMap.set(fiberId, []);
-          reverseDependencyMap.set(fiberId, []);
-          dependencyDetectionInfo.set(fiberId, []);
-        }
-        
-        // Ensure all fibers have an implicit dependency on core
-        ensureCoreDependencies(fibersToShow, dependencyMap, dependencyDetectionInfo, reverseDependencyMap);
-        
-        // Collect all possible dependency sources
-        for (const fiberId of fibersToShow) {
-          const detectionSources: {source: string, deps: string[]}[] = [];
-          
-          // First try to get dependencies from module metadata
-          const fiberModule = moduleResult.modules.find((m: any) => m.id === fiberId && m.type === 'fiber');
-          if (fiberModule && fiberModule.metadata && fiberModule.metadata.dependencies) {
-            const metadataDeps = fiberModule.metadata.dependencies
-              .map((dep: any) => dep.moduleId)
-              .filter((depId: string) => fibersToShow.includes(depId));
-              
-            if (metadataDeps.length > 0) {
-              detectionSources.push({
-                source: 'module.metadata.dependencies',
-                deps: metadataDeps
-              });
-            }
+        // Build the fiber dependency graph using our extracted utility
+        const graph = buildFiberDependencyGraph(
+          environment as FiberEnvironment,
+          { 
+            hideDisabled: options.hideDisabled, 
+            reverse: options.reverse 
           }
-          
-          // Check direct fiber dependencies from discovered module config and merged config
-          const fiberConfig = fiberModule?.config || {};
-          const moduleFiberDeps = fiberConfig[CONFIG_FIELDS.FIBER_DEPS] || [];
-          
-          if (moduleFiberDeps.length > 0) {
-            detectionSources.push({
-              source: 'fiber.config.fiberDeps',
-              deps: moduleFiberDeps.filter((depId: string) => fibersToShow.includes(depId))
-            });
-          }
-          
-          // Check direct fiber dependencies from user config (merged)
-          const configFiberDeps = (config[fiberId] as any)?.fiberDeps || [];
-          if (configFiberDeps.length > 0 && 
-              !detectionSources.some(source => source.source === 'fiber.config.fiberDeps' && 
-                                             JSON.stringify(source.deps) === JSON.stringify(configFiberDeps))) {
-            detectionSources.push({
-              source: 'config.fiberDeps',
-              deps: configFiberDeps.filter((depId: string) => fibersToShow.includes(depId))
-            });
-          }
-          
-          // Check tool dependencies that might map to fibers
-          const configToolDeps = (config[fiberId] as any)?.toolDeps || [];
-          if (configToolDeps.length > 0) {
-            // Find fibers that provide these tools
-            const toolToFiberMap = new Map<string, string[]>();
-            
-            // Build map of tool providers
-            for (const otherFiberId of fibersToShow) {
-              if (otherFiberId === fiberId) continue; // Skip self
-              
-              // Check for provides in fiber config
-              const provides = (config[otherFiberId] as any)?.provides || [];
-              for (const tool of provides) {
-                if (!toolToFiberMap.has(tool)) {
-                  toolToFiberMap.set(tool, []);
-                }
-                toolToFiberMap.get(tool)?.push(otherFiberId);
-              }
-              
-              // Check for provides in chains
-              const moduleConfig = (config[otherFiberId] as any)?.moduleConfig || {};
-              for (const [chainId, chainConfig] of Object.entries(moduleConfig)) {
-                const chainProvides = (chainConfig as any)?.provides || [];
-                for (const tool of chainProvides) {
-                  if (!toolToFiberMap.has(tool)) {
-                    toolToFiberMap.set(tool, []);
-                  }
-                  toolToFiberMap.get(tool)?.push(otherFiberId);
-                }
-              }
-            }
-            
-            // Find fibers providing tools we depend on
-            const toolDerivedDeps: string[] = [];
-            for (const tool of configToolDeps) {
-              const providers = toolToFiberMap.get(tool) || [];
-              for (const provider of providers) {
-                if (!toolDerivedDeps.includes(provider)) {
-                  toolDerivedDeps.push(provider);
-                }
-              }
-            }
-            
-            if (toolDerivedDeps.length > 0) {
-              detectionSources.push({
-                source: 'toolDeps providers',
-                deps: toolDerivedDeps
-              });
-            }
-          }
-          
-          // Update dependency map with all detected dependencies
-          for (const source of detectionSources) {
-            // Record detection source for detailed view
-            const existingDetection = dependencyDetectionInfo.get(fiberId) || [];
-            existingDetection.push(source);
-            dependencyDetectionInfo.set(fiberId, existingDetection);
-            
-            // Add all dependencies to the dependency map
-            const deps = dependencyMap.get(fiberId) || [];
-            for (const dep of source.deps) {
-              if (!deps.includes(dep)) {
-                deps.push(dep);
-              }
-            }
-            dependencyMap.set(fiberId, deps);
-            
-            // Update reverse dependency map
-            for (const dep of source.deps) {
-              const reverseDeps = reverseDependencyMap.get(dep) || [];
-              if (!reverseDeps.includes(fiberId)) {
-                reverseDeps.push(fiberId);
-                reverseDependencyMap.set(dep, reverseDeps);
-              }
-            }
-          }
-        }
-        
-        // Count total explicit dependencies
-        const totalDeps = Array.from(dependencyMap.values()).reduce(
-          (sum, deps) => sum + deps.length, 0
         );
         
-        // If no explicit dependencies, infer from load order
-        if (totalDeps === 0 && orderedFibers.length > 1) {
-          console.error('No explicit dependencies found. Inferring dependencies based on load order...');
-          
-          // Assume each fiber depends on the one before it
-          for (let i = 1; i < orderedFibers.length; i++) {
-            const fiberId = orderedFibers[i];
-            const prevId = orderedFibers[i-1];
-            
-            if (fibersToShow.includes(fiberId) && fibersToShow.includes(prevId)) {
-              // Add dependency
-              const deps = dependencyMap.get(fiberId) || [];
-              if (!deps.includes(prevId)) {
-                deps.push(prevId);
-                dependencyMap.set(fiberId, deps);
-                
-                // Update detection info
-                const detectionInfo = dependencyDetectionInfo.get(fiberId) || [];
-                detectionInfo.push({
-                  source: 'inferred from load order',
-                  deps: [prevId]
-                });
-                dependencyDetectionInfo.set(fiberId, detectionInfo);
-                
-                // Update reverse deps
-                const reverseDeps = reverseDependencyMap.get(prevId) || [];
-                if (!reverseDeps.includes(fiberId)) {
-                  reverseDeps.push(fiberId);
-                  reverseDependencyMap.set(prevId, reverseDeps);
-                }
-              }
-            }
-          }
+        // Output in JSON format if requested
+        if (options.json) {
+          console.log(JSON.stringify(dependencyGraphToJson(graph), null, 2));
+          return;
         }
         
         // Use the appropriate map based on whether we want to show dependencies or reverse dependencies
+        const { dependencyMap, reverseDependencyMap, detectionInfo, fibersToShow, rootFibers } = graph;
         const activeMap = options.reverse ? reverseDependencyMap : dependencyMap;
         
         // Output GraphViz DOT format
@@ -250,8 +86,8 @@ export function createDepsCommand(): Command {
             fibersToShow,
             dependencyMap,
             reverseDependencyMap,
-            dependencyDetectionInfo,
-            config as UserConfig,
+            detectionInfo,
+            config as any,
             { reverse: options.reverse }
           );
           
@@ -301,7 +137,7 @@ export function createDepsCommand(): Command {
             
             if (options.detailed) {
               // Get dependency sources
-              const sources = [...(dependencyDetectionInfo.get(fiberId) || [])];
+              const sources = [...(detectionInfo.get(fiberId) || [])];
               
               // Add implicit core dependency source if not already present
               if (!isCore && fibersToShow.includes('core') && 
@@ -323,188 +159,150 @@ export function createDepsCommand(): Command {
           }
         } else {
           // Tree view
-          console.log('Fiber Dependency Diagram:\n');
+          console.log('Fiber Dependency Diagram:');
+          console.log('─────────────────────────');
           
-          const printDependencyTree = (
-            fiberId: string, 
-            map: Map<string, string[]>, 
-            detailInfo: Map<string, {source: string, deps: string[]}[]> | null = null,
-            seen: Set<string> = new Set(), 
-            prefix = '', 
-            isLast = true
-          ) => {
-            // Prevent cycles
-            if (seen.has(fiberId)) {
-              console.log(`${prefix}${isLast ? '└── ' : '├── '}${fiberId} (circular dependency)`);
+          // In the original format, we want to show the true dependency structure:
+          // core -> dev -> cloud -> others
+          
+          // We'll build a tree in the correct orientation
+          const processedFibers = new Set<string>();
+          
+          // For reverse mode, we need to use the dependency map
+          // For normal mode, create a reverse map to show what depends on each fiber
+          const displayMap = options.reverse ? 
+            dependencyMap :  // Reverse mode: what each fiber requires (directly from dependencyMap)
+            new Map<string, string[]>(); // Normal mode: what depends on each fiber (built from dependencyMap)
+            
+          if (!options.reverse) {
+            // Build the reversed map for normal display mode
+            for (const [fiberId, deps] of dependencyMap.entries()) {
+              for (const dep of deps) {
+                if (!displayMap.has(dep)) {
+                  displayMap.set(dep, []);
+                }
+                const dependents = displayMap.get(dep)!;
+                if (!dependents.includes(fiberId)) {
+                  dependents.push(fiberId);
+                }
+              }
+            }
+            
+            // Remove redundant paths - if A depends on B and C, and B depends on C,
+            // then we should only show A -> B -> C, not A -> C directly
+            for (const [parent, dependents] of displayMap.entries()) {
+              // Filter out paths where one dependent is also dependent on another in this list
+              const directDependents = [...dependents];
+              
+              for (let i = dependents.length - 1; i >= 0; i--) {
+                const dependent = dependents[i];
+                
+                // Check if this dependent depends on any other dependent
+                for (const otherDependent of dependents) {
+                  if (dependent !== otherDependent && 
+                      (dependencyMap.get(dependent) || []).includes(otherDependent)) {
+                    // Remove this path as it's redundant
+                    const idx = directDependents.indexOf(dependent);
+                    if (idx >= 0) {
+                      directDependents.splice(idx, 1);
+                    }
+                    break;
+                  }
+                }
+              }
+              
+              // Update with filtered list
+              displayMap.set(parent, directDependents);
+            }
+            
+            // Sort dependents in each entry putting dev first for core, etc.
+            for (const [fiberId, dependents] of displayMap.entries()) {
+              dependents.sort((a, b) => {
+                if (fiberId === 'core') {
+                  if (a === 'dev') return -1;
+                  if (b === 'dev') return 1;
+                  
+                  if (a === 'dotfiles') return -1;
+                  if (b === 'dotfiles') return 1;
+                }
+                return a.localeCompare(b);
+              });
+            }
+          }
+          
+          // Function to print a node and its dependents
+          function printDependencyNode(
+            fiberId: string,
+            prefix = '',
+            isLast = true,
+            depth = 0
+          ) {
+            // Skip if already processed (prevents cycles)
+            if (processedFibers.has(fiberId)) {
               return;
             }
             
+            // Mark as processed
+            processedFibers.add(fiberId);
+            
+            // Get enabled status
             const isCore = fiberId === FIBER_NAMES.CORE;
             const isEnabled = isCore || isFiberEnabled(fiberId, config);
             const statusSymbol = isEnabled ? DISPLAY.EMOJIS.ENABLED : DISPLAY.EMOJIS.DISABLED;
             
-            // Print current fiber
-            console.log(`${prefix}${isLast ? '└── ' : '├── '}${statusSymbol} ${fiberId}`);
+            // Print the node
+            const connector = isLast ? '└── ' : '├── ';
+            console.log(`${prefix}${connector}${statusSymbol} ${fiberId}`);
             
-            if (options.detailed && detailInfo) {
-              const sources = detailInfo.get(fiberId) || [];
+            // Show detailed info if requested
+            if (options.detailed && detectionInfo) {
+              const sources = detectionInfo.get(fiberId) || [];
               if (sources.length > 0) {
                 const detailPrefix = `${prefix}${isLast ? '    ' : '│   '}`;
-                console.log(`${detailPrefix}Sources:`);
                 for (const source of sources) {
-                  console.log(`${detailPrefix}- ${source.source}: ${source.deps.join(', ')}`);
+                  console.log(`${detailPrefix}     Source: ${source.source}`);
+                  console.log(`${detailPrefix}     Dependencies: ${source.deps.join(', ')}`);
                 }
               }
             }
             
-            // Mark as seen to prevent cycles
-            seen.add(fiberId);
+            // Get dependents for this fiber
+            const dependents = displayMap.get(fiberId) || [];
             
-            // Get dependencies
-            const deps = [...(map.get(fiberId) || [])];
-            
-            // Add implicit core dependency for non-core fibers
-            if (!isCore && fibersToShow.includes('core') && !deps.includes('core')) {
-              deps.push('core');
-            }
-            
-            // Sort dependencies with core first, then alphabetically
-            const sortedDeps = [...deps].sort((a: string, b: string) => {
-              if (a === 'core') return -1;
-              if (b === 'core') return 1;
-              return a.localeCompare(b);
-            });
-            
-            // Print dependencies
+            // Calculate new prefix for children
             const newPrefix = `${prefix}${isLast ? '    ' : '│   '}`;
-            for (let i = 0; i < sortedDeps.length; i++) {
-              // Don't print already seen fibers to avoid circular dependencies
-              if (!seen.has(sortedDeps[i])) {
-                printDependencyTree(
-                  sortedDeps[i], 
-                  map, 
-                  detailInfo,
-                  new Set(seen), 
-                  newPrefix, 
-                  i === sortedDeps.length - 1
-                );
-              }
-            }
-          };
-          
-          // Function to determine root fibers for the tree
-          const getRootFibers = (): string[] => {
-            if (options.reverse) {
-              // For reverse mode, roots are fibers that nobody depends on
-              return fibersToShow.filter((id: string) => 
-                (reverseDependencyMap.get(id) || []).length === 0
+            
+            // Print each dependent
+            for (let i = 0; i < dependents.length; i++) {
+              const isLastChild = i === dependents.length - 1;
+              printDependencyNode(
+                dependents[i],
+                newPrefix,
+                isLastChild,
+                depth + 1
               );
-            } else {
-              // For normal mode, we want to show dependency providers at the top
-              // Find fibers with dependents but no dependencies of their own,
-              // or fibers that have the most dependents (foundational fibers)
-              const fibersWithDependents = fibersToShow.filter((id: string) => 
-                (reverseDependencyMap.get(id) || []).length > 0
-              );
-              
-              if (fibersWithDependents.length > 0) {
-                // Find fibers that don't have dependencies themselves
-                const selfContainedFibers = fibersWithDependents.filter((id: string) => 
-                  (dependencyMap.get(id) || []).length === 0
-                );
-                
-                if (selfContainedFibers.length > 0) {
-                  return selfContainedFibers;
-                }
-                
-                // Fall back to fibers with the most dependents
-                const dependentCounts = fibersWithDependents.map((id: string) => ({
-                  id,
-                  count: (reverseDependencyMap.get(id) || []).length
-                }));
-                
-                // Sort by number of dependents (descending)
-                dependentCounts.sort((a: {id: string, count: number}, b: {id: string, count: number}) => b.count - a.count);
-                
-                // Group fibers with the same number of dependents
-                const maxDependents = dependentCounts[0].count;
-                const mostDependedOn = dependentCounts
-                  .filter((item: {id: string, count: number}) => item.count === maxDependents)
-                  .map((item: {id: string, count: number}) => item.id);
-                  
-                return mostDependedOn;
-              }
-              
-              // Fallback for if no fibers have dependents
-              return fibersToShow.filter((id: string) => 
-                (dependencyMap.get(id) || []).length === 0
-              );
-            }
-          };
-          
-          // Get root fibers to start the tree
-          let rootFibers = getRootFibers();
-          
-          // If no clear roots, pick the most foundational fibers
-          if (rootFibers.length === 0) {
-            if (options.reverse) {
-              // Find fibers with most dependents
-              const maxDependents = Math.max(...Array.from(
-                reverseDependencyMap.entries(),
-                ([_, deps]) => deps.length
-              ));
-              
-              rootFibers = Array.from(
-                reverseDependencyMap.entries()
-              ).filter(([id, deps]) => 
-                deps.length === maxDependents
-              ).map(([id, _]) => id);
-            } else {
-              // Find fibers with fewest dependencies
-              const minDependencies = Math.min(...Array.from(
-                dependencyMap.entries(),
-                ([_, deps]) => deps.length
-              ));
-              
-              rootFibers = Array.from(
-                dependencyMap.entries()
-              ).filter(([id, deps]) => 
-                deps.length === minDependencies
-              ).map(([id, _]) => id);
             }
           }
           
-          // Sort roots with core first, then alphabetically
-          rootFibers.sort((a: string, b: string) => {
-            if (a === 'core') return -1;
-            if (b === 'core') return 1;
-            return a.localeCompare(b);
-          });
-          
-          // Function to build and print the dependency tree
-          const buildTree = (
-            fibers: string[],
-            seen: Set<string> = new Set(),
-            prefix = '',
-            isLastGroup = true
-          ) => {
-            for (let i = 0; i < fibers.length; i++) {
-              const fiberId = fibers[i];
-              const isLast = i === fibers.length - 1;
+          // Start with core as the root in normal mode
+          if (fibersToShow.includes('core')) {
+            printDependencyNode('core');
+          } else {
+            // If core isn't available, find roots by dependency analysis
+            const roots = options.reverse ?
+              // In reverse mode, roots are fibers with no dependencies
+              fibersToShow.filter(id => !dependencyMap.get(id)?.length) :
+              // In normal mode, roots are fibers that nobody depends on
+              fibersToShow.filter(id => !displayMap.get(id)?.length);
               
-              printDependencyTree(
-                fiberId, 
-                activeMap, 
-                options.detailed ? dependencyDetectionInfo : null,
-                new Set(seen), 
-                prefix, 
-                isLast && isLastGroup
-              );
+            // Sort roots alphabetically
+            const sortedRoots = [...roots].sort((a, b) => a.localeCompare(b));
+            
+            // Print each root
+            for (let i = 0; i < sortedRoots.length; i++) {
+              printDependencyNode(sortedRoots[i], '', i === sortedRoots.length - 1);
             }
-          };
-          
-          // Print the tree
-          buildTree(rootFibers);
+          }
         }
       } catch (error) {
         console.error('Error displaying fiber dependencies:', error);

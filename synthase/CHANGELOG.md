@@ -32,6 +32,7 @@
   - Preserves the dotfiles→core dependency as a special case
   - Prevents duplicate paths that create unnecessary visual complexity
   - Added unit tests to verify correct handling of transitive dependencies
+- Restored original display format for `fibers deps` command while adding JSON output support
 
 ### Improved
 - Refactored tools display code to use emoji constants from DISPLAY.EMOJIS instead of hardcoded values
@@ -67,6 +68,20 @@
   - Improving Homebrew cache freshness handling 
   - Optimizing shell pool initialization
   - Consolidating timeout and concurrency settings into centralized constants
+- Extracted fiber dependency graph logic into a dedicated utility:
+  - Created reusable `buildFiberDependencyGraph` function in `fiber/dependency-graph.ts`
+  - Added JSON output support for fiber dependencies via `fibers deps --json`
+  - Standardized the fiber dependency graph interface for consistent usage
+  - Made the code more testable with comprehensive test coverage
+  - Simplified the deps command implementation with cleaner separation of concerns
+  - Created type-safe interfaces for the dependency graph structure
+  - Provided utility functions for serializing the graph to JSON
+- Added comprehensive snapshot tests for the `fibers deps` command:
+  - Created test suite covering all flag combinations (--json, --hide-disabled, --flat, --reverse, --detailed, --graphviz)
+  - Implemented environment construction helpers for simplified test setup
+  - Added tests for both basic and complex dependency structures
+  - Used snapshot testing to verify output format consistency
+  - Ensured the dependency visualization remains reliable and accurate across changes
 
 ### To Fix
 - Status check timing summary appears twice when running `tools get --status` command - once before the final separator and once in the summary section 
@@ -100,6 +115,7 @@
 - Added progress indicator showing completion percentage during tool status checks
 - Added `--concurrency` option to the `tools get` command to control parallel execution (default: 5)
 - Added `--queue` option to use the queue-based parallel processing implementation instead of chunk-based approach for potentially better performance with heterogeneous tool checks
+- Added `update-snapshots` command to justfile for easily updating snapshot tests when output formats change intentionally
 
 ### Changed
 - Increased the default timeout for tool status checks to 15 seconds to prevent timeouts with slower tools like xcode-dev-tools

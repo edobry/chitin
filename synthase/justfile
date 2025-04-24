@@ -17,3 +17,18 @@ fiber-deps-graph:
     bun run src/cli.ts fibers deps --graphviz | dot -Tsvg -o fiber-dependencies.svg
     
     echo "Success! Fiber dependency graph saved to: fiber-dependencies.svg" 
+
+# Update snapshot tests (use when output formats change intentionally)
+update-snapshots *TEST_PATH:
+    #!/bin/bash
+    set -euo pipefail
+    
+    if [ -z "{{TEST_PATH}}" ]; then
+        echo "Updating all snapshot tests..."
+        bun test --update-snapshots
+    else
+        echo "Updating snapshots for: {{TEST_PATH}}"
+        bun test --update-snapshots "{{TEST_PATH}}"
+    fi
+    
+    echo "✅ Snapshot tests updated successfully!" 
