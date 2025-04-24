@@ -12,12 +12,12 @@
 - Fixed import.meta comparison in src/index.ts by using the correct property
 - Fixed import with .ts extension that wasn't allowed by TypeScript
 - Fixed spacing issue with the Install label in tools status display and legend
-- Fixed `tools get --status` command appearing to hang when checking many tools by using a shorter timeout
-- Fixed issues with hanging tool status checks for commands like gpg and bitwarden-cli by:
+- Fixed `tools get --status` command appearing to hang when checking many tools by:
   - Using dedicated non-interactive execution for status check commands
   - Adding environment variables to prevent tools from trying to read from TTY
   - Fixing stdin handling to properly redirect stdin to /dev/null
   - Properly separating command check executions from the shared shell pool
+  - Implementing parallel tool status checking with configurable concurrency
 
 ### Improved
 - Refactored tools display code to use emoji constants from DISPLAY.EMOJIS instead of hardcoded values
@@ -29,6 +29,15 @@
   - Added improved performance batch status checking with concurrency control
 - Improved tools command output by grouping tools by source
 - Added summary statistics showing tool counts by status and source
+- Refactored fibers command to improve maintainability and reduce code size:
+  - Split each subcommand (get, list, deps, config) into its own module
+  - Extracted shared functionality to a dedicated shared module
+  - Reduced file size and improved separation of concerns
+  - Made the code more modular and easier to maintain
+- Significantly improved performance of tool status checks by:
+  - Processing tools in parallel batches with controlled concurrency
+  - Adding progress indicator showing completion percentage during checks
+  - Optimizing Homebrew environment initialization
 
 ### To Fix
 - Status check timing summary appears twice when running `tools get --status` command - once before the final separator and once in the summary section 
@@ -58,6 +67,10 @@
 - Command factory for creating commands with consistent structure and error handling
 - Unified tool status checking utility with better error handling and concurrency
 - Batch tool status checking with optimized performance and progress tracking
+- Added parallel processing for tool status checks to improve performance
+- Added progress indicator showing completion percentage during tool status checks
+- Added `--concurrency` option to the `tools get` command to control parallel execution (default: 5)
+- Added `--queue` option to use the queue-based parallel processing implementation instead of chunk-based approach for potentially better performance with heterogeneous tool checks
 
 ### Changed
 - Increased the default timeout for tool status checks to 15 seconds to prevent timeouts with slower tools like xcode-dev-tools
