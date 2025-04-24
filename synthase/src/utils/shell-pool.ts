@@ -4,6 +4,7 @@
 import { execa } from 'execa';
 import { safeExeca } from './process';
 import { debug, error } from './logger';
+import { DEFAULT_TOOL_TIMEOUT } from '../commands/tools/constants';
 
 // Define the shell process type to avoid 'any' issues
 type ShellProcess = ReturnType<typeof safeExeca>;
@@ -185,7 +186,7 @@ export class ShellPool {
    * @param timeoutMs Timeout in milliseconds
    * @returns Command output
    */
-  async executeCommand(command: string, timeoutMs: number = 5000): Promise<{ stdout: string; stderr: string; exitCode: number }> {
+  async executeCommand(command: string, timeoutMs: number = DEFAULT_TOOL_TIMEOUT): Promise<{ stdout: string; stderr: string; exitCode: number }> {
     // For status check commands, use direct execution instead of shell pool
     // This provides better isolation and prevents hanging on interactive commands
     if (command.startsWith('command -v') || 
@@ -358,16 +359,9 @@ echo '${endMarker}'
     
     const startTime = performance.now();
     
-    // Known problematic commands that tend to hang or be slow
-    const problematicCommands = ['hg', 'gh', 'grr', 'op', 'scalr', 'true'];
-    const isProblematicCommand = problematicCommands.some(cmd => command.includes(cmd));
-    
     // Use a shorter timeout for direct command execution to avoid excessive waiting
     // This is especially important for tools that might hang waiting for user input
-    // For problematic commands, use even shorter timeout
-    const effectiveTimeout = isProblematicCommand 
-      ? Math.min(timeoutMs, 1500) // Very short timeout for known problematic commands
-      : Math.min(timeoutMs, 3000); // Reduced from 5000ms to 3000ms
+    const effectiveTimeout = Math.min(timeoutMs, DEFAULT_TOOL_TIMEOUT); 
     
     try {
       // For simple command checks, run directly with execa instead of through shell pool
@@ -407,7 +401,7 @@ echo '${endMarker}'
       if (error instanceof Error && error.message.includes('timed out')) {
         return {
           stdout: '',
-          stderr: `Command timed out after ${timeoutMs}ms`,
+          stderr: `Command timed out after ${effectiveTimeout}ms: ${command}`,
           exitCode: 124 // Standard timeout exit code
         };
       }

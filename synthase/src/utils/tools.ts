@@ -9,6 +9,7 @@ import { isBrewPackageInstalled, isToolBrewCask, getToolBrewPackageName, initBre
 import * as fs from 'fs';
 import * as path from 'path';
 import { performance } from 'perf_hooks';
+import { DEFAULT_TOOL_TIMEOUT } from '../commands/tools/constants';
 
 /**
  * Shell command check constants
@@ -188,11 +189,6 @@ export function generateAppNameVariations(appName: string): string[] {
 // ================================================================
 // Tool Status Functions (merged from tool-status.ts)
 // ================================================================
-
-/**
- * Default timeout for tool status checks
- */
-export const DEFAULT_TOOL_TIMEOUT = 15000; // 15 seconds
 
 /**
  * Check the status of a tool with standardized timeout and error handling

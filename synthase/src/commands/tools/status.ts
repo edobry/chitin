@@ -8,11 +8,17 @@ import { ToolConfig } from '../../types';
 import { 
   ToolStatus, 
   ToolStatusResult, 
-  checkToolStatus, 
+  checkToolStatus,
+  checkToolStatusWithOptions, 
   batchCheckToolStatus 
 } from '../../utils/tools';
 import { initBrewEnvironment, initializeBrewCaches } from '../../utils/homebrew';
 import { debug } from '../../utils/logger';
+import {
+  DEFAULT_TOOL_CONCURRENCY,
+  DEFAULT_TOOL_TIMEOUT,
+  DEFAULT_BREW_CACHE_TIMEOUT
+} from './constants';
 
 /**
  * Options for checking tool statuses
@@ -31,11 +37,6 @@ export interface ToolStatusCheckOptions {
 }
 
 /**
- * Default timeout for tool checks in milliseconds
- */
-const DEFAULT_TOOL_TIMEOUT = 5000;
-
-/**
  * Check statuses for a collection of tools
  * 
  * This is a pure data operation that does not produce any console output
@@ -50,7 +51,7 @@ export async function checkToolStatuses(
   options: ToolStatusCheckOptions = {}
 ): Promise<Map<string, ToolStatusResult>> {
   const {
-    concurrency = 10,
+    concurrency = DEFAULT_TOOL_CONCURRENCY,
     timeout = DEFAULT_TOOL_TIMEOUT,
     onProgress,
     skipBrewInit = false,
@@ -71,7 +72,7 @@ export async function checkToolStatuses(
     if (hasBrewTools) {
       debug('Initializing Homebrew environment for status checks');
       await initBrewEnvironment();
-      await initializeBrewCaches(5000);
+      await initializeBrewCaches(DEFAULT_BREW_CACHE_TIMEOUT);
     }
   }
   

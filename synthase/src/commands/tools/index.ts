@@ -30,6 +30,12 @@ import {
   ToolStatusCheckOptions
 } from './status';
 
+// Import shared constants
+import {
+  DEFAULT_TOOL_CONCURRENCY,
+  DEFAULT_TOOL_TIMEOUT
+} from './constants';
+
 /**
  * Creates a tools command
  * @returns Configured Command object
@@ -50,7 +56,7 @@ export function createToolsCommand(): Command {
         .option('-y, --yes', 'Skip confirmation when checking many tools')
         .option('--json', 'Output in JSON format')
         .option('--yaml', 'Output in YAML format')
-        .option('--concurrency <number>', 'Number of tools to check in parallel', '10')
+        .option('--concurrency <number>', `Number of tools to check in parallel`, String(DEFAULT_TOOL_CONCURRENCY))
         .action(handleToolsCommand)
     )
     .addCommand(
@@ -154,8 +160,8 @@ async function handleListCommand(options: any): Promise<void> {
  * @returns Timeout in milliseconds
  */
 function getToolTimeout(): number {
-  // Use a reasonable timeout for all tools to prevent hanging
-  return 5000; // 5 seconds timeout for all tools
+  // Use a standard timeout for all tools to prevent hanging
+  return DEFAULT_TOOL_TIMEOUT;
 }
 
 /**
@@ -171,7 +177,7 @@ async function checkToolStatusesWithProgress(
     quiet?: boolean;
   } = {}
 ): Promise<Map<string, ToolStatusResult>> {
-  const { concurrency = 10, quiet = false } = options;
+  const { concurrency = DEFAULT_TOOL_CONCURRENCY, quiet = false } = options;
   
   if (tools.size === 0) {
     return new Map();

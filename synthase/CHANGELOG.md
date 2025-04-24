@@ -62,11 +62,11 @@
   - Optimized core dependency handling to create cleaner, more intuitive diagrams
   - Fixed redundant connections in dependency graph for better readability
 - Optimized performance of `tools get --status` command by:
-  - Increasing default concurrency from 5 to 10 parallel checks
-  - Reducing default tool check timeout from 15s to 2.5s
+  - Increasing default concurrency from 5 to 20 parallel checks
+  - Reducing default tool check timeout from 15s to 1.5s
   - Improving Homebrew cache freshness handling 
   - Optimizing shell pool initialization
-  - Adding special handling for known problematic commands
+  - Consolidating timeout and concurrency settings into centralized constants
 
 ### To Fix
 - Status check timing summary appears twice when running `tools get --status` command - once before the final separator and once in the summary section 
