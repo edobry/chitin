@@ -18,6 +18,16 @@
   - Fixing stdin handling to properly redirect stdin to /dev/null
   - Properly separating command check executions from the shared shell pool
   - Implementing parallel tool status checking with configurable concurrency
+- Fixed import of `loadConfigAndModules` function in deps-command.ts to use the correct module
+- Fixed display issue in `fibers deps` command where only the core fiber was displayed in the tree view
+- Fixed `fibers deps --json` command to include proper fiber IDs in the orderedFibers array instead of numeric indices
+- Fixed GraphViz output in `fibers deps --graphviz` to properly use comma-separated style attributes instead of space-separated ones, resolving "unsupported style" warnings
+- Fixed redundant connections in GraphViz dependency diagrams by optimizing the core dependency handling algorithm:
+  - Now only adds direct core dependencies to top-level fibers rather than all fibers
+  - Creates cleaner and more intuitive dependency visualizations
+  - Preserves the dotfiles→core dependency as a special case
+  - Prevents duplicate paths that create unnecessary visual complexity
+  - Added unit tests to verify correct handling of transitive dependencies
 
 ### Improved
 - Refactored tools display code to use emoji constants from DISPLAY.EMOJIS instead of hardcoded values
@@ -38,6 +48,15 @@
   - Processing tools in parallel batches with controlled concurrency
   - Adding progress indicator showing completion percentage during checks
   - Optimizing Homebrew environment initialization
+- Improved GraphViz dependency diagram generation:
+  - Refactored to use domain-specific constants from fiber/graph.ts
+  - Fixed styling to match expected output format with proper node colors
+  - Simplified code with template literals and functional programming patterns
+  - Unified diagram generation through shared utility function
+  - Added type safety with proper UserConfig typing
+  - Improved dependency visualization by only showing essential connections
+  - Optimized core dependency handling to create cleaner, more intuitive diagrams
+  - Fixed redundant connections in dependency graph for better readability
 
 ### To Fix
 - Status check timing summary appears twice when running `tools get --status` command - once before the final separator and once in the summary section 

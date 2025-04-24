@@ -4,9 +4,29 @@
 
 import { UserConfig } from '../types';
 import { isFiberEnabled } from '../commands/fibers/utils';
+import { FIBER_NAMES } from './types';
 
 // GraphViz styling constants
 const GRAPH_STYLES = {
+  // Common style values
+  VALUES: {
+    FONT: 'Arial',
+    FONTSIZE: {
+      GRAPH: '12',
+      NODE: '10',
+      EDGE: '9'
+    },
+    SHAPE: 'box',
+    DIRECTION: 'LR'
+  },
+  
+  // Style components
+  STYLE: {
+    ROUNDED: 'rounded',
+    FILLED: 'filled',
+    DASHED: 'dashed'
+  },
+  
   // Node colors
   COLORS: {
     CORE: '#D0E0FF',    // Light blue for core
@@ -15,23 +35,28 @@ const GRAPH_STYLES = {
     DISABLED_TEXT: '#606060' // Gray text for disabled
   },
   
-  // Graph settings
-  SETTINGS: `  graph [rankdir=LR, fontname="Arial", fontsize=12];
-  node [fontname="Arial", fontsize=10, shape=box, style=rounded];
-  edge [fontname="Arial", fontsize=9];`,
-  
-  // Node styles
-  NODE_STYLES: {
-    BASE: 'style="rounded',
-    FILLED: ',filled"',
-    DISABLED: ',filled,dashed"'
+  // Graph settings (using template literals with extracted constants)
+  get SETTINGS() {
+    const { FONT, FONTSIZE, SHAPE, DIRECTION } = this.VALUES;
+    return `  graph [rankdir=${DIRECTION}, fontname="${FONT}", fontsize=${FONTSIZE.GRAPH}];
+  node [fontname="${FONT}", fontsize=${FONTSIZE.NODE}, shape=${SHAPE}];
+  edge [fontname="${FONT}", fontsize=${FONTSIZE.EDGE}];`;
   },
   
-  // Special fiber IDs
-  SPECIAL_FIBERS: {
-    CORE: 'core',
-    DOTFILES: 'dotfiles',
-    DEV: 'dev'
+  // Node styles (using extracted constants with comma separation)
+  NODE_STYLES: {
+    get ROUNDED() {
+      const { ROUNDED } = GRAPH_STYLES.STYLE;
+      return `style="${ROUNDED}"`;
+    },
+    get FILLED() {
+      const { ROUNDED, FILLED } = GRAPH_STYLES.STYLE;
+      return `style="${ROUNDED},${FILLED}"`;
+    },
+    get DISABLED() {
+      const { ROUNDED, FILLED, DASHED } = GRAPH_STYLES.STYLE;
+      return `style="${ROUNDED},${FILLED},${DASHED}"`;
+    }
   }
 };
 
@@ -63,33 +88,34 @@ ${GRAPH_STYLES.SETTINGS}
 
   // Create nodes with appropriate styling
   for (const fiberId of fibersToShow) {
-    const { CORE, DOTFILES, DEV } = GRAPH_STYLES.SPECIAL_FIBERS;
-    const isCore = fiberId === CORE;
+    const isCore = fiberId === FIBER_NAMES.CORE;
     const isEnabled = isCore || isFiberEnabled(fiberId, config);
     
     // Determine node style and colors
-    let style, fillColor = '', fontColor = '';
+    let nodeStyle = '';
+    let fillColor = '';
+    let fontColor = '';
     
     if (isCore) {
-      style = `${GRAPH_STYLES.NODE_STYLES.BASE}${GRAPH_STYLES.NODE_STYLES.FILLED}`;
+      nodeStyle = GRAPH_STYLES.NODE_STYLES.FILLED;
       fillColor = ` fillcolor="${GRAPH_STYLES.COLORS.CORE}"`;
     } else if (isEnabled) {
-      style = `${GRAPH_STYLES.NODE_STYLES.BASE}${GRAPH_STYLES.NODE_STYLES.FILLED}`;
+      nodeStyle = GRAPH_STYLES.NODE_STYLES.FILLED;
       fillColor = ` fillcolor="${GRAPH_STYLES.COLORS.ENABLED}"`;
     } else {
-      style = `${GRAPH_STYLES.NODE_STYLES.BASE}${GRAPH_STYLES.NODE_STYLES.DISABLED}`;
+      nodeStyle = GRAPH_STYLES.NODE_STYLES.DISABLED;
       fillColor = ` fillcolor="${GRAPH_STYLES.COLORS.DISABLED}"`;
       fontColor = ` fontcolor="${GRAPH_STYLES.COLORS.DISABLED_TEXT}"`;
     }
     
-    output += `  "${fiberId}" [${style}${fillColor}${fontColor}];\n`;
+    output += `  "${fiberId}" [${nodeStyle}${fillColor}${fontColor}];\n`;
   }
   
   // Extract direct dependencies from detection info
   const directDeps = extractDirectDependencies(
     fibersToShow, 
     dependencyDetectionInfo, 
-    GRAPH_STYLES.SPECIAL_FIBERS
+    { CORE: FIBER_NAMES.CORE, DOTFILES: FIBER_NAMES.DOTFILES }
   );
   
   // Generate edges for the dependencies
@@ -101,58 +127,62 @@ ${GRAPH_STYLES.SETTINGS}
 }
 
 /**
- * Extract direct dependencies for each fiber from dependency detection info
+ * Extract direct dependencies from detection info
+ * Filter out redundant dependencies 
  */
 function extractDirectDependencies(
   fibersToShow: string[],
   dependencyDetectionInfo: Map<string, {source: string, deps: string[]}[]>,
-  specialFibers: { CORE: string, DOTFILES: string, DEV: string }
+  specialFibers: { CORE: string, DOTFILES: string }
 ): Map<string, string[]> {
-  const directDeps = new Map<string, string[]>();
-  const { CORE, DOTFILES, DEV } = specialFibers;
+  const { CORE, DOTFILES } = specialFibers;
   
-  // Get explicit dependencies from all detection sources
-  for (const [fiberId, sources] of dependencyDetectionInfo.entries()) {
-    if (fiberId === CORE) continue; // Skip core as it has no dependencies
-    
-    // Combine all dependencies from all sources
-    const allDeps = Array.from(
-      new Set(
-        sources.flatMap(source => source.deps)
-      )
-    );
-    
-    directDeps.set(fiberId, allDeps);
-  }
+  // Create a map for the final dependencies
+  const finalDeps = new Map<string, string[]>();
   
-  // Add special implicit dependencies if needed
-  if (fibersToShow.includes(CORE)) {
-    // Ensure dotfiles depends on core
-    if (fibersToShow.includes(DOTFILES)) {
-      ensureDependency(directDeps, DOTFILES, CORE);
+  // Process all fibers and collect their direct dependencies
+  for (const fiberId of fibersToShow) {
+    const allDeps: string[] = [];
+    const detectionSources = dependencyDetectionInfo.get(fiberId) || [];
+    
+    for (const source of detectionSources) {
+      for (const dep of source.deps) {
+        if (fibersToShow.includes(dep) && !allDeps.includes(dep)) {
+          allDeps.push(dep);
+        }
+      }
     }
     
-    // Ensure dev depends on core
-    if (fibersToShow.includes(DEV)) {
-      ensureDependency(directDeps, DEV, CORE);
-    }
+    finalDeps.set(fiberId, allDeps);
   }
-  
-  return directDeps;
-}
 
-/**
- * Ensure a dependency exists in the dependency map
- */
-function ensureDependency(
-  depMap: Map<string, string[]>,
-  sourceId: string, 
-  depId: string
-): void {
-  const deps = depMap.get(sourceId) || [];
-  if (!deps.includes(depId)) {
-    depMap.set(sourceId, [...deps, depId]);
+  // Special case: dotfiles always depends directly on core if both exist
+  if (fibersToShow.includes(DOTFILES) && fibersToShow.includes(CORE)) {
+    const dotfilesDeps = finalDeps.get(DOTFILES) || [];
+    if (!dotfilesDeps.includes(CORE)) {
+      dotfilesDeps.push(CORE);
+      finalDeps.set(DOTFILES, dotfilesDeps);
+    }
   }
+  
+  // Add core dependency only to top-level fibers (those with no other dependencies)
+  for (const fiberId of fibersToShow) {
+    if (fiberId === CORE) continue; // Skip core itself
+    
+    const deps = finalDeps.get(fiberId) || [];
+    
+    // If the fiber has no dependencies other than possibly core
+    // or if it only depends on dotfiles, add core dependency
+    if ((deps.length === 0) || 
+        (deps.length === 1 && deps[0] === DOTFILES)) {
+      if (!deps.includes(CORE)) {
+        deps.push(CORE);
+        finalDeps.set(fiberId, deps);
+      }
+    }
+  }
+  
+  return finalDeps;
 }
 
 /**

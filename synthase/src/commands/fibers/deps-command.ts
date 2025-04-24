@@ -10,7 +10,6 @@ import {
   getFiberIds,
   getChainIds,
   orderChainsByDependencies,
-  generateFiberDependencyGraph
 } from '../../fiber';
 import {
   orderFibersByDependencies,
@@ -30,6 +29,10 @@ import fs from 'fs';
 import yaml from 'js-yaml';
 import { FIBER_NAMES, CONFIG_FIELDS, FILE_NAMES, DISPLAY } from '../../constants';
 import { loadConfigAndModules } from './shared';
+
+// Import generateFiberDependencyGraph from fiber/graph.ts
+import { generateFiberDependencyGraph } from '../../fiber/graph';
+import { UserConfig } from '../../types';
 
 /**
  * Create the 'deps' subcommand for showing fiber dependencies in a diagram
@@ -58,7 +61,7 @@ export function createDepsCommand(): Command {
         let fibersToShow = displayFiberIds;
         if (options.hideDisabled) {
           fibersToShow = fibersToShow.filter((fiberId: string) => {
-            const isCore = fiberId === 'core';
+            const isCore = fiberId === FIBER_NAMES.CORE;
             return isCore || isFiberEnabled(fiberId, config);
           });
         }
@@ -242,39 +245,24 @@ export function createDepsCommand(): Command {
         
         // Output GraphViz DOT format
         if (options.graphviz) {
-          console.log('digraph fiber_dependencies {');
-          console.log('  rankdir=LR;');
-          console.log('  node [shape=box];');
+          // Generate the GraphViz DOT representation using the existing utility
+          const graphOutput = generateFiberDependencyGraph(
+            fibersToShow,
+            dependencyMap,
+            reverseDependencyMap,
+            dependencyDetectionInfo,
+            config as UserConfig,
+            { reverse: options.reverse }
+          );
           
-          // Output all nodes
-          for (const fiberId of fibersToShow) {
-            const isCore = fiberId === 'core';
-            const isEnabled = isCore || isFiberEnabled(fiberId, config);
-            const color = isEnabled ? 'green' : 'gray';
-            console.log(`  "${fiberId}" [style=filled, fillcolor=${color}];`);
-          }
-          
-          // Output all edges
-          for (const [fiberId, deps] of dependencyMap.entries()) {
-            for (const dep of deps) {
-              if (fibersToShow.includes(dep)) {
-                if (options.reverse) {
-                  console.log(`  "${dep}" -> "${fiberId}";`);
-                } else {
-                  console.log(`  "${fiberId}" -> "${dep}";`);
-                }
-              }
-            }
-          }
-          
-          console.log('}');
+          console.log(graphOutput);
           return;
         }
         
         // Sort fibers alphabetically for flat display, with core first
         const sortedFibers = [...fibersToShow].sort((a: string, b: string) => {
-          if (a === 'core') return -1;
-          if (b === 'core') return 1;
+          if (a === FIBER_NAMES.CORE) return -1;
+          if (b === FIBER_NAMES.CORE) return 1;
           return a.localeCompare(b);
         });
         
@@ -282,7 +270,7 @@ export function createDepsCommand(): Command {
           console.log('Fiber dependencies:\n');
           
           for (const fiberId of sortedFibers) {
-            const isCore = fiberId === 'core';
+            const isCore = fiberId === FIBER_NAMES.CORE;
             const isEnabled = isCore || isFiberEnabled(fiberId, config);
             const statusSymbol = isEnabled ? DISPLAY.EMOJIS.ENABLED : DISPLAY.EMOJIS.DISABLED;
             
@@ -335,7 +323,7 @@ export function createDepsCommand(): Command {
           }
         } else {
           // Tree view
-          console.log('Fiber dependency tree:\n');
+          console.log('Fiber Dependency Diagram:\n');
           
           const printDependencyTree = (
             fiberId: string, 
@@ -351,7 +339,7 @@ export function createDepsCommand(): Command {
               return;
             }
             
-            const isCore = fiberId === 'core';
+            const isCore = fiberId === FIBER_NAMES.CORE;
             const isEnabled = isCore || isFiberEnabled(fiberId, config);
             const statusSymbol = isEnabled ? DISPLAY.EMOJIS.ENABLED : DISPLAY.EMOJIS.DISABLED;
             
