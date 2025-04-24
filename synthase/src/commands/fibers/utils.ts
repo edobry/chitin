@@ -111,6 +111,8 @@ export function orderFibersByDependencies(
       // Only add the dependency if it's in our fiber list
       if (fibersToSort.includes(depId)) {
         // Add dependency relationship to graph
+        // Important: The dependent should point to its dependency
+        // If A depends on B, then A -> B in the graph
         graph.addDependency(fiberId, depId);
       }
     }
@@ -119,7 +121,8 @@ export function orderFibersByDependencies(
   // Ensure all fibers have an implicit dependency on core
   ensureCoreDependencies(fibersToSort, undefined, undefined, undefined, graph);
   
-  // Get topologically sorted fibers (dependencies come before dependents)
+  // Get topologically sorted fibers
+  // The result of topological sort gives dependencies first, then dependents
   let sortedFibers = graph.getTopologicalSort();
   
   // Handle special case fibers - core must be first and dotfiles second (depending on core)

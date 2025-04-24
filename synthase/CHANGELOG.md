@@ -33,6 +33,16 @@
   - Prevents duplicate paths that create unnecessary visual complexity
   - Added unit tests to verify correct handling of transitive dependencies
 - Restored original display format for `fibers deps` command while adding JSON output support
+- Fixed fiber dependency ordering in `fibers get` command to properly display dependencies before dependents:
+  - Implemented complete topological sorting algorithm to ensure correct ordering
+  - Fixed critical bug where fibers were appearing before their dependencies
+  - Ensured special cases like 'core' and 'dotfiles' maintain their special ordering
+  - Now fibers like 'oplabs' correctly appear after 'cloud' when they depend on it
+- Unified dependency detection logic between `fibers deps` and `fibers get` commands:
+  - Both commands now use the same advanced dependency detection from the dependency graph
+  - The `get` command now shows the same rich dependency information as the `deps` command
+  - Fibers are now consistently ordered with dependencies before dependents in both commands
+  - Tool-derived dependencies and other advanced dependency sources are now detected in both commands
 
 ### Improved
 - Refactored tools display code to use emoji constants from DISPLAY.EMOJIS instead of hardcoded values
