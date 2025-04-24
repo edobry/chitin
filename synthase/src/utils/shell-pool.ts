@@ -22,7 +22,7 @@ export class ShellPool {
    * @param poolSize Maximum number of shells to maintain
    * @param terminationTimeoutMs Timeout in milliseconds for shell termination (default 1000ms)
    */
-  constructor(poolSize = 10, terminationTimeoutMs = 1000) {
+  constructor(poolSize = 15, terminationTimeoutMs = 1000) {
     this.poolSize = poolSize;
     this.terminationTimeoutMs = terminationTimeoutMs;
   }
@@ -37,8 +37,11 @@ export class ShellPool {
 
     debug(`Initializing shell pool with size ${this.poolSize}`);
     
-    // Start with just one shell to reduce initial overhead
-    await this.createShell();
+    // Start with multiple shells to handle concurrent checks better
+    const initialShellCount = Math.min(5, this.poolSize);
+    for (let i = 0; i < initialShellCount; i++) {
+      await this.createShell();
+    }
     
     this.initialized = true;
   }
@@ -355,9 +358,16 @@ echo '${endMarker}'
     
     const startTime = performance.now();
     
+    // Known problematic commands that tend to hang or be slow
+    const problematicCommands = ['hg', 'gh', 'grr', 'op', 'scalr', 'true'];
+    const isProblematicCommand = problematicCommands.some(cmd => command.includes(cmd));
+    
     // Use a shorter timeout for direct command execution to avoid excessive waiting
     // This is especially important for tools that might hang waiting for user input
-    const effectiveTimeout = Math.min(timeoutMs, 5000);
+    // For problematic commands, use even shorter timeout
+    const effectiveTimeout = isProblematicCommand 
+      ? Math.min(timeoutMs, 1500) // Very short timeout for known problematic commands
+      : Math.min(timeoutMs, 3000); // Reduced from 5000ms to 3000ms
     
     try {
       // For simple command checks, run directly with execa instead of through shell pool

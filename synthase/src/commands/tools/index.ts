@@ -11,20 +11,7 @@ import { discoverModulesFromConfig } from '../../modules/discovery';
 import { debug, error, info, setLogLevel, LogLevel } from '../../utils/logger';
 import { setupProcessCleanup } from '../../utils/process';
 import { shellPool } from '../../utils/shell-pool';
-import { 
-  initBrewEnvironment, 
-  initializeBrewCaches,
-  normalizeBrewConfig,
-  getBrewDisplayString,
-  getToolBrewPackageName,
-  isToolBrewCask
-} from '../../utils/homebrew';
-import { 
-  ToolStatus, 
-  ToolStatusResult, 
-  checkToolStatus, 
-  batchCheckToolStatus 
-} from '../../utils/tools';
+import { ToolStatus, ToolStatusResult } from '../../utils/tools';
 
 // Import domain-specific utilities
 import { loadParentConfig, extractAllTools } from './discovery';
@@ -36,6 +23,12 @@ import {
   displayToolsAsYaml,
   ToolDisplayOptions
 } from './ui';
+import {
+  checkToolStatuses,
+  createConsoleProgressHandler,
+  clearProgressLine,
+  ToolStatusCheckOptions
+} from './status';
 
 /**
  * Creates a tools command
@@ -57,8 +50,7 @@ export function createToolsCommand(): Command {
         .option('-y, --yes', 'Skip confirmation when checking many tools')
         .option('--json', 'Output in JSON format')
         .option('--yaml', 'Output in YAML format')
-        .option('--concurrency <number>', 'Number of tools to check in parallel', '5')
-        .option('--queue', 'Use queue-based implementation instead of chunk-based (may be more efficient)')
+        .option('--concurrency <number>', 'Number of tools to check in parallel', '10')
         .action(handleToolsCommand)
     )
     .addCommand(
@@ -167,96 +159,48 @@ function getToolTimeout(): number {
 }
 
 /**
- * Check status of multiple tools in parallel with concurrency control - chunk-based approach
- * Tools are processed in fixed-size batches
- * @param tools Tools to check
- * @param concurrency Maximum number of concurrent checks
- * @returns Map of tool status results
+ * Check tool statuses with progress reporting
+ * @param tools Tools to check status for
+ * @param options Status checking options
+ * @returns Status check results
  */
-async function checkToolsStatusInParallel(
+async function checkToolStatusesWithProgress(
   tools: Map<string, { config: ToolConfig; source: string }>,
-  concurrency: number
+  options: {
+    concurrency?: number;
+    quiet?: boolean;
+  } = {}
 ): Promise<Map<string, ToolStatusResult>> {
-  const results = new Map<string, ToolStatusResult>();
-  const toolEntries = Array.from(tools.entries());
-  const total = toolEntries.length;
-  let completed = 0;
+  const { concurrency = 10, quiet = false } = options;
   
-  // Process tools in chunks based on concurrency
-  for (let i = 0; i < toolEntries.length; i += concurrency) {
-    const chunk = toolEntries.slice(i, i + concurrency);
-    const chunkPromises = chunk.map(async ([toolId, { config }]) => {
-      const timeout = getToolTimeout();
-      try {
-        const result = await checkToolStatus(toolId, config, timeout);
-        completed++;
-        // Update progress
-        process.stdout.write(`\r\x1b[KChecking tools: ${completed}/${total} (${Math.round(completed/total*100)}%)`);
-        return { toolId, result };
-      } catch (err) {
-        completed++;
-        process.stdout.write(`\r\x1b[KChecking tools: ${completed}/${total} (${Math.round(completed/total*100)}%)`);
-        return { 
-          toolId, 
-          result: { 
-            status: ToolStatus.NOT_INSTALLED, 
-            method: 'unknown', 
-            error: err instanceof Error ? err : new Error(String(err)) 
-          } 
-        };
-      }
-    });
-    
-    // Wait for all tools in this chunk to complete
-    const chunkResults = await Promise.all(chunkPromises);
-    
-    // Store results
-    for (const { toolId, result } of chunkResults) {
-      results.set(toolId, result);
-    }
+  if (tools.size === 0) {
+    return new Map();
   }
   
-  // Clear the progress line
-  process.stdout.write('\r\x1b[K');
-  return results;
-}
-
-/**
- * Check tool status using the queue-based approach from batchCheckToolStatus
- * This wraps the existing implementation with a progress indicator
- * @param tools Tools to check 
- * @param concurrency Maximum concurrent checks
- * @returns Map of tool status results
- */
-async function checkToolsStatusWithQueue(
-  tools: Map<string, { config: ToolConfig; source: string }>,
-  concurrency: number
-): Promise<Map<string, ToolStatusResult>> {
-  // Convert the Map to format expected by batchCheckToolStatus
-  const toolConfigs = new Map<string, ToolConfig>();
-  for (const [toolId, { config }] of tools.entries()) {
-    toolConfigs.set(toolId, config);
+  if (!quiet) {
+    console.log("Checking tool status...");
   }
   
-  // Create a progress tracker
-  const total = toolConfigs.size;
-  let completed = 0;
+  // Create progress handler that updates the console
+  const progressHandler = createConsoleProgressHandler();
   
-  const onProgress = (checked: number, total: number) => {
-    completed = checked;
-    process.stdout.write(`\r\x1b[KChecking tools: ${checked}/${total} (${Math.round(checked/total*100)}%)`);
-  };
-  
-  // Use the existing batch checker with our progress callback
-  const results = await batchCheckToolStatus(toolConfigs, {
+  // Check all tools with the status module
+  const startTime = performance.now();
+  const statusResults = await checkToolStatuses(tools, {
+    concurrency, 
     timeout: getToolTimeout(),
-    concurrency,
-    onProgress
+    onProgress: quiet ? undefined : progressHandler
   });
+  const endTime = performance.now();
   
-  // Clear the progress line
-  process.stdout.write('\r\x1b[K');
-  return results;
+  // Clear the progress line and log completion
+  if (!quiet) {
+    clearProgressLine();
+    const duration = ((endTime - startTime) / 1000).toFixed(2);
+    debug(`Completed all tool status checks in ${duration} seconds`);
+  }
+  
+  return statusResults;
 }
 
 /**
@@ -267,15 +211,7 @@ async function checkToolsStatusWithQueue(
 async function handleToolsCommand(toolNames: string[] | undefined, options: any): Promise<void> {
   await withToolSetup(async ({ tools, filteredTools, options }) => {
     // Parse concurrency option
-    const concurrency = parseInt(options.concurrency, 10) || 5;
-    // Determine which implementation to use
-    const useQueueApproach = options.queue === true;
-    
-    if (useQueueApproach) {
-      debug('Using queue-based parallel processing');
-    } else {
-      debug('Using chunk-based parallel processing');
-    }
+    const concurrency = parseInt(options.concurrency, 10) || 10;
     
     // If specific tools are requested
     if (toolNames && toolNames.length > 0) {
@@ -299,60 +235,29 @@ async function handleToolsCommand(toolNames: string[] | undefined, options: any)
         }
       }
       
-      // If all tools should be checked for status together
+      // Prepare display options
+      const displayOptions: ToolDisplayOptions = {
+        detailed: options.detailed,
+        status: options.status,
+        missing: options.missing,
+        filterSource: options.filterSource,
+        filterCheck: options.filterCheck,
+        filterInstall: options.filterInstall,
+        skipStatusWarning: true // Skip warning since we're explicitly requesting these tools
+      };
+      
+      // If status checking was requested, perform it before display
       if (options.status) {
-        // Initialize Homebrew environment if needed
-        const hasBrewTools = Array.from(toolsToDisplay.values()).some(
-          tool => tool.config.brew || tool.config.checkBrew
-        );
-        
-        if (hasBrewTools) {
-          debug('Initializing Homebrew environment for status checks');
-          await initBrewEnvironment();
-          await initializeBrewCaches();
-        }
-        
-        // Handle status checking based on selected approach
-        let statusResults;
-        
-        if (toolsToDisplay.size > 1) {
-          // Use selected parallel approach for multiple tools
-          statusResults = useQueueApproach
-            ? await checkToolsStatusWithQueue(toolsToDisplay, concurrency)
-            : await checkToolsStatusInParallel(toolsToDisplay, concurrency);
-        } else {
-          // For a single tool, just check directly
-          statusResults = new Map<string, ToolStatusResult>();
-          const [toolId, toolData] = Array.from(toolsToDisplay.entries())[0];
-          debug(`Checking status of ${toolId}`);
-          const timeout = getToolTimeout();
-          statusResults.set(toolId, await checkToolStatus(toolId, toolData.config, timeout));
-        }
-        
-        // Display all tools with their status
-        await displayTools(toolsToDisplay, {
-          detailed: options.detailed,
-          status: options.status,
-          missing: options.missing,
-          statusResults,
-          filterSource: options.filterSource,
-          filterCheck: options.filterCheck,
-          filterInstall: options.filterInstall,
-          skipStatusWarning: true // Skip warning since we're explicitly requesting these tools
+        const statusResults = await checkToolStatusesWithProgress(toolsToDisplay, {
+          concurrency,
+          quiet: toolsToDisplay.size === 1 // Don't show progress for a single tool
         });
-      } else {
-        // Display tools without status
-        await displayTools(toolsToDisplay, {
-          detailed: options.detailed,
-          status: false,
-          missing: options.missing,
-          filterSource: options.filterSource,
-          filterCheck: options.filterCheck,
-          filterInstall: options.filterInstall,
-          skipStatusWarning: true
-        });
+        
+        displayOptions.statusResults = statusResults;
       }
       
+      // Display the tools with any status results
+      await displayTools(toolsToDisplay, displayOptions);
       return;
     }
     
@@ -373,90 +278,39 @@ async function handleToolsCommand(toolNames: string[] | undefined, options: any)
       skipStatusWarning: options.yes
     };
     
-    // If JSON output is requested
-    if (options.json) {
-      // If we need status information, get it first
-      if (options.status) {
-        // Initialize Homebrew environment if needed
-        const hasBrewTools = Array.from(filteredTools.values()).some(
-          tool => tool.config.brew || tool.config.checkBrew
-        );
-        
-        if (hasBrewTools) {
-          debug('Initializing Homebrew environment for status checks');
-          await initBrewEnvironment();
-          await initializeBrewCaches();
-        }
-        
-        const statusResults = useQueueApproach
-          ? await checkToolsStatusWithQueue(filteredTools, concurrency)
-          : await checkToolsStatusInParallel(filteredTools, concurrency);
-        
-        displayToolsAsJson(filteredTools, statusResults, { missing: options.missing });
-      } else {
-        // No status information
-        displayToolsAsJson(filteredTools, new Map(), { missing: false });
-      }
-      
-      return;
-    }
+    // Check if we need to check status
+    let statusResults: Map<string, ToolStatusResult> | undefined;
     
-    // If YAML output is requested
-    if (options.yaml) {
-      // If we need status information, get it first
-      if (options.status) {
-        // Initialize Homebrew environment if needed
-        const hasBrewTools = Array.from(filteredTools.values()).some(
-          tool => tool.config.brew || tool.config.checkBrew
-        );
-        
-        if (hasBrewTools) {
-          debug('Initializing Homebrew environment for status checks');
-          await initBrewEnvironment();
-          await initializeBrewCaches();
-        }
-        
-        const statusResults = useQueueApproach
-          ? await checkToolsStatusWithQueue(filteredTools, concurrency)
-          : await checkToolsStatusInParallel(filteredTools, concurrency);
-        
-        displayToolsAsYaml(filteredTools, statusResults, { missing: options.missing });
-      } else {
-        displayToolsAsYaml(filteredTools, new Map(), { missing: false });
-      }
-      
-      return;
-    }
-    
-    // Default display - set up status checks if needed
     if (options.status) {
-      // Show initial progress message
-      console.log("Checking tool status...");
+      statusResults = await checkToolStatusesWithProgress(filteredTools, { concurrency });
       
-      // Initialize Homebrew environment if needed
-      const hasBrewTools = Array.from(filteredTools.values()).some(
-        tool => tool.config.brew || tool.config.checkBrew
-      );
-      
-      if (hasBrewTools) {
-        debug('Initializing Homebrew environment for status checks');
-        await initBrewEnvironment();
-        await initializeBrewCaches();
+      // For JSON and YAML output, we check status first then output
+      if (options.json) {
+        displayToolsAsJson(filteredTools, statusResults, { missing: options.missing });
+        return;
       }
       
-      // Check all tools in parallel using selected approach
-      const startTime = performance.now();
+      if (options.yaml) {
+        displayToolsAsYaml(filteredTools, statusResults, { missing: options.missing });
+        return;
+      }
       
-      options.statusResults = useQueueApproach
-        ? await checkToolsStatusWithQueue(filteredTools, concurrency)
-        : await checkToolsStatusInParallel(filteredTools, concurrency);
+      // For normal output, add status results to display options
+      displayOptions.statusResults = statusResults;
+    } else {
+      // No status checking requested
+      if (options.json) {
+        displayToolsAsJson(filteredTools, undefined, { missing: false });
+        return;
+      }
       
-      const endTime = performance.now();
-      const duration = ((endTime - startTime) / 1000).toFixed(2);
-      debug(`Completed all tool status checks in ${duration} seconds using ${useQueueApproach ? 'queue-based' : 'chunk-based'} approach`);
+      if (options.yaml) {
+        displayToolsAsYaml(filteredTools, undefined, { missing: false });
+        return;
+      }
     }
     
-    // Display tools
+    // Display tools with the collected display options
     await displayTools(filteredTools, displayOptions);
   }, options);
 } 

@@ -106,6 +106,7 @@ export async function initBrewEnvironment(timeoutMs: number = 1000): Promise<boo
 let brewFormulasCache: string[] = [];
 let brewCasksCache: string[] = [];
 let brewCacheInitialized = false;
+let brewCacheTimestamp = 0; // Add timestamp for cache freshness check
 
 /**
  * Initialize Homebrew caches for formulas and casks
@@ -113,8 +114,10 @@ let brewCacheInitialized = false;
  * @returns True if initialization succeeded, false otherwise
  */
 export async function initializeBrewCaches(timeoutMs: number = 5000): Promise<boolean> {
-  if (brewCacheInitialized) {
-    debug('Using already initialized Homebrew caches');
+  // Check if cache is still fresh (use cache for 5 minutes/300000ms)
+  const now = Date.now();
+  if (brewCacheInitialized && (now - brewCacheTimestamp) < 300000) {
+    debug('Using already initialized fresh Homebrew caches');
     return true;
   }
   
@@ -137,6 +140,7 @@ export async function initializeBrewCaches(timeoutMs: number = 5000): Promise<bo
     debug(`Cached ${brewCasksCache.length} installed casks`);
     
     brewCacheInitialized = true;
+    brewCacheTimestamp = now; // Update timestamp
     return true;
   } catch (error) {
     debug(`Error initializing Homebrew caches: ${error}`);

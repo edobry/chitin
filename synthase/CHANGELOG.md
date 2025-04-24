@@ -12,6 +12,10 @@
 - Fixed import.meta comparison in src/index.ts by using the correct property
 - Fixed import with .ts extension that wasn't allowed by TypeScript
 - Fixed spacing issue with the Install label in tools status display and legend
+- Fixed `tools` command to display help information instead of running the `get` command's logic when no subcommand is provided
+- Fixed duplicate status checking in `tools get --status` command by removing redundant checking code in ui.ts
+- Fixed status display in `tools get --status` command to properly show the status of each tool
+- Fixed duplicate progress indicator in `tools get --status` command by properly handling pre-computed status results
 - Fixed `tools get --status` command appearing to hang when checking many tools by:
   - Using dedicated non-interactive execution for status check commands
   - Adding environment variables to prevent tools from trying to read from TTY
@@ -57,6 +61,12 @@
   - Improved dependency visualization by only showing essential connections
   - Optimized core dependency handling to create cleaner, more intuitive diagrams
   - Fixed redundant connections in dependency graph for better readability
+- Optimized performance of `tools get --status` command by:
+  - Increasing default concurrency from 5 to 10 parallel checks
+  - Reducing default tool check timeout from 15s to 2.5s
+  - Improving Homebrew cache freshness handling 
+  - Optimizing shell pool initialization
+  - Adding special handling for known problematic commands
 
 ### To Fix
 - Status check timing summary appears twice when running `tools get --status` command - once before the final separator and once in the summary section 
@@ -501,3 +511,9 @@
 
 ### Files Modified
 - `src/modules/discovery.ts` - Updated error handling and debug implementation
+
+## [Unreleased]
+
+### Changed
+- Removed chunk-based implementation for tool status checking in favor of the more efficient queue-based implementation
+- Removed `--queue` option from `tools get` command as queue-based implementation is now the default
