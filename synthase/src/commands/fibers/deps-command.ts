@@ -27,12 +27,14 @@ import {
 import { join } from 'path';
 import fs from 'fs';
 import yaml from 'js-yaml';
-import { FIBER_NAMES, CONFIG_FIELDS, FILE_NAMES, DISPLAY } from '../../constants';
+import { FIBER_NAMES } from '../../fiber/types';
+import { CONFIG_FIELDS } from '../../config/types';
+import { FILE_NAMES, DISPLAY } from '../../constants';
 import { loadConfigAndModules } from './shared';
 
 // Import generateFiberDependencyGraph from fiber/graph.ts
 import { generateFiberDependencyGraph } from '../../fiber/graph';
-import { UserConfig } from '../../types';
+import { UserConfig } from '../../config/types';
 import { 
   buildFiberDependencyGraph, 
   dependencyGraphToJson,
@@ -108,7 +110,7 @@ export function createDepsCommand(): Command {
           for (const fiberId of sortedFibers) {
             const isCore = fiberId === FIBER_NAMES.CORE;
             const isEnabled = isCore || isFiberEnabled(fiberId, config);
-            const statusSymbol = isEnabled ? DISPLAY.EMOJIS.ENABLED : DISPLAY.EMOJIS.DISABLED;
+            const statusSymbol = isEnabled ? DISPLAY.EMOJIS.ACTIVE : DISPLAY.EMOJIS.DISABLED;
             
             // Get explicit dependencies
             const deps = [...(activeMap.get(fiberId) || [])];
@@ -248,7 +250,7 @@ export function createDepsCommand(): Command {
             // Get enabled status
             const isCore = fiberId === FIBER_NAMES.CORE;
             const isEnabled = isCore || isFiberEnabled(fiberId, config);
-            const statusSymbol = isEnabled ? DISPLAY.EMOJIS.ENABLED : DISPLAY.EMOJIS.DISABLED;
+            const statusSymbol = isEnabled ? DISPLAY.EMOJIS.ACTIVE : DISPLAY.EMOJIS.DISABLED;
             
             // Print the node
             const connector = isLast ? '└── ' : '├── ';
@@ -309,4 +311,24 @@ export function createDepsCommand(): Command {
         process.exit(1);
       }
     });
+}
+
+export function displayDependencyStatus(
+  fiberId: string,
+  isEnabled: boolean,
+  isSatisfied: boolean,
+  inConfig: boolean
+): void {
+  const statusSymbol = isEnabled ? DISPLAY.EMOJIS.ACTIVE : DISPLAY.EMOJIS.DISABLED;
+  console.log(`  ${statusSymbol} ${fiberId}`);
+}
+
+export function displayChainDependencyStatus(
+  chainId: string,
+  isEnabled: boolean,
+  isSatisfied: boolean,
+  inConfig: boolean
+): void {
+  const statusSymbol = isEnabled ? DISPLAY.EMOJIS.ACTIVE : DISPLAY.EMOJIS.DISABLED;
+  console.log(`  ${statusSymbol} ${chainId}`);
 } 

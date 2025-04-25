@@ -4,8 +4,9 @@ import {
   buildFiberDependencyGraph, 
   FiberEnvironment 
 } from '../../src/fiber/dependency-graph';
-import { FIBER_NAMES } from '../../src/constants';
-import { Module } from '../../src/types';
+import { FIBER_NAMES } from '../../src/fiber/types';
+import { Module } from '../../src/modules/types';
+import { CONFIG_FIELDS } from '../../src/config/types';
 
 describe('Fiber Dependency Graph', () => {
   let mockEnvironment: FiberEnvironment;

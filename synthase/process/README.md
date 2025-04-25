@@ -43,4 +43,5 @@ When planning a significant code change:
 
 ## Index of Process Documents
 
-- [Fiber Command Refactoring](./fiber-command-refactoring.md) - Plan to separate data processing from rendering in the fiber commands 
+- [Fiber Command Refactoring](./fiber-command-refactoring.md) - Plan to separate data processing from rendering in the fiber commands
+- [Fiber Command Modularization](./fiber-command-modularization.md) - Plan to modularize the fiber command structure for better organization and maintainability 

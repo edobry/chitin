@@ -2,7 +2,8 @@ import { getCoreConfigValue } from '../../config';
 import { findChitinDir } from '../../utils/path';
 import { isFiberEnabled, getChainDependencies, getDependentFibers } from './utils';
 import { areFiberDependenciesSatisfied } from '../../fiber/manager';
-import { UserConfig, ConfigValidationResult, Module, FiberConfig } from '../../types';
+import { UserConfig, ConfigValidationResult, FiberConfig } from '../../types/config';
+import { Module } from '../../types/module';
 import { DISPLAY } from '../../constants';
 
 /**
@@ -77,13 +78,13 @@ export function getFiberStatus(
   if (fiberId === 'core') {
     return '(core)';
   } else if (!isEnabled) {
-    return DISPLAY.EMOJIS.DISABLED;  // Red circle emoji for disabled
+    return DISPLAY.EMOJIS.DISABLED;  // Black circle emoji for disabled
   } else if (!isSatisfied) {
     return '(unsatisfied dependencies)';
   } else if (!inConfig) {
     return '(unconfigured)';
   } else if (!hideDisabled) {
-    return DISPLAY.EMOJIS.ENABLED;  // Green circle emoji for enabled (only when not hiding disabled)
+    return DISPLAY.EMOJIS.ACTIVE;  // Green circle emoji for active (only when not hiding disabled)
   }
   return '';
 }
@@ -194,19 +195,34 @@ export function displayFiberDependencies(
  * @param isEnabled Whether the chain is enabled
  * @param isConfigured Whether the chain is configured
  * @param hideDisabled Whether disabled chains are hidden
+ * @param isFiberEnabled Whether the parent fiber is enabled
+ * @param isAvailable Whether the chain is available (dependencies satisfied)
  * @returns Status text
  */
 export function getChainStatus(
   isEnabled: boolean,
   isConfigured: boolean,
-  hideDisabled: boolean = false
+  hideDisabled: boolean = false,
+  isFiberEnabled: boolean = true,
+  isAvailable: boolean = true
 ): string {
-  if (!isEnabled) {
-    return DISPLAY.EMOJIS.DISABLED;  // Red circle emoji for disabled, no space
-  } else if (!hideDisabled) {
-    return DISPLAY.EMOJIS.ENABLED;  // Green circle emoji for enabled, no space
+  // If fiber is disabled, chain is automatically disabled
+  if (!isFiberEnabled) {
+    return DISPLAY.EMOJIS.DISABLED;  // Black circle emoji for disabled
   }
-  return '';
+  
+  // If chain is explicitly disabled
+  if (!isEnabled) {
+    return DISPLAY.EMOJIS.DISABLED;  // Black circle emoji for disabled
+  }
+  
+  // If chain is not available (dependencies not satisfied)
+  if (!isAvailable) {
+    return DISPLAY.EMOJIS.UNAVAILABLE;  // Red circle emoji for unavailable
+  }
+  
+  // Chain is enabled and available
+  return DISPLAY.EMOJIS.ACTIVE;  // Green circle emoji for active
 }
 
 /**
@@ -243,6 +259,10 @@ export function displayChain(
     
   const isChainConfigured = !!chainConfig;
   
+  // Check if chain is available (dependencies satisfied)
+  const isChainAvailable = fiberEnabled && isChainEnabled && 
+    areFiberDependenciesSatisfied(fiberId, config);
+  
   // Skip disabled chains if hide-disabled option is enabled
   if (options.hideDisabled && !isChainEnabled) {
     return false;
@@ -252,7 +272,13 @@ export function displayChain(
   const chainValidation = validationResults[chainId] && !validationResults[chainId].valid ? '✗' : '';
   
   // Create status indicator for chains
-  const chainStatus = getChainStatus(isChainEnabled, isChainConfigured, options.hideDisabled);
+  const chainStatus = getChainStatus(
+    isChainEnabled, 
+    isChainConfigured, 
+    options.hideDisabled,
+    fiberEnabled,
+    isChainAvailable
+  );
   
   // Get dependencies for this chain
   const dependencies = getChainDependencies(chainId, config[fiberId]?.moduleConfig || {});

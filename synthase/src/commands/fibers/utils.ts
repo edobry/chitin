@@ -1,9 +1,11 @@
 import { createDependencyGraph } from '../../modules/dependency';
-import { Module } from '../../types';
+import { Module, ModuleDependency } from '../../modules/types';
 import fs from 'fs';
 import yaml from 'js-yaml';
 import { join } from 'path';
-import { FIBER_NAMES, CONFIG_FIELDS, FILE_NAMES } from '../../constants';
+import { FIBER_NAMES } from '../../fiber/types';
+import { CONFIG_FIELDS } from '../../config/types';
+import { FILE_NAMES } from '../../constants';
 
 /**
  * Ensures all fibers have an implicit dependency on core
@@ -213,4 +215,9 @@ export function countDisplayedModules(
   }
   
   return { fibers: fiberCount, chains: chainCount };
+}
+
+// Add type annotation to the parameter
+function processDependency(dep: ModuleDependency): string {
+  return dep.moduleId;
 } 

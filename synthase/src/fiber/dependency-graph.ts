@@ -1,7 +1,9 @@
 #!/usr/bin/env bun
 
-import { UserConfig, Module } from '../types';
-import { FIBER_NAMES, CONFIG_FIELDS } from '../constants';
+import { UserConfig } from '../config/types';
+import { Module } from '../modules/types';
+import { FIBER_NAMES } from './types';
+import { CONFIG_FIELDS } from '../config/types';
 import { isFiberEnabled } from '../commands/fibers/utils';
 import { ensureCoreDependencies } from '../commands/fibers/utils';
 

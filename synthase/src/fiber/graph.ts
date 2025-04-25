@@ -2,9 +2,10 @@
  * Utilities for generating graph visualizations for fibers
  */
 
-import { UserConfig } from '../types';
+import { UserConfig } from '../config/types';
 import { isFiberEnabled } from '../commands/fibers/utils';
 import { FIBER_NAMES } from './types';
+import { CONFIG_FIELDS } from '../config/types';
 
 // GraphViz styling constants
 const GRAPH_STYLES = {

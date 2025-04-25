@@ -3,7 +3,8 @@
  * @description Data model interfaces for the fiber command refactoring
  */
 
-import { Module, UserConfig, ConfigValidationResult } from '../../types';
+import { Module } from '../../types/module';
+import { UserConfig, ConfigValidationResult } from '../../types/config';
 import { DISPLAY } from '../../constants';
 
 /**
@@ -14,7 +15,11 @@ export interface FiberDisplayModel {
   isCore: boolean;
   isEnabled: boolean;
   path: string;
-  dependencies: Array<{id: string, source: string}>;
+  dependencies: Array<{
+    id: string;
+    source: string;
+    isSatisfied: boolean;
+  }>;
   validation: {
     isValid: boolean;
     errors: string[];
@@ -29,8 +34,12 @@ export interface FiberDisplayModel {
 export interface ChainDisplayModel {
   id: string;
   isEnabled: boolean;
+  isAvailable: boolean;
   isConfigured: boolean;
-  dependencies: string[];
+  dependencies: Array<{
+    id: string;
+    isSatisfied: boolean;
+  }>;
   validation: {
     isValid: boolean;
     errors: string[];

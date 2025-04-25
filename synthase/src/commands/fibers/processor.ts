@@ -6,7 +6,7 @@
 import { FiberEnvironment, FiberCommandOptions, ProcessedFiberData, FiberDisplayModel, ChainDisplayModel, FiberSummaryModel } from './models';
 import { isFiberEnabled, getChainDependencies } from './utils';
 import { areFiberDependenciesSatisfied } from '../../fiber';
-import { FIBER_NAMES } from '../../constants';
+import { FIBER_NAMES } from '../../fiber/types';
 
 /**
  * Processes environment data into display models based on command options
@@ -93,7 +93,8 @@ function createFiberDisplayModel(
     dependencyGraph,
     fiberChainMap,
     moduleResult,
-    discoveredFiberMap
+    discoveredFiberMap,
+    dependencyChecker
   } = environment;
 
   const isCore = fiberId === FIBER_NAMES.CORE;
@@ -111,7 +112,8 @@ function createFiberDisplayModel(
   const dependencyInfo = dependencyGraph.detectionInfo.get(fiberId) || [];
   const dependencyModels = dependencyInfo.map(info => ({
     id: info.deps[0], // Assuming single dependency per source for now
-    source: info.source
+    source: info.source,
+    isSatisfied: areFiberDependenciesSatisfied(info.deps[0], config, dependencyChecker)
   }));
 
   // Get chains
@@ -155,7 +157,8 @@ function createChainDisplayModel(
     config,
     validationResults,
     moduleResult,
-    orderedChains
+    orderedChains,
+    dependencyChecker
   } = environment;
 
   const chainConfig = config[fiberId]?.moduleConfig?.[chainId];
@@ -163,12 +166,22 @@ function createChainDisplayModel(
     m.id === chainId && m.type === 'chain'
   );
 
-  const isEnabled = chainConfig?.enabled !== false;
+  // If fiber is disabled, chain is automatically disabled
+  const fiberEnabled = isFiberEnabled(fiberId, config);
+  const isEnabled = fiberEnabled && (chainConfig?.enabled !== false);
   const isConfigured = !!chainConfig;
   const order = orderedChains.indexOf(chainId) + 1;
 
+  // Check if chain is available (dependencies satisfied)
+  const isAvailable = isEnabled && isConfigured && 
+    areFiberDependenciesSatisfied(fiberId, config, dependencyChecker);
+
   // Get dependencies
   const dependencies = getChainDependencies(chainId, config[fiberId]?.moduleConfig || {});
+  const dependencyModels = dependencies.map(depId => ({
+    id: depId,
+    isSatisfied: areFiberDependenciesSatisfied(depId, config, dependencyChecker)
+  }));
 
   // Get validation results
   const validation = validationResults[chainId] || {
@@ -180,8 +193,9 @@ function createChainDisplayModel(
   return {
     id: chainId,
     isEnabled,
+    isAvailable,
     isConfigured,
-    dependencies,
+    dependencies: dependencyModels,
     validation: {
       isValid: validation.valid,
       errors: validation.errors || [],

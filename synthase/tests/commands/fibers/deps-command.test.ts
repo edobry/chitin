@@ -2,8 +2,9 @@
 import { describe, test, expect, beforeEach, afterEach, spyOn } from 'bun:test';
 import { createDepsCommand } from '../../../src/commands/fibers/deps-command';
 import * as shared from '../../../src/commands/fibers/shared';
-import { FIBER_NAMES } from '../../../src/constants';
-import { Module, UserConfig } from '../../../src/types';
+import { FIBER_NAMES } from '../../../src/fiber/types';
+import { Module } from '../../../src/modules/types';
+import { UserConfig, CONFIG_FIELDS } from '../../../src/config/types';
 
 /**
  * Helper to create fiber modules for testing

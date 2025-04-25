@@ -3,7 +3,8 @@ import { serializeToYaml } from '../../utils';
 import { loadAndValidateConfig } from '../utils';
 import { discoverModulesFromConfig } from '../../modules/discovery';
 import { validateModulesAgainstConfig } from '../../modules/validator';
-import { UserConfig, Module } from '../../types';
+import { UserConfig } from '../../config/types';
+import { Module } from '../../modules/types';
 import { 
   getLoadableFibers, 
   areFiberDependenciesSatisfied, 
@@ -43,7 +44,9 @@ import {
 import { join } from 'path';
 import fs from 'fs';
 import yaml from 'js-yaml';
-import { FIBER_NAMES, CONFIG_FIELDS, FILE_NAMES, DISPLAY } from '../../constants';
+import { FIBER_NAMES } from '../../fiber/types';
+import { CONFIG_FIELDS } from '../../config/types';
+import { FILE_NAMES, DISPLAY } from '../../constants';
 import { createDepsCommand } from './deps-command';
 import { createGetCommand } from './get-command';
 
@@ -127,25 +130,25 @@ async function loadConfigAndModules(options: any) {
   const orderedChains = orderChainsByDependencies(loadableChains, config, loadableFibers);
   
   // Get all fiber modules from module discovery
-  const discoveredFiberModules = moduleResult.modules.filter(m => m.type === 'fiber');
+  const discoveredFiberModules = moduleResult.modules.filter((m: Module) => m.type === 'fiber');
   
   // Create a map for all discovered fibers with their IDs as keys
-  const discoveredFiberMap = new Map(
-    discoveredFiberModules.map(module => [module.id, module])
+  const discoveredFiberMap = new Map<string, Module>(
+    discoveredFiberModules.map((module: Module) => [module.id, module])
   );
   
   // Get all chain modules from module discovery
-  const discoveredChainModules = moduleResult.modules.filter(m => m.type === 'chain');
+  const discoveredChainModules = moduleResult.modules.filter((m: Module) => m.type === 'chain');
   
   // Create a map for all discovered chains with their IDs as keys
-  const discoveredChainMap = new Map(
-    discoveredChainModules.map(module => [module.id, module])
+  const discoveredChainMap = new Map<string, Module>(
+    discoveredChainModules.map((module: Module) => [module.id, module])
   );
   
   // Combine all fibers - configured and unconfigured for unified display
   const allFiberModuleIds = new Set([
     ...allFibers,
-    ...discoveredFiberModules.map(m => m.id)
+    ...discoveredFiberModules.map((m: Module) => m.id)
   ]);
   
   // Create a list of all fiber IDs to display ensuring proper dependency order
