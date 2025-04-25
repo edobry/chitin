@@ -365,71 +365,6 @@ echo '${endMarker}'
       throw error;
     }
   }
-  
-  /**
-   * Execute a command directly without using the shell pool
-   * This is more reliable for simple check commands that might hang in a reused shell
-   */
-  private async executeDirectCommand(command: string, timeoutMs: number): Promise<{ stdout: string; stderr: string; exitCode: number }> {
-    debug(`Executing direct command: ${command}`);
-    
-    const startTime = performance.now();
-    
-    // Use a shorter timeout for direct command execution to avoid excessive waiting
-    // This is especially important for tools that might hang waiting for user input
-    const effectiveTimeout = Math.min(timeoutMs, DEFAULT_TOOL_TIMEOUT); 
-    
-    try {
-      // For simple command checks, run directly with execa instead of through shell pool
-      const result = await execa('bash', ['-c', command], {
-        timeout: effectiveTimeout,
-        stdio: ['pipe', 'pipe', 'pipe'],
-        env: {
-          ...process.env,
-          // Disable interactive prompts
-          BASH_SILENCE_DEPRECATION_WARNING: '1',
-          HISTFILE: '/dev/null',
-          HISTSIZE: '0',
-          // GPG specific settings
-          GPG_TTY: '/dev/null',
-          // Prevent SSH prompts
-          SSH_ASKPASS: '/bin/true',
-          // Bitwarden specific settings
-          BW_NOINTERACTION: 'true',
-        },
-        // Reject on error for cleaner error handling
-        reject: false,
-      });
-      
-      const duration = performance.now() - startTime;
-      debug(`Direct command completed in ${duration.toFixed(2)}ms with exit code ${result.exitCode}: ${command}`);
-      
-      return {
-        stdout: result.stdout || '',
-        stderr: result.stderr || '',
-        exitCode: result.exitCode != null ? result.exitCode : -1
-      };
-    } catch (error) {
-      const duration = performance.now() - startTime;
-      debug(`Direct command execution error after ${duration.toFixed(2)}ms: ${error instanceof Error ? error.message : String(error)}`);
-      
-      // If it's a timeout error
-      if (error instanceof Error && error.message.includes('timed out')) {
-        return {
-          stdout: '',
-          stderr: `Command timed out after ${effectiveTimeout}ms: ${command}`,
-          exitCode: 124 // Standard timeout exit code
-        };
-      }
-      
-      // For other errors, return error information
-      return {
-        stdout: '',
-        stderr: error instanceof Error ? error.message : String(error),
-        exitCode: 1
-      };
-    }
-  }
 
   /**
    * Shutdown the shell pool and kill all processes
@@ -480,6 +415,16 @@ echo '${endMarker}'
     
     this.shells = [];
     this.initialized = false;
+  }
+
+  public async performToolStatusCheck(command: string, timeoutMs: number = 5000): Promise<boolean> {
+    try {
+      const result = await this.executeCommand(command, timeoutMs);
+      return result.exitCode === 0;
+    } catch (error) {
+      debug(`Tool status check failed for command "${command}": ${error}`);
+      return false;
+    }
   }
 }
 

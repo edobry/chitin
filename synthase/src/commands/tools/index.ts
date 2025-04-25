@@ -21,9 +21,9 @@ import { ToolStatus, ToolStatusResult } from '../../utils/tools';
 import { loadParentConfig, extractAllTools } from './discovery';
 import { filterTools, ToolFilterOptions } from './filter';
 import { 
-  displaySingleTool,
-  displayTools,
-  displayToolsAsJson,
+  displaySingleTool, 
+  displayTools, 
+  displayToolsAsJson, 
   displayToolsAsYaml,
   displayToolsLegend,
   ToolDisplayOptions
@@ -113,7 +113,7 @@ async function withToolSetup<T>(
     // Only initialize the shell pool if we need to check status
     if (options.status) {
       debug('Initializing shell pool for status checks');
-      await shellPool.initialize();
+    await shellPool.initialize();
     }
     
     // Load configuration and validate
@@ -150,11 +150,11 @@ async function withToolSetup<T>(
   } finally {
     // Only clean up the shell pool if we initialized it
     if (options.status) {
-      try {
+    try {
         debug('Shutting down shell pool');
-        await shellPool.shutdown();
-      } catch (err) {
-        debug(`Error shutting down shell pool: ${err}`);
+      await shellPool.shutdown();
+    } catch (err) {
+      debug(`Error shutting down shell pool: ${err}`);
       }
     }
   }
@@ -290,7 +290,7 @@ async function handleToolsCommand(toolNames: string[] | undefined, options: any)
           process.exit(1);
         }
       }
-
+      
       // If status checking was requested, perform it before any output
       let statusResults: Map<string, ToolStatusResult> | undefined;
       let duration: number | undefined;
@@ -339,7 +339,7 @@ async function handleToolsCommand(toolNames: string[] | undefined, options: any)
       console.log('No tools found matching the criteria.');
       return;
     }
-
+    
     // If status checking was requested, perform it before any output
     let statusResults: Map<string, ToolStatusResult> | undefined;
     let duration: number | undefined;
@@ -354,16 +354,16 @@ async function handleToolsCommand(toolNames: string[] | undefined, options: any)
     }
 
     // Handle JSON/YAML output after status check
-    if (options.json) {
-      displayToolsAsJson(filteredTools, statusResults, { missing: options.missing });
-      return;
-    }
-
-    if (options.yaml) {
-      displayToolsAsYaml(filteredTools, statusResults, { missing: options.missing });
-      return;
-    }
-    
+      if (options.json) {
+        displayToolsAsJson(filteredTools, statusResults, { missing: options.missing });
+        return;
+      }
+      
+      if (options.yaml) {
+        displayToolsAsYaml(filteredTools, statusResults, { missing: options.missing });
+        return;
+      }
+      
     // Prepare display options for normal output
     const displayOptions: ToolDisplayOptions = {
       detailed: options.detailed,

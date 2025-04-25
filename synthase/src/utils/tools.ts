@@ -325,31 +325,51 @@ async function performToolStatusCheck(
           // Use default check mechanism (command -v) if checkCommand is true
           commandStr = getCheckCommand(toolId);
           debug(`Using default check command for ${toolId}: ${commandStr}`);
+          
+          // For simple command checks, use the shell pool
+          const cmdResult = await shellPool.executeCommand(commandStr, timeoutMs);
+          const duration = Date.now() - commandStartTime;
+          
+          // Status is based on exit code, not stderr content
+          if (cmdResult.exitCode === 0) {
+            return {
+              status: ToolStatus.INSTALLED,
+              message: 'Tool command check succeeded',
+              checkDuration: duration
+            };
+          } else {
+            return {
+              status: ToolStatus.NOT_INSTALLED,
+              message: 'Tool command check failed',
+              output: cmdResult.stderr || cmdResult.stdout,
+              checkDuration: duration
+            };
+          }
         } else {
           // Use the custom check command as a string
           commandStr = typeof config.checkCommand === 'string' 
             ? config.checkCommand 
             : String(config.checkCommand);
-        }
-        
-        // Execute command via shell pool
-        const cmdResult = await shellPool.executeCommand(commandStr, timeoutMs);
-        const duration = Date.now() - commandStartTime;
-        
-        // Status is based on exit code, not stderr content
-        if (cmdResult.exitCode === 0) {
-          return {
-            status: ToolStatus.INSTALLED,
-            message: 'Tool command check succeeded',
-            checkDuration: duration
-          };
-        } else {
-          return {
-            status: ToolStatus.NOT_INSTALLED,
-            message: 'Tool command check failed',
-            output: cmdResult.stderr || cmdResult.stdout,
-            checkDuration: duration
-          };
+          
+          // Execute command via shell pool
+          const cmdResult = await shellPool.executeCommand(commandStr, timeoutMs);
+          const duration = Date.now() - commandStartTime;
+          
+          // Status is based on exit code, not stderr content
+          if (cmdResult.exitCode === 0) {
+            return {
+              status: ToolStatus.INSTALLED,
+              message: 'Tool command check succeeded',
+              checkDuration: duration
+            };
+          } else {
+            return {
+              status: ToolStatus.NOT_INSTALLED,
+              message: 'Tool command check failed',
+              output: cmdResult.stderr || cmdResult.stdout,
+              checkDuration: duration
+            };
+          }
         }
       } catch (err) {
         return {

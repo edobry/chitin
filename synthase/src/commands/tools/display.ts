@@ -315,3 +315,4 @@ export function displayToolsAsYaml(
 }
 
 // cleanupShells function is no longer needed, it's handled in withToolSetup 
+ 

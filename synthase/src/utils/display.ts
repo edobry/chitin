@@ -11,7 +11,7 @@ export const EMOJI = {
   RED_CIRCLE: '🔴',
   WHITE_CIRCLE: '⚪',
   BLACK_CIRCLE: '⚫',
-  WARNING: '⚠️',
+    WARNING: '⚠️',
   ERROR_CROSS: '❌',
   WRENCH: '🔧',
   MAGNIFYING_GLASS: '🔍',
@@ -27,7 +27,7 @@ export const EMOJI = {
   FOLDER: '📂',
   DNA: '🧬',
   CHAINS: '⛓️',
-
+    
   // Domain-specific aliases
   get INSTALLED() { return this.GREEN_CIRCLE },
   get NOT_INSTALLED() { return this.RED_CIRCLE },
