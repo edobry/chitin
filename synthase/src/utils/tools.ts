@@ -319,10 +319,18 @@ async function performToolStatusCheck(
       const commandStartTime = Date.now();
       
       try {
-        // Convert checkCommand to string if it's a boolean
-        const commandStr = typeof config.checkCommand === 'string' 
-          ? config.checkCommand 
-          : String(config.checkCommand);
+        // Handle boolean true checkCommand differently
+        let commandStr: string;
+        if (typeof config.checkCommand === 'boolean' && config.checkCommand === true) {
+          // Use default check mechanism (command -v) if checkCommand is true
+          commandStr = getCheckCommand(toolId);
+          debug(`Using default check command for ${toolId}: ${commandStr}`);
+        } else {
+          // Use the custom check command as a string
+          commandStr = typeof config.checkCommand === 'string' 
+            ? config.checkCommand 
+            : String(config.checkCommand);
+        }
         
         // Execute command via shell pool
         const cmdResult = await shellPool.executeCommand(commandStr, timeoutMs);

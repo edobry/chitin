@@ -49,6 +49,7 @@
   - Reduced default tool check timeout from 1500ms to 800ms
   - Increased default concurrency from 20 to 50 parallel checks
   - Extended cache expiration from 10 to 60 minutes
+- Fixed issue with Docker and other tools using `checkCommand: true` which was incorrectly converted to a string "true" command instead of using the proper default check command
 
 ### Improved
 - Refactored tools display code to use emoji constants from DISPLAY.EMOJIS instead of hardcoded values
