@@ -1,5 +1,6 @@
-import { isFiberEnabled } from './utils';
-import { UserConfig, Module } from '../../types';
+import { UserConfig } from '../../types/config';
+import { Module } from '../../modules/types';
+import { isFiberEnabled } from './utils/fiber-utils';
 
 /**
  * Associates chains with fibers based on configuration and paths

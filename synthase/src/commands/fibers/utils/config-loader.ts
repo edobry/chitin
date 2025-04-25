@@ -13,11 +13,14 @@ import {
 import {
   orderFibersByDependencies,
   getDependentFibers,
-  isFiberEnabled,
   getChainDependencies,
-  countDisplayedModules,
   ensureCoreDependencies
-} from '../utils';
+} from './dependency-utils';
+
+import { 
+  isFiberEnabled,
+  countDisplayedModules
+} from './fiber-utils';
 
 import {
   associateChainsByFiber,

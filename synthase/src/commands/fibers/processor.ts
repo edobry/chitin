@@ -4,9 +4,12 @@
  */
 
 import { FiberEnvironment, FiberCommandOptions, ProcessedFiberData, FiberDisplayModel, ChainDisplayModel, FiberSummaryModel } from './models';
-import { isFiberEnabled, getChainDependencies } from './utils';
 import { areFiberDependenciesSatisfied } from '../../fiber';
 import { FIBER_NAMES } from '../../fiber/types';
+
+// Import from the new utility modules
+import { isFiberEnabled } from './utils/fiber-utils';
+import { getChainDependencies } from './utils/dependency-utils';
 
 /**
  * Processes environment data into display models based on command options

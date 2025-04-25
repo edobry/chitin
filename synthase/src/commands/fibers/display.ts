@@ -1,10 +1,13 @@
 import { getCoreConfigValue } from '../../config';
 import { findChitinDir } from '../../utils/path';
-import { isFiberEnabled, getChainDependencies, getDependentFibers } from './utils';
 import { areFiberDependenciesSatisfied } from '../../fiber/manager';
 import { UserConfig, ConfigValidationResult, FiberConfig } from '../../types/config';
 import { Module } from '../../types/module';
 import { EMOJI } from '../../constants';
+
+// Import from the new utility modules
+import { isFiberEnabled } from './utils/fiber-utils';
+import { getChainDependencies, getDependentFibers } from './utils/dependency-utils';
 
 /**
  * Display options for fibers command
