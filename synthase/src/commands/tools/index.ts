@@ -21,12 +21,13 @@ import { ToolStatus, ToolStatusResult } from '../../utils/tools';
 import { loadParentConfig, extractAllTools } from './discovery';
 import { filterTools, ToolFilterOptions } from './filter';
 import { 
-  displaySingleTool, 
-  displayTools, 
-  displayToolsAsJson, 
+  displaySingleTool,
+  displayTools,
+  displayToolsAsJson,
   displayToolsAsYaml,
+  displayToolsLegend,
   ToolDisplayOptions
-} from './ui';
+} from './display';
 import {
   checkToolStatuses,
   createConsoleProgressHandler,
@@ -40,6 +41,9 @@ import {
   DEFAULT_TOOL_TIMEOUT
 } from './constants';
 
+import { getToolConfig } from '../../utils/tools';
+import { checkToolStatus } from '../../utils/tools';
+
 /**
  * Creates a tools command
  * @returns Configured Command object
@@ -49,7 +53,7 @@ export function createToolsCommand(): Command {
     .description('Manage and display tool configurations')
     .addCommand(
       new Command('get')
-        .description('Get detailed information about configured tools')
+        .description('Get information about configured tools')
         .argument('[toolNames...]', 'Optional tool name(s) to display')
         .option('-d, --detailed', 'Show detailed tool configuration')
         .option('--status', 'Check if tools are installed')
@@ -76,7 +80,7 @@ export function createToolsCommand(): Command {
         .action(handleListCommand)
     );
   
-  // Display help when no subcommand is specified instead of defaulting to 'get'
+  // Display help when no subcommand is specified
   cmd.action(() => {
     cmd.help();
   });
@@ -280,8 +284,32 @@ async function handleToolsCommand(toolNames: string[] | undefined, options: any)
           process.exit(1);
         }
       }
+
+      // If status checking was requested, perform it before any output
+      let statusResults: Map<string, ToolStatusResult> | undefined;
+      let duration: number | undefined;
+      if (options.status) {
+        const result = await checkToolStatusesWithProgress(toolsToDisplay, {
+          concurrency,
+          quiet: true, // Stay quiet for JSON output
+          debug
+        });
+        statusResults = result.results;
+        duration = result.duration;
+      }
+
+      // Handle JSON/YAML output after status check
+      if (options.json) {
+        displayToolsAsJson(toolsToDisplay, statusResults, { missing: options.missing });
+        return;
+      }
+
+      if (options.yaml) {
+        displayToolsAsYaml(toolsToDisplay, statusResults, { missing: options.missing });
+        return;
+      }
       
-      // Prepare display options
+      // Prepare display options for normal output
       const displayOptions: ToolDisplayOptions = {
         detailed: options.detailed,
         status: options.status,
@@ -289,23 +317,14 @@ async function handleToolsCommand(toolNames: string[] | undefined, options: any)
         filterSource: options.filterSource,
         filterCheck: options.filterCheck,
         filterInstall: options.filterInstall,
-        skipStatusWarning: true // Skip warning since we're explicitly requesting these tools
+        skipStatusWarning: true, // Skip warning since we're explicitly requesting these tools
+        statusResults,
+        wallClockDuration: duration
       };
-      
-      // If status checking was requested, perform it before display
-      if (options.status) {
-        const { results: statusResults, duration } = await checkToolStatusesWithProgress(toolsToDisplay, {
-          concurrency,
-          quiet: toolsToDisplay.size === 1, // Don't show progress for a single tool
-          debug
-        });
-        
-        displayOptions.statusResults = statusResults;
-        displayOptions.wallClockDuration = duration;
-      }
       
       // Display the tools with any status results
       await displayTools(toolsToDisplay, displayOptions);
+      
       return;
     }
     
@@ -314,8 +333,32 @@ async function handleToolsCommand(toolNames: string[] | undefined, options: any)
       console.log('No tools found matching the criteria.');
       return;
     }
+
+    // If status checking was requested, perform it before any output
+    let statusResults: Map<string, ToolStatusResult> | undefined;
+    let duration: number | undefined;
+    if (options.status) {
+      const result = await checkToolStatusesWithProgress(filteredTools, { 
+        concurrency,
+        quiet: options.json || options.yaml, // Stay quiet for JSON/YAML output
+        debug
+      });
+      statusResults = result.results;
+      duration = result.duration;
+    }
+
+    // Handle JSON/YAML output after status check
+    if (options.json) {
+      displayToolsAsJson(filteredTools, statusResults, { missing: options.missing });
+      return;
+    }
+
+    if (options.yaml) {
+      displayToolsAsYaml(filteredTools, statusResults, { missing: options.missing });
+      return;
+    }
     
-    // Prepare display options
+    // Prepare display options for normal output
     const displayOptions: ToolDisplayOptions = {
       detailed: options.detailed,
       status: options.status,
@@ -323,45 +366,10 @@ async function handleToolsCommand(toolNames: string[] | undefined, options: any)
       filterSource: options.filterSource,
       filterCheck: options.filterCheck,
       filterInstall: options.filterInstall,
-      skipStatusWarning: options.yes
+      skipStatusWarning: options.yes,
+      statusResults,
+      wallClockDuration: duration
     };
-    
-    // Check if we need to check status
-    let statusResults: Map<string, ToolStatusResult> | undefined;
-    
-    if (options.status) {
-      const { results, duration } = await checkToolStatusesWithProgress(filteredTools, { 
-        concurrency,
-        debug
-      });
-      statusResults = results;
-      displayOptions.wallClockDuration = duration;
-      
-      // For JSON and YAML output, we check status first then output
-      if (options.json) {
-        displayToolsAsJson(filteredTools, statusResults, { missing: options.missing });
-        return;
-      }
-      
-      if (options.yaml) {
-        displayToolsAsYaml(filteredTools, statusResults, { missing: options.missing });
-        return;
-      }
-      
-      // For normal output, add status results to display options
-      displayOptions.statusResults = statusResults;
-    } else {
-      // No status checking requested
-      if (options.json) {
-        displayToolsAsJson(filteredTools, undefined, { missing: false });
-        return;
-      }
-      
-      if (options.yaml) {
-        displayToolsAsYaml(filteredTools, undefined, { missing: false });
-        return;
-      }
-    }
     
     // Display tools with the collected display options
     await displayTools(filteredTools, displayOptions);

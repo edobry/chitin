@@ -55,12 +55,35 @@ export class ShellPool {
       debug('Creating new shell process');
       
       // Use explicit environment variables to ensure non-interactive behavior
-      const shellEnv = {
-        ...process.env,
-        // Disable interactive prompts and history
+      const DEFAULT_ENV = {
+        // Basic shell settings
         BASH_SILENCE_DEPRECATION_WARNING: '1',
         HISTFILE: '/dev/null',
         HISTSIZE: '0',
+        TERM: 'dumb',
+        BASH_ENV: '/dev/null',
+        
+        // Prevent interactive behavior
+        PROMPT_COMMAND: '',
+        PS1: '',
+        PS2: '',
+        
+        // General settings
+        DEBIAN_FRONTEND: 'noninteractive',
+        NO_COLOR: '1',
+        FORCE_COLOR: '0',
+        CLICOLOR: '0',
+        CLICOLOR_FORCE: '0',
+        
+        // PATH settings
+        PATH: '/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin',
+      };
+      
+      // Create a completely non-interactive shell with proper stdio configuration
+      const shellEnv = {
+        ...DEFAULT_ENV,
+        ...process.env,
+        // Disable interactive prompts and history
         PROMPT_COMMAND: '',
         PS1: '',
         PS2: '',
@@ -70,10 +93,8 @@ export class ShellPool {
         BASH_ENV: '/dev/null',
         // Other settings for better command execution
         FORCE_COLOR: '1',
-        // GPG specific settings to avoid hanging on gpg commands
-        GPG_TTY: '/dev/null',
-        // Disable SSH agent prompts
-        SSH_ASKPASS: '/bin/true',
+        // Ensure PATH includes common locations
+        PATH: `/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:${process.env.PATH || ''}`
       };
       
       // Create a completely non-interactive shell with proper stdio configuration
@@ -218,15 +239,19 @@ export class ShellPool {
           reject(err);
         };
         
-        // Set up timeout
+        // Set up timeout with more detailed error message
         const timeout = setTimeout(() => {
           cleanup();
-          reject(new Error(`Command timed out after ${timeoutMs}ms: ${command}`));
+          const error = new Error(`Command timed out after ${timeoutMs}ms: ${command}`);
+          debug(`Command timeout: ${error.message}`);
+          reject(error);
         }, timeoutMs);
         
         const exitHandler = () => {
           cleanup();
-          reject(new Error('Shell process exited unexpectedly'));
+          const error = new Error('Shell process exited unexpectedly');
+          debug(`Shell exit: ${error.message}`);
+          reject(error);
         };
         
         // Function to clean up event listeners
@@ -459,4 +484,4 @@ echo '${endMarker}'
 }
 
 // Export a singleton instance for use throughout the application
-export const shellPool = new ShellPool(); 
+export const shellPool = new ShellPool();

@@ -550,3 +550,10 @@
 - Increased default tool concurrency from 20 to 50 parallel checks
 - Extended cache expiration from 10 to 60 minutes
 - Reduced default tool check timeout from 1500ms to 800ms
+
+### Changed
+- Improved tools command UI and organization:
+  - Removed redundant `config` subcommand and integrated its functionality into `get --detailed`
+  - Enhanced `get` command to show detailed information inline with basic info
+  - Improved readability by integrating detailed configuration into relevant sections
+  - Maintained all existing functionality while reducing command complexity

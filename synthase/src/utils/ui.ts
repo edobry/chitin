@@ -1,34 +1,9 @@
 /**
  * UI utilities for displaying information to the user
  */
-import { ToolConfig } from '../types';
+import { ToolConfig } from '../config/types';
 import { ToolStatus, ToolStatusResult, getStatusEmoji, getToolCheckMethod, getToolInstallMethod } from './tools';
-
-/**
- * Display constants
- */
-export const DISPLAY = {
-  EMOJIS: {
-    // Entities
-    FIBER: '🧬',
-    CHAIN: '⛓️',
-    TOOL: '🔧',
-    REFERENCE: '🔗',
-    
-    // Status indicators
-    ENABLED: '🟢',
-    DISABLED: '🔴',
-    WARNING: '⚠️',  // Warning/error symbol
-    ERROR: '⚠️',    // Error symbol (same as warning)
-    UNKNOWN: '⚪',
-    DEPENDS_ON: '⬆️',
-    
-    // Tool properties
-    CHECK: '🔍',
-    INSTALL: '🏗️',
-    ADDITIONAL_INFO: '📋',
-  },
-} as const;
+import { DISPLAY } from './display';
 
 /**
  * Format a status enum to a display string
@@ -136,14 +111,6 @@ export function displayAdditionalInfo(config: ToolConfig): void {
   
   if (config.optional === true) {
     additionalInfo.push('Optional: Yes');
-  }
-  
-  if (config.provides && Array.isArray(config.provides) && config.provides.length > 0) {
-    additionalInfo.push(`Provides: ${config.provides.join(', ')}`);
-  }
-  
-  if (config.deps && Array.isArray(config.deps) && config.deps.length > 0) {
-    additionalInfo.push(`Depends on: ${config.deps.join(', ')}`);
   }
   
   if (additionalInfo.length > 0) {

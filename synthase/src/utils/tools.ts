@@ -2,22 +2,18 @@
  * Shared tool utilities for handling tool configuration and status
  */
 import { ToolConfig } from '../types/config';
-import { DISPLAY } from './ui';
-import { debug } from './logger';
+import { DISPLAY } from '../constants';
+import { debug, error } from './logger';
 import { shellPool } from './shell-pool';
 import { isBrewPackageInstalled, isToolBrewCask, getToolBrewPackageName, initBrewEnvironment } from './homebrew';
 import * as fs from 'fs';
 import * as path from 'path';
 import { performance } from 'perf_hooks';
 import { DEFAULT_TOOL_TIMEOUT } from '../commands/tools/constants';
-import { executeCommand, getCommandExists } from './command';
-import { getBrewPackageDisplayName } from './homebrew';
-import { debug, error } from './logger';
-import { shellPool } from './shell-pool';
-import { performance } from 'perf_hooks';
-import { DEFAULT_TOOL_TIMEOUT } from '../commands/tools/constants';
-import { performance } from 'perf_hooks';
-import { DISPLAY } from './ui';
+import { loadAndValidateConfig } from '../commands/utils';
+import { discoverModulesFromConfig } from '../modules/discovery';
+import { Module } from '../types/module';
+import { extractAllTools } from '../commands/tools/discovery';
 
 /**
  * Shell command check constants
@@ -111,13 +107,8 @@ export function getToolInstallMethod(config: ToolConfig): string {
  * @returns Shell command to check for the command
  */
 export function getCheckCommand(command: string): string {
-  // For problematic commands that often time out, use a faster check
-  if (command === 'gpg' || command === 'gh' || command === 'op' || command === 'grr' || command === 'gofumpt' || command === 'goimports') {
-    return `which ${command} >/dev/null 2>&1 || (echo "Command not found: ${command}" >&2 && exit 1)`;
-  }
-  
-  // For standard commands, use command -v
-  return `${CHECK_CMD.COMMAND_EXISTS} ${command}`;
+  // Default case - use which to check if command exists
+  return `which ${command} >/dev/null 2>&1`;
 }
 
 /**
@@ -187,6 +178,32 @@ export function generateAppNameVariations(appName: string): string[] {
   }
   
   return variations.filter((v, i, a) => a.indexOf(v) === i); // Remove duplicates
+}
+
+/**
+ * Get the configuration for a specific tool
+ * @param toolId The ID of the tool to get configuration for
+ * @returns The tool configuration and its source
+ */
+export async function getToolConfig(toolId: string): Promise<{ config: ToolConfig; source: string }> {
+  // Load configuration and validate
+  const { config } = await loadAndValidateConfig();
+  
+  // Discover modules
+  const discoveryResult = await discoverModulesFromConfig(config);
+  const modules: Module[] = discoveryResult.modules || [];
+  
+  // Extract tools from all sources
+  const tools = extractAllTools(config, modules);
+  
+  // Get the specific tool configuration
+  const toolConfig = tools.get(toolId);
+  
+  if (!toolConfig) {
+    throw new Error(`Tool '${toolId}' not found in configuration`);
+  }
+  
+  return toolConfig;
 }
 
 // ================================================================
@@ -641,7 +658,7 @@ export async function batchCheckToolStatus(
       
       // Log slow tool checks
       if (duration > 200) {
-        debug(`Slow tool check: ${toolId} took ${(duration/1000).toFixed(3)}s, status: ${ToolStatus[result.status]}`);
+        debug(`Slow tool check: ${toolId} took ${(duration/1000).toFixed(3)}s, status: ${result.status}`);
       }
       
       // Update progress
@@ -723,7 +740,7 @@ export async function batchCheckToolStatus(
     debug(`Slowest tools:`);
     for (let i = 0; i < Math.min(5, toolTimings.length); i++) {
       const { toolId, duration, status } = toolTimings[i];
-      debug(`  ${i+1}. ${toolId}: ${(duration/1000).toFixed(3)}s (${ToolStatus[status]})`);
+      debug(`  ${i+1}. ${toolId}: ${(duration/1000).toFixed(3)}s (${status})`);
     }
   }
   
