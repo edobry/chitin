@@ -3,7 +3,7 @@
  */
 import { ToolConfig } from '../../types/config';
 import { ToolStatus, ToolStatusResult, getToolCheckMethod, getToolInstallMethod } from '../../utils/tools';
-import { DISPLAY } from '../../utils/display';
+import { EMOJI } from '../../utils/display';
 import { debug } from '../../utils/logger';
 import { shellPool } from '../../utils/shell-pool';
 import { countToolsByStatus } from './status';
@@ -29,13 +29,13 @@ export interface ToolDisplayOptions {
 function getToolStatus(status: ToolStatusResult): { emoji: string; text: string } {
   switch (status.status) {
     case ToolStatus.INSTALLED:
-      return { emoji: DISPLAY.EMOJIS.ACTIVE, text: 'installed' };
+      return { emoji: EMOJI.INSTALLED, text: 'installed' };
     case ToolStatus.NOT_INSTALLED:
-      return { emoji: DISPLAY.EMOJIS.DISABLED, text: 'not installed' };
+      return { emoji: EMOJI.NOT_INSTALLED, text: 'not installed' };
     case ToolStatus.ERROR:
-      return { emoji: DISPLAY.EMOJIS.WARNING, text: `error${status.message ? ` - ${status.message}` : ''}` };
+      return { emoji: EMOJI.ERROR, text: `error${status.message ? ` - ${status.message}` : ''}` };
     default:
-      return { emoji: DISPLAY.EMOJIS.UNKNOWN, text: 'unknown' };
+      return { emoji: EMOJI.UNKNOWN, text: 'unknown' };
   }
 }
 
@@ -51,6 +51,9 @@ export function displaySingleTool(
   const { config, source } = tool;
   const { detailed } = options;
 
+  // Add separator before each tool
+  console.log('\n―――――――――――――――――――――――――――――――――――――――\n');
+
   // Display tool header with status if available
   let statusEmoji = '';
   let statusText = '';
@@ -60,13 +63,13 @@ export function displaySingleTool(
     statusText = `\n  Status: ${text}`;
   }
 
-  console.log(`\n  ${statusEmoji}${DISPLAY.EMOJIS.TOOL} ${toolId}\n`);
+  console.log(`  ${statusEmoji}${EMOJI.TOOL} ${toolId}\n`);
   console.log(`  Source: ${source}`);
 
   // Check methods section
   const checkMethod = getToolCheckMethod(config);
   if (checkMethod !== 'None') {
-    console.log(`  ${DISPLAY.EMOJIS.CHECK} Check: ${checkMethod}`);
+    console.log(`  ${EMOJI.CHECK} Check: ${checkMethod}`);
     if (detailed) {
       if (config.checkCommand) console.log(`    Command: ${config.checkCommand}`);
       if (config.checkPath) console.log(`    Path: ${config.checkPath}`);
@@ -77,7 +80,7 @@ export function displaySingleTool(
   // Install methods section
   const installMethod = getToolInstallMethod(config);
   if (installMethod !== 'None') {
-    console.log(`  ${DISPLAY.EMOJIS.INSTALL} Install: ${installMethod}`);
+    console.log(`  ${EMOJI.INSTALL} Install: ${installMethod}`);
     if (detailed) {
       if (config.brew && typeof config.brew === 'object') {
         if (config.brew.name) console.log(`    Package: ${config.brew.name}`);
@@ -104,22 +107,22 @@ export function displaySingleTool(
     let versionInfo = '';
     if (config.version) versionInfo += `\n    Version: ${config.version}`;
     if (config.versionCommand) versionInfo += `\n    Command: ${config.versionCommand}`;
-    if (versionInfo) console.log(`  📌 Version:${versionInfo}`);
+    if (versionInfo) console.log(`  ${EMOJI.VERSION} Version:${versionInfo}`);
   }
 
   // Additional configuration
   if (detailed) {
     if (config.optional) {
-      console.log('  ⚡ Optional: true');
+      console.log(`  ${EMOJI.OPTIONAL} Optional: true`);
     }
     if (config.postInstall) {
-      console.log(`  🔄 Post Install: ${config.postInstall}`);
+      console.log(`  ${EMOJI.POST_INSTALL} Post Install: ${config.postInstall}`);
     }
   }
 
   // Dependencies
   if (detailed && config.deps && Array.isArray(config.deps) && config.deps.length > 0) {
-    console.log('  ⬇️ Dependencies:');
+    console.log(`  ${EMOJI.DEPENDENCIES} Dependencies:`);
     for (const dep of config.deps) {
       console.log(`    - ${dep}`);
     }
@@ -127,7 +130,7 @@ export function displaySingleTool(
 
   // Provided tools
   if (detailed && config.provides && Array.isArray(config.provides) && config.provides.length > 0) {
-    console.log('  📦 Provides:');
+    console.log(`  ${EMOJI.PROVIDES} Provides:`);
     for (const providedTool of config.provides) {
       console.log(`    - ${providedTool}`);
     }
@@ -177,7 +180,11 @@ export async function displayTools(
   }
   
   // Display legend
-  displayToolsLegend({ status: options.status });
+  console.log(`Legend: ${EMOJI.TOOL} = tool   ${EMOJI.CHECK} = check method   ${EMOJI.INSTALL} = install method   ${EMOJI.REFERENCE} = reference`);
+  if (options.status) {
+    console.log(`Status: ${EMOJI.INSTALLED} = installed   ${EMOJI.NOT_INSTALLED} = not installed   ${EMOJI.ERROR} = error   ${EMOJI.UNKNOWN} = unknown`);
+  }
+  console.log('');
   
   // Only show the count and source grouping for multiple tools
   if (tools.size > 1) {
@@ -230,13 +237,13 @@ export async function displayTools(
     const statusCounts = countToolsByStatus(options.statusResults);
     
     console.log(`Total tools: ${fullTools.size}`);
-    console.log(`  ${DISPLAY.EMOJIS.ACTIVE} Installed: ${statusCounts.installed}`);
-    console.log(`  ${DISPLAY.EMOJIS.DISABLED} Not installed: ${statusCounts.notInstalled}`);
+    console.log(`  ${EMOJI.INSTALLED} Installed: ${statusCounts.installed}`);
+    console.log(`  ${EMOJI.NOT_INSTALLED} Not installed: ${statusCounts.notInstalled}`);
     if (statusCounts.error > 0) {
-      console.log(`  ${DISPLAY.EMOJIS.WARNING} Error: ${statusCounts.error}`);
+      console.log(`  ${EMOJI.ERROR} Error: ${statusCounts.error}`);
     }
     if (statusCounts.unknown > 0) {
-      console.log(`  ${DISPLAY.EMOJIS.UNKNOWN} Unknown: ${statusCounts.unknown}`);
+      console.log(`  ${EMOJI.UNKNOWN} Unknown: ${statusCounts.unknown}`);
     }
     
     // Count tools by source
@@ -263,9 +270,9 @@ export async function displayTools(
 export function displayToolsLegend(options: { status?: boolean } = {}): void {
   // Only display legend for normal output, not for JSON/YAML
   if (process.stdout.isTTY) {
-    console.log(`Legend: ${DISPLAY.EMOJIS.TOOL} = tool   ${DISPLAY.EMOJIS.CHECK} = check method   ${DISPLAY.EMOJIS.INSTALL}  = install method   ${DISPLAY.EMOJIS.REFERENCE} = reference`);
+    console.log(`Legend: ${EMOJI.TOOL} = tool   ${EMOJI.CHECK} = check method   ${EMOJI.INSTALL} = install method   ${EMOJI.REFERENCE} = reference`);
     if (options.status) {
-      console.log(`Status: ${DISPLAY.EMOJIS.ACTIVE} = installed   ${DISPLAY.EMOJIS.DISABLED} = not installed   ${DISPLAY.EMOJIS.WARNING} = error   ${DISPLAY.EMOJIS.UNKNOWN} = unknown`);
+      console.log(`Status: ${EMOJI.INSTALLED} = installed   ${EMOJI.NOT_INSTALLED} = not installed   ${EMOJI.ERROR} = error   ${EMOJI.UNKNOWN} = unknown`);
     }
     console.log('');
   }

@@ -3,7 +3,7 @@
  */
 import { ToolConfig } from '../config/types';
 import { ToolStatus, ToolStatusResult, getStatusEmoji, getToolCheckMethod, getToolInstallMethod } from './tools';
-import { DISPLAY } from './display';
+import { EMOJI } from './display';
 
 /**
  * Format a status enum to a display string
@@ -79,7 +79,7 @@ export function formatConfigValue(value: any): string {
  * @param config Tool configuration
  */
 export function displayCheckMethod(toolId: string, config: ToolConfig): void {
-  console.log(`  ${DISPLAY.EMOJIS.CHECK} Check: ${getToolCheckMethod(config)}`);
+  console.log(`  ${EMOJI.CHECK} Check: ${getToolCheckMethod(config)}`);
   
   // Remove detailed check method display
 }
@@ -95,7 +95,7 @@ export function displayInstallMethod(config: ToolConfig): void {
     return; // Don't display if no install method is available
   }
   
-  console.log(`  ${DISPLAY.EMOJIS.INSTALL}  Install: ${installMethod}`);
+  console.log(`  ${EMOJI.INSTALL}  Install: ${installMethod}`);
   
   // Remove detailed installation method display
 }
@@ -114,7 +114,7 @@ export function displayAdditionalInfo(config: ToolConfig): void {
   }
   
   if (additionalInfo.length > 0) {
-    console.log(`  ${DISPLAY.EMOJIS.ADDITIONAL_INFO} Info:`);
+    console.log(`  ${EMOJI.ADDITIONAL_INFO} Info:`);
     for (const info of additionalInfo) {
       console.log(`    ${info}`);
     }

@@ -2,7 +2,7 @@
  * Shared tool utilities for handling tool configuration and status
  */
 import { ToolConfig } from '../types/config';
-import { DISPLAY } from '../constants';
+import { EMOJI } from './display';
 import { debug, error } from './logger';
 import { shellPool } from './shell-pool';
 import { isBrewPackageInstalled, isToolBrewCask, getToolBrewPackageName, initBrewEnvironment } from './homebrew';
@@ -44,21 +44,19 @@ export interface ToolStatusResult {
 }
 
 /**
- * Get the emoji for a tool status
- * @param status Tool status result
- * @returns Emoji representing the status
+ * Get the status emoji for a tool
  */
 export function getStatusEmoji(status: ToolStatusResult): string {
   switch (status.status) {
     case ToolStatus.INSTALLED:
-      return DISPLAY.EMOJIS.ENABLED;
+      return EMOJI.INSTALLED;
     case ToolStatus.NOT_INSTALLED:
-      return DISPLAY.EMOJIS.DISABLED;
+      return EMOJI.NOT_INSTALLED;
     case ToolStatus.ERROR:
-      return DISPLAY.EMOJIS.WARNING;
+      return EMOJI.ERROR;
     case ToolStatus.UNKNOWN:
     default:
-      return DISPLAY.EMOJIS.UNKNOWN;
+      return EMOJI.UNKNOWN;
   }
 }
 
