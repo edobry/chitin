@@ -43,6 +43,11 @@
   - The `get` command now shows the same rich dependency information as the `deps` command
   - Fibers are now consistently ordered with dependencies before dependents in both commands
   - Tool-derived dependencies and other advanced dependency sources are now detected in both commands
+- Improved performance of `tools get --status` command by:
+  - Removed special case handling for certain command types (command -v, --version, gpg, bw) to consistently use the shell pool
+  - Reduced default tool check timeout from 1500ms to 800ms
+  - Increased default concurrency from 20 to 50 parallel checks
+  - Extended cache expiration from 10 to 60 minutes
 
 ### Improved
 - Refactored tools display code to use emoji constants from DISPLAY.EMOJIS instead of hardcoded values
@@ -541,5 +546,7 @@
 ## [Unreleased]
 
 ### Changed
-- Removed chunk-based implementation for tool status checking in favor of the more efficient queue-based implementation
-- Removed `--queue` option from `tools get` command as queue-based implementation is now the default
+- Updated "tools get --status" command to show actual execution time (wall clock time) rather than the sum of individual tool check durations
+- Increased default tool concurrency from 20 to 50 parallel checks
+- Extended cache expiration from 10 to 60 minutes
+- Reduced default tool check timeout from 1500ms to 800ms
