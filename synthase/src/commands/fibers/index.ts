@@ -46,7 +46,7 @@ import fs from 'fs';
 import yaml from 'js-yaml';
 import { FIBER_NAMES } from '../../fiber/types';
 import { CONFIG_FIELDS } from '../../config/types';
-import { FILE_NAMES, DISPLAY } from '../../constants';
+import { FILE_NAMES, EMOJI } from '../../constants';
 import { createDepsCommand } from './deps-command';
 import { createGetCommand } from './get-command';
 

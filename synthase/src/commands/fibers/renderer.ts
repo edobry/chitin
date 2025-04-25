@@ -4,7 +4,7 @@
  */
 
 import { ProcessedFiberData, FiberDisplayModel, ChainDisplayModel } from './models';
-import { DISPLAY } from '../../constants';
+import { EMOJI } from '../../constants';
 import { serializeToYaml } from '../../utils';
 
 /**
@@ -42,14 +42,14 @@ export function renderFibers(
 function renderToConsole(data: ProcessedFiberData, options: RenderOptions): void {
   // Display legend with status explanations
   console.log(`Legend:`);
-  console.log(`  ${DISPLAY.EMOJIS.FIBER} = fiber`);
-  console.log(`  ${DISPLAY.EMOJIS.CHAIN} = chain`);
-  console.log(`  ${DISPLAY.EMOJIS.ACTIVE} = active`);
-  console.log(`  ${DISPLAY.EMOJIS.DISABLED} = disabled (explicitly disabled in config)`);
-  console.log(`  ${DISPLAY.EMOJIS.UNAVAILABLE} = unavailable (dependencies not satisfied)`);
-  console.log(`  ${DISPLAY.EMOJIS.DEPENDS_ON} = depends on`);
-  console.log(`  ${DISPLAY.EMOJIS.TOOL} = tool`);
-  console.log(`  ${DISPLAY.EMOJIS.PATH} = path\n`);
+  console.log(`  ${EMOJI.FIBER} = fiber`);
+  console.log(`  ${EMOJI.CHAIN} = chain`);
+  console.log(`  ${EMOJI.ACTIVE} = active`);
+  console.log(`  ${EMOJI.DISABLED} = disabled (explicitly disabled in config)`);
+  console.log(`  ${EMOJI.UNAVAILABLE} = unavailable (dependencies not satisfied)`);
+  console.log(`  ${EMOJI.DEPENDS_ON} = depends on`);
+  console.log(`  ${EMOJI.TOOL} = tool`);
+  console.log(`  ${EMOJI.PATH} = path\n`);
 
   // Render each fiber
   for (const fiber of data.fibers) {
@@ -76,17 +76,17 @@ function renderFiberToConsole(fiber: FiberDisplayModel, options: RenderOptions):
   const validationIndicator = fiber.validation.isValid ? '' : '✗';
   
   // Display fiber header with proper alignment and emoji
-  console.log(`  ${statusIndicator} ${DISPLAY.EMOJIS.FIBER} ${fiber.id}${validationIndicator}`);
+  console.log(`  ${statusIndicator} ${EMOJI.FIBER} ${fiber.id}${validationIndicator}`);
   console.log('');
   
   // Display path
-  console.log(`  ${DISPLAY.EMOJIS.PATH} ${fiber.path}`);
+  console.log(`  ${EMOJI.PATH} ${fiber.path}`);
   
   // Display validation results
   if (fiber.validation.errors.length > 0) {
     console.log('  Validation Errors:');
     for (const error of fiber.validation.errors) {
-      console.log(`    ${DISPLAY.EMOJIS.ERROR} ${error}`);
+      console.log(`    ${EMOJI.ERROR} ${error}`);
     }
   }
   
@@ -95,19 +95,19 @@ function renderFiberToConsole(fiber: FiberDisplayModel, options: RenderOptions):
     const unsatisfiedDeps = fiber.dependencies.filter(dep => !dep.isSatisfied);
     if (unsatisfiedDeps.length > 0) {
       const missingDeps = unsatisfiedDeps.map(dep => dep.id).join(', ');
-      console.log(`  ${DISPLAY.EMOJIS.WARNING} Missing dependencies: ${missingDeps}`);
+      console.log(`  ${EMOJI.WARNING} Missing dependencies: ${missingDeps}`);
     }
   }
   
   // Display dependencies
   if (fiber.dependencies.length > 0) {
     const dependencyText = fiber.dependencies.map(d => d.id).join(', ');
-    console.log(`  ${DISPLAY.EMOJIS.DEPENDS_ON} Depends on: ${dependencyText}`);
+    console.log(`  ${EMOJI.DEPENDS_ON} Depends on: ${dependencyText}`);
     
     // Add detailed dependency info if requested
     if (options.detailed) {
       for (const dep of fiber.dependencies) {
-        const status = dep.isSatisfied ? DISPLAY.EMOJIS.ACTIVE : DISPLAY.EMOJIS.DISABLED;
+        const status = dep.isSatisfied ? EMOJI.ACTIVE : EMOJI.DISABLED;
         console.log(`    ${status} ${dep.id} (${dep.source})`);
       }
     }
@@ -119,13 +119,13 @@ function renderFiberToConsole(fiber: FiberDisplayModel, options: RenderOptions):
   // Display chains
   if (fiber.chains.length > 0) {
     const pluralS = fiber.chains.length === 1 ? '' : 's';
-    console.log(`  ${fiber.chains.length} ${DISPLAY.EMOJIS.CHAIN}${pluralS}:`);
+    console.log(`  ${fiber.chains.length} ${EMOJI.CHAIN}${pluralS}:`);
     
     for (const chain of fiber.chains) {
       renderChainToConsole(chain, options);
     }
   } else {
-    console.log(`  0 ${DISPLAY.EMOJIS.CHAIN}s`);
+    console.log(`  0 ${EMOJI.CHAIN}s`);
   }
 }
 
@@ -135,10 +135,10 @@ function renderFiberToConsole(fiber: FiberDisplayModel, options: RenderOptions):
 function renderChainToConsole(chain: ChainDisplayModel, options: RenderOptions): void {
   // Get status indicator based on enabled and available status
   const statusIndicator = chain.isEnabled && chain.isAvailable 
-    ? DISPLAY.EMOJIS.ACTIVE 
+    ? EMOJI.ACTIVE 
     : chain.isEnabled && !chain.isAvailable 
-      ? DISPLAY.EMOJIS.DISABLED 
-      : DISPLAY.EMOJIS.DISABLED;
+      ? EMOJI.DISABLED 
+      : EMOJI.DISABLED;
   
   const validationIndicator = chain.validation.isValid ? '' : '✗';
   
@@ -149,7 +149,7 @@ function renderChainToConsole(chain: ChainDisplayModel, options: RenderOptions):
   if (chain.validation.errors.length > 0) {
     console.log('      Validation Errors:');
     for (const error of chain.validation.errors) {
-      console.log(`        ${DISPLAY.EMOJIS.ERROR} ${error}`);
+      console.log(`        ${EMOJI.ERROR} ${error}`);
     }
   }
   
@@ -158,18 +158,18 @@ function renderChainToConsole(chain: ChainDisplayModel, options: RenderOptions):
     const unsatisfiedDeps = chain.dependencies.filter(dep => !dep.isSatisfied);
     if (unsatisfiedDeps.length > 0) {
       const missingDeps = unsatisfiedDeps.map(dep => dep.id).join(', ');
-      console.log(`      ${DISPLAY.EMOJIS.DISABLED} Missing dependencies: ${missingDeps}`);
+      console.log(`      ${EMOJI.DISABLED} Missing dependencies: ${missingDeps}`);
     }
   }
   
   // Display dependencies if any
   if (chain.dependencies.length > 0) {
-    console.log(`      ${DISPLAY.EMOJIS.DEPENDS_ON} Depends on: ${chain.dependencies.map(d => d.id).join(', ')}`);
+    console.log(`      ${EMOJI.DEPENDS_ON} Depends on: ${chain.dependencies.map(d => d.id).join(', ')}`);
     
     // Add detailed dependency info if requested
     if (options.detailed) {
       for (const dep of chain.dependencies) {
-        const status = dep.isSatisfied ? DISPLAY.EMOJIS.ACTIVE : DISPLAY.EMOJIS.DISABLED;
+        const status = dep.isSatisfied ? EMOJI.ACTIVE : EMOJI.DISABLED;
         console.log(`        ${status} ${dep.id}`);
       }
     }
@@ -177,7 +177,7 @@ function renderChainToConsole(chain: ChainDisplayModel, options: RenderOptions):
   
   // Display tool dependencies if any
   if (chain.toolDependencies?.length) {
-    console.log(`      ${DISPLAY.EMOJIS.TOOL} Tools: ${chain.toolDependencies.join(', ')}`);
+    console.log(`      ${EMOJI.TOOL} Tools: ${chain.toolDependencies.join(', ')}`);
   }
 }
 
@@ -198,5 +198,5 @@ function getFiberStatusIndicator(fiber: FiberDisplayModel): string {
   if (fiber.isCore) {
     return ''; // Don't add status indicator for core fibers
   }
-  return fiber.isEnabled ? DISPLAY.EMOJIS.ACTIVE : DISPLAY.EMOJIS.DISABLED;
+  return fiber.isEnabled ? EMOJI.ACTIVE : EMOJI.DISABLED;
 } 

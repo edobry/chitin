@@ -4,7 +4,7 @@ import { isFiberEnabled, getChainDependencies, getDependentFibers } from './util
 import { areFiberDependenciesSatisfied } from '../../fiber/manager';
 import { UserConfig, ConfigValidationResult, FiberConfig } from '../../types/config';
 import { Module } from '../../types/module';
-import { DISPLAY } from '../../constants';
+import { EMOJI } from '../../constants';
 
 /**
  * Display options for fibers command
@@ -78,13 +78,13 @@ export function getFiberStatus(
   if (fiberId === 'core') {
     return '(core)';
   } else if (!isEnabled) {
-    return DISPLAY.EMOJIS.DISABLED;  // Black circle emoji for disabled
+    return EMOJI.DISABLED;  // Black circle emoji for disabled
   } else if (!isSatisfied) {
     return '(unsatisfied dependencies)';
   } else if (!inConfig) {
     return '(unconfigured)';
   } else if (!hideDisabled) {
-    return DISPLAY.EMOJIS.ACTIVE;  // Green circle emoji for active (only when not hiding disabled)
+    return EMOJI.ACTIVE;  // Green circle emoji for active (only when not hiding disabled)
   }
   return '';
 }
@@ -133,7 +133,7 @@ export function displayValidationResults(validationResult: ExtendedValidationRes
     if (filteredWarnings.length > 0) {
       console.log(`  Warnings:`);
       for (const warning of filteredWarnings) {
-        console.log(`    ${DISPLAY.EMOJIS.WARNING}  ${warning}`);
+        console.log(`    ${EMOJI.WARNING}  ${warning}`);
       }
     }
   }
@@ -208,21 +208,21 @@ export function getChainStatus(
 ): string {
   // If fiber is disabled, chain is automatically disabled
   if (!isFiberEnabled) {
-    return DISPLAY.EMOJIS.DISABLED;  // Black circle emoji for disabled
+    return EMOJI.DISABLED;  // Black circle emoji for disabled
   }
   
   // If chain is explicitly disabled
   if (!isEnabled) {
-    return DISPLAY.EMOJIS.DISABLED;  // Black circle emoji for disabled
+    return EMOJI.DISABLED;  // Black circle emoji for disabled
   }
   
   // If chain is not available (dependencies not satisfied)
   if (!isAvailable) {
-    return DISPLAY.EMOJIS.UNAVAILABLE;  // Red circle emoji for unavailable
+    return EMOJI.UNAVAILABLE;  // Red circle emoji for unavailable
   }
   
   // Chain is enabled and available
-  return DISPLAY.EMOJIS.ACTIVE;  // Green circle emoji for active
+  return EMOJI.ACTIVE;  // Green circle emoji for active
 }
 
 /**
@@ -307,7 +307,7 @@ export function displayChain(
     }
     if (result.warnings && result.warnings.length > 0) {
       for (const warning of result.warnings) {
-        console.log(`       ${DISPLAY.EMOJIS.WARNING}  ${warning}`);
+        console.log(`       ${EMOJI.WARNING}  ${warning}`);
       }
     }
   }

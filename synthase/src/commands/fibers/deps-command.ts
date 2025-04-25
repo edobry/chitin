@@ -29,7 +29,7 @@ import fs from 'fs';
 import yaml from 'js-yaml';
 import { FIBER_NAMES } from '../../fiber/types';
 import { CONFIG_FIELDS } from '../../config/types';
-import { FILE_NAMES, DISPLAY } from '../../constants';
+import { FILE_NAMES, EMOJI } from '../../constants';
 import { loadConfigAndModules } from './shared';
 
 // Import generateFiberDependencyGraph from fiber/graph.ts
@@ -110,7 +110,7 @@ export function createDepsCommand(): Command {
           for (const fiberId of sortedFibers) {
             const isCore = fiberId === FIBER_NAMES.CORE;
             const isEnabled = isCore || isFiberEnabled(fiberId, config);
-            const statusSymbol = isEnabled ? DISPLAY.EMOJIS.ACTIVE : DISPLAY.EMOJIS.DISABLED;
+            const statusSymbol = isEnabled ? EMOJI.ACTIVE : EMOJI.DISABLED;
             
             // Get explicit dependencies
             const deps = [...(activeMap.get(fiberId) || [])];
@@ -250,7 +250,7 @@ export function createDepsCommand(): Command {
             // Get enabled status
             const isCore = fiberId === FIBER_NAMES.CORE;
             const isEnabled = isCore || isFiberEnabled(fiberId, config);
-            const statusSymbol = isEnabled ? DISPLAY.EMOJIS.ACTIVE : DISPLAY.EMOJIS.DISABLED;
+            const statusSymbol = isEnabled ? EMOJI.ACTIVE : EMOJI.DISABLED;
             
             // Print the node
             const connector = isLast ? '└── ' : '├── ';
@@ -319,7 +319,7 @@ export function displayDependencyStatus(
   isSatisfied: boolean,
   inConfig: boolean
 ): void {
-  const statusSymbol = isEnabled ? DISPLAY.EMOJIS.ACTIVE : DISPLAY.EMOJIS.DISABLED;
+  const statusSymbol = isEnabled ? EMOJI.ACTIVE : EMOJI.DISABLED;
   console.log(`  ${statusSymbol} ${fiberId}`);
 }
 
@@ -329,6 +329,6 @@ export function displayChainDependencyStatus(
   isSatisfied: boolean,
   inConfig: boolean
 ): void {
-  const statusSymbol = isEnabled ? DISPLAY.EMOJIS.ACTIVE : DISPLAY.EMOJIS.DISABLED;
+  const statusSymbol = isEnabled ? EMOJI.ACTIVE : EMOJI.DISABLED;
   console.log(`  ${statusSymbol} ${chainId}`);
 } 

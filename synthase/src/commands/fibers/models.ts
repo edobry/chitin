@@ -5,7 +5,7 @@
 
 import { Module } from '../../types/module';
 import { UserConfig, ConfigValidationResult } from '../../types/config';
-import { DISPLAY } from '../../constants';
+import { EMOJI } from '../../constants';
 
 /**
  * Interface for fiber display model
