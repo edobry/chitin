@@ -1,0 +1,16 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../chitin-dev"
+		},
+		{
+			"path": "../chitin-cloud"
+		},
+		{
+			"path": "../../.local/share/chezmoi"
+		}
+	]
+}
