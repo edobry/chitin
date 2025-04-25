@@ -151,11 +151,8 @@ export async function displayTools(
   tools: Map<string, { config: ToolConfig, source: string }>,
   options: ToolDisplayOptions
 ): Promise<void> {
-  // Register process exit handlers for cleanup
-  process.once('beforeExit', () => {
-    debug('Process beforeExit event triggered, cleaning up...');
-    cleanupShells();
-  });
+  // We no longer need to register process exit handlers for cleanup
+  // since it's handled in withToolSetup
   
   if (tools.size === 0) {
     console.log('No tools found matching the criteria.');
@@ -260,8 +257,7 @@ export async function displayTools(
     }
   }
 
-  // Make sure we clean up before exiting
-  await cleanupShells();
+  // We no longer need to clean up shells here since it's handled in withToolSetup
 }
 
 /**
@@ -318,12 +314,4 @@ export function displayToolsAsYaml(
   // Implementation would go here
 }
 
-async function cleanupShells(): Promise<void> {
-  debug('Cleaning up shell processes...');
-  try {
-    await shellPool.shutdown();
-    debug('Shell cleanup completed successfully');
-  } catch (err) {
-    debug(`Error during shell cleanup: ${err}`);
-  }
-} 
+// cleanupShells function is no longer needed, it's handled in withToolSetup 

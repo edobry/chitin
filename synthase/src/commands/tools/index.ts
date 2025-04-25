@@ -110,8 +110,11 @@ async function withToolSetup<T>(
       setLogLevel(LogLevel.DEBUG);
     }
     
-    // Initialize the shell pool early
-    await shellPool.initialize();
+    // Only initialize the shell pool if we need to check status
+    if (options.status) {
+      debug('Initializing shell pool for status checks');
+      await shellPool.initialize();
+    }
     
     // Load configuration and validate
     const { config } = await loadAndValidateConfig();
@@ -145,11 +148,14 @@ async function withToolSetup<T>(
     process.exit(1);
     throw new Error('This code is unreachable due to process.exit(1)');
   } finally {
-    // Make sure to clean up the shell pool
-    try {
-      await shellPool.shutdown();
-    } catch (err) {
-      debug(`Error shutting down shell pool: ${err}`);
+    // Only clean up the shell pool if we initialized it
+    if (options.status) {
+      try {
+        debug('Shutting down shell pool');
+        await shellPool.shutdown();
+      } catch (err) {
+        debug(`Error shutting down shell pool: ${err}`);
+      }
     }
   }
 }

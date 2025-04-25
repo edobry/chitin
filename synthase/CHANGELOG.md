@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Fixed
+- Fixed issue where the base `tools get` command without `--status` hangs for a few seconds at the end by conditionally initializing the shell pool only when needed for status checks
 - Fixed issue where warning about checking many tools is displayed twice in `tools get --status` command
 - Fixed duplicate implementation of `_checkToolStatus` function that was causing type errors and inconsistent behavior
 - Resolved TypeScript errors with configurable command checks by properly handling string/boolean type checking
