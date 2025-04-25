@@ -187,15 +187,6 @@ export class ShellPool {
    * @returns Command output
    */
   async executeCommand(command: string, timeoutMs: number = DEFAULT_TOOL_TIMEOUT): Promise<{ stdout: string; stderr: string; exitCode: number }> {
-    // For status check commands, use direct execution instead of shell pool
-    // This provides better isolation and prevents hanging on interactive commands
-    if (command.startsWith('command -v') || 
-        command.includes(' --version') || 
-        command.includes('gpg') || 
-        command.includes('bw')) {
-      return this.executeDirectCommand(command, timeoutMs);
-    }
-    
     if (!this.initialized) {
       await this.initialize();
     }

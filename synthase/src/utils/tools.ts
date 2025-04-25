@@ -1,7 +1,7 @@
 /**
  * Shared tool utilities for handling tool configuration and status
  */
-import { ToolConfig } from '../types';
+import { ToolConfig } from '../types/config';
 import { DISPLAY } from './ui';
 import { debug } from './logger';
 import { shellPool } from './shell-pool';
@@ -10,6 +10,14 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { performance } from 'perf_hooks';
 import { DEFAULT_TOOL_TIMEOUT } from '../commands/tools/constants';
+import { executeCommand, getCommandExists } from './command';
+import { getBrewPackageDisplayName } from './homebrew';
+import { debug, error } from './logger';
+import { shellPool } from './shell-pool';
+import { performance } from 'perf_hooks';
+import { DEFAULT_TOOL_TIMEOUT } from '../commands/tools/constants';
+import { performance } from 'perf_hooks';
+import { DISPLAY } from './ui';
 
 /**
  * Shell command check constants
@@ -98,23 +106,18 @@ export function getToolInstallMethod(config: ToolConfig): string {
 }
 
 /**
- * Get the check command for a tool
- * @param commandName Command name to check
- * @returns Check command
+ * Get a command to check if a command exists
+ * @param command Command to check for
+ * @returns Shell command to check for the command
  */
-export function getCheckCommand(commandName: string): string {
-  // Handle case where CHECK_CMD is an object with a cmd property
-  if (typeof CHECK_CMD === 'object' && CHECK_CMD !== null && 'COMMAND_EXISTS' in CHECK_CMD) {
-    return `${CHECK_CMD.COMMAND_EXISTS} ${commandName}`;
+export function getCheckCommand(command: string): string {
+  // For problematic commands that often time out, use a faster check
+  if (command === 'gpg' || command === 'gh' || command === 'op' || command === 'grr' || command === 'gofumpt' || command === 'goimports') {
+    return `which ${command} >/dev/null 2>&1 || (echo "Command not found: ${command}" >&2 && exit 1)`;
   }
   
-  // Handle case where CHECK_CMD is a string
-  if (typeof CHECK_CMD === 'string') {
-    return `${CHECK_CMD} ${commandName}`;
-  }
-  
-  // Fallback to command -v if CHECK_CMD is not usable
-  return `command -v ${commandName}`;
+  // For standard commands, use command -v
+  return `${CHECK_CMD.COMMAND_EXISTS} ${command}`;
 }
 
 /**
@@ -583,6 +586,12 @@ export async function batchCheckToolStatus(
     return results;
   }
   
+  // Track the slowest tools for performance analysis
+  const toolTimings: { toolId: string; duration: number; status: ToolStatus }[] = [];
+  
+  debug(`Starting batch status check for ${tools.size} tools with concurrency ${concurrency}`);
+  const batchStartTime = performance.now();
+  
   // Queue of tools to check
   const queue = Array.from(tools.entries());
   
@@ -608,6 +617,8 @@ export async function batchCheckToolStatus(
     const [toolId, config] = queue.shift()!;
     activeJobs++;
     
+    const toolStartTime = performance.now();
+    
     try {
       // Check the tool status
       const result = await checkToolStatusWithOptions(toolId, config, {
@@ -615,8 +626,23 @@ export async function batchCheckToolStatus(
         signal
       });
       
+      const toolEndTime = performance.now();
+      const duration = toolEndTime - toolStartTime;
+      
+      // Track timing for this tool
+      toolTimings.push({
+        toolId,
+        duration,
+        status: result.status
+      });
+      
       // Add to results
       results.set(toolId, result);
+      
+      // Log slow tool checks
+      if (duration > 200) {
+        debug(`Slow tool check: ${toolId} took ${(duration/1000).toFixed(3)}s, status: ${ToolStatus[result.status]}`);
+      }
       
       // Update progress
       completedJobs++;
@@ -624,12 +650,25 @@ export async function batchCheckToolStatus(
         onProgress(completedJobs, tools.size);
       }
     } catch (error) {
+      const toolEndTime = performance.now();
+      const duration = toolEndTime - toolStartTime;
+      
+      // Track timing for this failed tool
+      toolTimings.push({
+        toolId,
+        duration,
+        status: ToolStatus.ERROR
+      });
+      
       // Handle errors by setting an error status
       results.set(toolId, {
         status: ToolStatus.ERROR,
         message: error instanceof Error ? error.message : String(error),
         error: error instanceof Error ? error : new Error(String(error))
       });
+      
+      // Log slow tool checks that ended in error
+      debug(`Error checking tool: ${toolId} took ${(duration/1000).toFixed(3)}s, error: ${error instanceof Error ? error.message : String(error)}`);
       
       // Update progress for failed checks too
       completedJobs++;
@@ -670,6 +709,22 @@ export async function batchCheckToolStatus(
     
     // Brief pause to allow other jobs to proceed
     await new Promise(resolve => setTimeout(resolve, 10));
+  }
+  
+  const batchEndTime = performance.now();
+  const totalBatchTime = batchEndTime - batchStartTime;
+  
+  // Log the overall performance and the slowest tools
+  debug(`Batch status check completed in ${(totalBatchTime/1000).toFixed(2)}s for ${tools.size} tools`);
+  
+  // Sort and log the slowest 5 tools
+  toolTimings.sort((a, b) => b.duration - a.duration);
+  if (toolTimings.length > 0) {
+    debug(`Slowest tools:`);
+    for (let i = 0; i < Math.min(5, toolTimings.length); i++) {
+      const { toolId, duration, status } = toolTimings[i];
+      debug(`  ${i+1}. ${toolId}: ${(duration/1000).toFixed(3)}s (${ToolStatus[status]})`);
+    }
   }
   
   // Return collected results

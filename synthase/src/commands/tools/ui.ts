@@ -1,7 +1,7 @@
 /**
  * UI utilities for tools command displays
  */
-import { ToolConfig } from '../../types';
+import { ToolConfig } from '../../types/config';
 import { ToolStatus, ToolStatusResult, getStatusEmoji } from '../../utils/tools';
 import { displayCheckMethod, displayInstallMethod, displayAdditionalInfo, displayToolStatus, formatConfigValue } from '../../utils/ui';
 import { debug } from '../../utils/logger';
@@ -101,6 +101,7 @@ export interface ToolDisplayOptions {
   filterCheck?: string;
   filterInstall?: string;
   skipStatusWarning?: boolean;
+  wallClockDuration?: number; // Duration in milliseconds of actual execution time
 }
 
 // For tracking total check time
@@ -248,8 +249,10 @@ export async function displayTools(
     
     // Show total check time only once
     if (!timingSummaryDisplayed) {
-      const totalCheckTime = calculateTotalCheckDuration(options.statusResults);
-      console.log(`\nTotal status check time: ${(totalCheckTime / 1000).toFixed(2)}s`);
+      // Only display wall clock time if available
+      if (options.wallClockDuration) {
+        console.log(`\nExecution time: ${(options.wallClockDuration / 1000).toFixed(2)}s`);
+      }
       timingSummaryDisplayed = true;
     }
   }

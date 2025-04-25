@@ -4,7 +4,7 @@
  * This module provides functions for checking tool status without any display logic.
  * It serves as a pure data layer for tool status operations.
  */
-import { ToolConfig } from '../../types';
+import { ToolConfig } from '../../types/config';
 import { 
   ToolStatus, 
   ToolStatusResult, 
@@ -17,8 +17,15 @@ import { debug } from '../../utils/logger';
 import {
   DEFAULT_TOOL_CONCURRENCY,
   DEFAULT_TOOL_TIMEOUT,
-  DEFAULT_BREW_CACHE_TIMEOUT
+  DEFAULT_BREW_CACHE_TIMEOUT,
+  DEFAULT_CACHE_EXPIRATION
 } from './constants';
+import { 
+  loadToolStatusCache, 
+  saveToolStatusCache, 
+  getCachedToolStatus, 
+  updateToolStatusCache 
+} from './cache';
 
 /**
  * Options for checking tool statuses
@@ -34,6 +41,18 @@ export interface ToolStatusCheckOptions {
   skipBrewInit?: boolean;
   /** Abort signal to cancel the operation */
   signal?: AbortSignal;
+  /** Disable caching */
+  noCache?: boolean;
+  /** Maximum age for cache entries in milliseconds */
+  cacheMaxAge?: number;
+  /** Skip specific tools (by ID) */
+  skipTools?: string[];
+  /** Report progress for each individual tool */
+  reportIndividualProgress?: boolean;
+  /** Timing hooks for performance measurement */
+  onPreBrew?: (time: number) => void;
+  onCacheRead?: (time: number) => void;
+  onCacheWrite?: (time: number) => void;
 }
 
 /**
@@ -55,7 +74,14 @@ export async function checkToolStatuses(
     timeout = DEFAULT_TOOL_TIMEOUT,
     onProgress,
     skipBrewInit = false,
-    signal
+    signal,
+    noCache = false,
+    cacheMaxAge = DEFAULT_CACHE_EXPIRATION,
+    skipTools = [],
+    reportIndividualProgress = false,
+    onPreBrew,
+    onCacheRead,
+    onCacheWrite
   } = options;
   
   // If no tools to check, return empty results
@@ -71,24 +97,127 @@ export async function checkToolStatuses(
     
     if (hasBrewTools) {
       debug('Initializing Homebrew environment for status checks');
+      const brewStartTime = performance.now();
       await initBrewEnvironment();
       await initializeBrewCaches(DEFAULT_BREW_CACHE_TIMEOUT);
+      const brewEndTime = performance.now();
+      const brewDuration = brewEndTime - brewStartTime;
+      
+      debug(`Homebrew initialization completed in ${(brewDuration / 1000).toFixed(2)}s`);
+      
+      if (onPreBrew) {
+        onPreBrew(brewDuration);
+      }
     }
   }
   
-  // Convert to the format needed by batchCheckToolStatus
-  const toolConfigs = new Map<string, ToolConfig>();
-  for (const [toolId, { config }] of tools.entries()) {
-    toolConfigs.set(toolId, config);
+  // Load cache if enabled
+  const cacheReadStart = performance.now();
+  const cache = !noCache ? loadToolStatusCache() : null;
+  const cacheReadDuration = performance.now() - cacheReadStart;
+  
+  if (onCacheRead) {
+    onCacheRead(cacheReadDuration);
   }
   
-  // Perform the batch check
-  const results = await batchCheckToolStatus(toolConfigs, {
-    timeout,
-    concurrency,
-    onProgress,
-    signal
-  });
+  debug(`Cache loading completed in ${(cacheReadDuration/1000).toFixed(3)}s`);
+  
+  // Track the tools to check and results
+  const toolsToCheck = new Map<string, ToolConfig>();
+  const results = new Map<string, ToolStatusResult>();
+  let completedCount = 0;
+  const totalCount = tools.size;
+  
+  // First, apply cache and filter skipped tools
+  for (const [toolId, { config }] of tools.entries()) {
+    // Skip tools that are explicitly listed to skip
+    if (skipTools.includes(toolId)) {
+      debug(`Skipping tool ${toolId} as requested`);
+      results.set(toolId, {
+        status: ToolStatus.UNKNOWN,
+        message: 'Tool check skipped by user request'
+      });
+      
+      // Update progress
+      completedCount++;
+      if (onProgress) {
+        onProgress(completedCount, totalCount);
+      }
+      
+      continue;
+    }
+    
+    // Check if we have a valid cached result
+    if (cache) {
+      const cachedResult = getCachedToolStatus(toolId, config, cache, cacheMaxAge);
+      if (cachedResult) {
+        results.set(toolId, cachedResult);
+        
+        // Update progress
+        completedCount++;
+        if (onProgress) {
+          onProgress(completedCount, totalCount);
+        }
+        
+        continue;
+      }
+    }
+    
+    // If not skipped or cached, add to the list to check
+    toolsToCheck.set(toolId, config);
+  }
+  
+  // Create a progress handler that updates both overall and individual progress
+  let progressHandler: ((checked: number, total: number) => void) | undefined = undefined;
+  
+  if (onProgress) {
+    progressHandler = (checked: number, total: number) => {
+      onProgress(completedCount + checked, totalCount);
+    };
+  }
+  
+  // Check remaining tools
+  if (toolsToCheck.size > 0) {
+    debug(`Checking status of ${toolsToCheck.size} tools (${completedCount} already resolved)`);
+    
+    // Perform the batch check
+    const batchResults = await batchCheckToolStatus(toolsToCheck, {
+      timeout,
+      concurrency,
+      onProgress: progressHandler,
+      signal
+    });
+    
+    // Update the overall results and cache
+    const cacheWriteStart = performance.now();
+    
+    for (const [toolId, result] of batchResults.entries()) {
+      results.set(toolId, result);
+      
+      // Update cache if enabled
+      if (cache && !noCache) {
+        const config = tools.get(toolId)?.config;
+        if (config) {
+          updateToolStatusCache(toolId, config, result, cache);
+        }
+      }
+    }
+    
+    // Save updated cache if enabled
+    if (cache && !noCache) {
+      await saveToolStatusCache(cache);
+    }
+    
+    const cacheWriteDuration = performance.now() - cacheWriteStart;
+    
+    if (onCacheWrite) {
+      onCacheWrite(cacheWriteDuration);
+    }
+    
+    debug(`Cache update completed in ${(cacheWriteDuration/1000).toFixed(3)}s`);
+  } else if (results.size > 0) {
+    debug(`All ${results.size} tools resolved from cache or skipped`);
+  }
   
   return results;
 }

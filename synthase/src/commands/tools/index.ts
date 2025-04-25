@@ -2,9 +2,13 @@
  * Tools command for managing and displaying tool configurations
  */
 import { Command } from 'commander';
+import fs from 'fs';
+import path from 'path';
+import { performance } from 'perf_hooks';
+import { UserConfig } from '../../types/config';
+import { Module } from '../../types/module';
+import { ToolConfig } from '../../types/config';
 import { loadAndValidateConfig } from '../utils';
-import { UserConfig, Module } from '../../types';
-import { ToolConfig } from '../../types';
 import { discoverModulesFromConfig } from '../../modules/discovery';
 
 // Import shared utilities
@@ -57,6 +61,10 @@ export function createToolsCommand(): Command {
         .option('--json', 'Output in JSON format')
         .option('--yaml', 'Output in YAML format')
         .option('--concurrency <number>', `Number of tools to check in parallel`, String(DEFAULT_TOOL_CONCURRENCY))
+        .option('--no-cache', 'Disable status check caching')
+        .option('--cache-max-age <milliseconds>', 'Maximum age for cached status results in milliseconds')
+        .option('--skip-tools <toolIds>', 'Comma-separated list of tool IDs to skip checking')
+        .option('--debug', 'Show debug timing information')
         .action(handleToolsCommand)
     )
     .addCommand(
@@ -175,12 +183,13 @@ async function checkToolStatusesWithProgress(
   options: {
     concurrency?: number;
     quiet?: boolean;
+    debug?: boolean;
   } = {}
-): Promise<Map<string, ToolStatusResult>> {
-  const { concurrency = DEFAULT_TOOL_CONCURRENCY, quiet = false } = options;
+): Promise<{ results: Map<string, ToolStatusResult>; duration: number }> {
+  const { concurrency = DEFAULT_TOOL_CONCURRENCY, quiet = false, debug: showDebug = false } = options;
   
   if (tools.size === 0) {
-    return new Map();
+    return { results: new Map(), duration: 0 };
   }
   
   if (!quiet) {
@@ -190,23 +199,53 @@ async function checkToolStatusesWithProgress(
   // Create progress handler that updates the console
   const progressHandler = createConsoleProgressHandler();
   
+  // Track timings for debugging
+  const timings: Record<string, number> = {
+    start: performance.now(),
+    brewInit: 0,
+    cacheRead: 0,
+    checking: 0,
+    cacheWrite: 0,
+    total: 0
+  };
+  
+  // Adding a pre-check hook to track brew init time
+  const timeTrackingOptions = {
+    onPreBrew: (time: number) => { timings.brewInit = time; },
+    onCacheRead: (time: number) => { timings.cacheRead = time; },
+    onCacheWrite: (time: number) => { timings.cacheWrite = time; }
+  };
+  
   // Check all tools with the status module
   const startTime = performance.now();
   const statusResults = await checkToolStatuses(tools, {
     concurrency, 
     timeout: getToolTimeout(),
-    onProgress: quiet ? undefined : progressHandler
+    onProgress: quiet ? undefined : progressHandler,
+    ...timeTrackingOptions
   });
   const endTime = performance.now();
+  const duration = endTime - startTime;
+  timings.checking = duration - (timings.brewInit + timings.cacheRead + timings.cacheWrite);
+  timings.total = duration;
   
   // Clear the progress line and log completion
   if (!quiet) {
     clearProgressLine();
-    const duration = ((endTime - startTime) / 1000).toFixed(2);
-    debug(`Completed all tool status checks in ${duration} seconds`);
+    debug(`Completed all tool status checks in ${(duration / 1000).toFixed(2)} seconds`);
+    
+    // Show debug timing information if requested
+    if (showDebug) {
+      console.error("\nTiming breakdown:");
+      console.error(`Homebrew initialization: ${(timings.brewInit / 1000).toFixed(2)}s (${Math.round(timings.brewInit / timings.total * 100)}%)`);
+      console.error(`Cache reading: ${(timings.cacheRead / 1000).toFixed(2)}s (${Math.round(timings.cacheRead / timings.total * 100)}%)`);
+      console.error(`Tool checking: ${(timings.checking / 1000).toFixed(2)}s (${Math.round(timings.checking / timings.total * 100)}%)`);
+      console.error(`Cache writing: ${(timings.cacheWrite / 1000).toFixed(2)}s (${Math.round(timings.cacheWrite / timings.total * 100)}%)`);
+      console.error(`Total: ${(timings.total / 1000).toFixed(2)}s (100%)`);
+    }
   }
   
-  return statusResults;
+  return { results: statusResults, duration };
 }
 
 /**
@@ -218,6 +257,7 @@ async function handleToolsCommand(toolNames: string[] | undefined, options: any)
   await withToolSetup(async ({ tools, filteredTools, options }) => {
     // Parse concurrency option
     const concurrency = parseInt(options.concurrency, 10) || 10;
+    const debug = options.debug || false;
     
     // If specific tools are requested
     if (toolNames && toolNames.length > 0) {
@@ -254,12 +294,14 @@ async function handleToolsCommand(toolNames: string[] | undefined, options: any)
       
       // If status checking was requested, perform it before display
       if (options.status) {
-        const statusResults = await checkToolStatusesWithProgress(toolsToDisplay, {
+        const { results: statusResults, duration } = await checkToolStatusesWithProgress(toolsToDisplay, {
           concurrency,
-          quiet: toolsToDisplay.size === 1 // Don't show progress for a single tool
+          quiet: toolsToDisplay.size === 1, // Don't show progress for a single tool
+          debug
         });
         
         displayOptions.statusResults = statusResults;
+        displayOptions.wallClockDuration = duration;
       }
       
       // Display the tools with any status results
@@ -288,7 +330,12 @@ async function handleToolsCommand(toolNames: string[] | undefined, options: any)
     let statusResults: Map<string, ToolStatusResult> | undefined;
     
     if (options.status) {
-      statusResults = await checkToolStatusesWithProgress(filteredTools, { concurrency });
+      const { results, duration } = await checkToolStatusesWithProgress(filteredTools, { 
+        concurrency,
+        debug
+      });
+      statusResults = results;
+      displayOptions.wallClockDuration = duration;
       
       // For JSON and YAML output, we check status first then output
       if (options.json) {
