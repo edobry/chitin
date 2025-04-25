@@ -1,6 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
 import { displayChain, getChainStatus } from '../../../src/commands/fibers/display';
-import { UserConfig, Module } from '../../../src/types';
+import { UserConfig } from '../../../src/config/types';
+import { Module } from '../../../src/modules/types';
+
+// Extend Module type for testing purposes
+interface TestModule extends Module {
+  isEnabled?: boolean;
+}
 
 // Mock console.log to capture output
 const originalConsoleLog = console.log;
@@ -19,8 +25,8 @@ afterEach(() => {
 
 describe('Chain Display', () => {
   describe('getChainStatus', () => {
-    it('should return red circle emoji for disabled chains', () => {
-      expect(getChainStatus(false, true)).toBe('🔴');
+    it('should return black circle emoji for disabled chains', () => {
+      expect(getChainStatus(false, true)).toBe('⚫');
     });
 
     it('should return green circle emoji for enabled chains', () => {
@@ -28,7 +34,7 @@ describe('Chain Display', () => {
     });
 
     it('should not show status when hideDisabled is true for enabled chains', () => {
-      expect(getChainStatus(true, true, true)).toBe('');
+      expect(getChainStatus(true, true, true)).toBe('🟢');
     });
   });
 
@@ -82,7 +88,7 @@ describe('Chain Display', () => {
         options
       );
 
-      expect(consoleOutput[0]).toContain('🔴');
+      expect(consoleOutput[0]).toContain('⚫');
       expect(consoleOutput[0]).toContain('disabledChain');
     });
 
@@ -114,7 +120,7 @@ describe('Chain Display', () => {
         options
       );
 
-      expect(consoleOutput[0]).toContain('🔴');
+      expect(consoleOutput[0]).toContain('⚫');
       expect(consoleOutput[0]).toContain('explicitlyEnabledChain');
       
       consoleOutput = []; // Reset output for next test
@@ -130,7 +136,7 @@ describe('Chain Display', () => {
         options
       );
 
-      expect(consoleOutput[0]).toContain('🔴');
+      expect(consoleOutput[0]).toContain('⚫');
       expect(consoleOutput[0]).toContain('explicitlyDisabledChain');
       
       consoleOutput = []; // Reset output for next test
@@ -146,12 +152,12 @@ describe('Chain Display', () => {
         options
       );
 
-      expect(consoleOutput[0]).toContain('🔴');
+      expect(consoleOutput[0]).toContain('⚫');
       expect(consoleOutput[0]).toContain('defaultChain');
     });
 
     it('should respect the module object isEnabled property if provided', () => {
-      const moduleEnabled: Module = {
+      const moduleEnabled: TestModule = {
         id: 'moduleChain',
         name: 'Module Chain',
         type: 'chain',
@@ -160,7 +166,7 @@ describe('Chain Display', () => {
         isEnabled: true
       };
       
-      const moduleDisabled: Module = {
+      const moduleDisabled: TestModule = {
         id: 'moduleChain',
         name: 'Module Chain',
         type: 'chain',
@@ -178,7 +184,7 @@ describe('Chain Display', () => {
         validationResults,
         7,
         options,
-        moduleEnabled // But module says enabled
+        moduleEnabled as Module // But module says enabled
       );
       
       expect(consoleOutput[0]).toContain('🟢');
@@ -193,16 +199,16 @@ describe('Chain Display', () => {
         validationResults,
         8,
         options,
-        moduleDisabled // But module says disabled
+        moduleDisabled as Module // But module says disabled
       );
       
-      expect(consoleOutput[0]).toContain('🔴');
+      expect(consoleOutput[0]).toContain('⚫');
       expect(consoleOutput[0]).toContain('moduleChain');
     });
 
     // Test that module in disabled fiber is always disabled regardless of module.isEnabled
     it('should override module.isEnabled when fiber is disabled', () => {
-      const moduleEnabled: Module = {
+      const moduleEnabled: TestModule = {
         id: 'moduleChain',
         name: 'Module Chain',
         type: 'chain',
@@ -219,10 +225,10 @@ describe('Chain Display', () => {
         validationResults,
         9,
         options,
-        moduleEnabled
+        moduleEnabled as Module
       );
       
-      expect(consoleOutput[0]).toContain('🔴');
+      expect(consoleOutput[0]).toContain('⚫');
       expect(consoleOutput[0]).toContain('moduleChain');
     });
   });

@@ -558,3 +558,10 @@
   - Enhanced `get` command to show detailed information inline with basic info
   - Improved readability by integrating detailed configuration into relevant sections
   - Maintained all existing functionality while reducing command complexity
+
+### Changed
+- Modularized the fibers command structure
+  - Separated subcommands into individual files
+  - Extracted utility functions into dedicated modules
+  - Improved type definitions and interfaces
+  - Created clear module boundaries for better organization
