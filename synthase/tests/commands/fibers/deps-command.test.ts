@@ -1,6 +1,21 @@
 #!/usr/bin/env bun
-import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
+import { describe, test, expect, beforeEach, afterEach, beforeAll } from 'bun:test';
 import { createDepsCommand } from '../../../src/commands/fibers/commands/deps-command';
+import { mock } from 'bun:test';
+
+// Helper to hold the current mock implementation
+let currentLoadConfigAndModulesImpl: (() => Promise<any>) | null = null;
+
+// Mock the config-loader module before importing it
+mock.module('../../../src/commands/fibers/utils/config-loader', () => ({
+  loadConfigAndModules: () => {
+    if (currentLoadConfigAndModulesImpl) {
+      return currentLoadConfigAndModulesImpl();
+    }
+    throw new Error('No mock implementation set for loadConfigAndModules');
+  },
+}));
+
 import { loadConfigAndModules } from '../../../src/commands/fibers/utils/config-loader';
 import { FIBER_NAMES } from '../../../src/fiber/types';
 import { Module } from '../../../src/modules/types';
@@ -111,9 +126,6 @@ describe('deps command', () => {
     consoleOutput.push(processedArgs.join(" "));
   };
 
-  // Save original implementation
-  const originalLoadConfigAndModules = loadConfigAndModules;
-
   beforeEach(() => {
     // Reset console output capture
     consoleOutput = [];
@@ -123,15 +135,18 @@ describe('deps command', () => {
   afterEach(() => {
     // Restore console.log
     console.log = originalConsoleLog;
-    // Restore original loadConfigAndModules
-    (loadConfigAndModules as any) = originalLoadConfigAndModules;
+  });
+
+  // Use loadConfigAndModules in a dummy call to avoid unused import warning
+  beforeAll(() => {
+    void loadConfigAndModules;
   });
 
   // Basic command visualization tests
   describe('basic dependency structure', () => {
     beforeEach(() => {
       const env = createBasicTestEnvironment();
-      (loadConfigAndModules as any) = async () => env;
+      currentLoadConfigAndModulesImpl = async () => env;
     });
 
     test('should display tree diagram by default', async () => {
@@ -164,7 +179,7 @@ describe('deps command', () => {
   describe('complex dependency structure', () => {
     beforeEach(() => {
       const env = createComplexTestEnvironment();
-      (loadConfigAndModules as any) = async () => env;
+      currentLoadConfigAndModulesImpl = async () => env;
     });
     
     test('should show reverse dependencies when --reverse flag is used', async () => {

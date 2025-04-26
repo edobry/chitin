@@ -50,6 +50,9 @@
   - Increased default concurrency from 20 to 50 parallel checks
   - Extended cache expiration from 10 to 60 minutes
 - Fixed issue with Docker and other tools using `checkCommand: true` which was incorrectly converted to a string "true" command instead of using the proper default check command
+- Fixed all test errors in `synthase/tests/commands/fibers/deps-command.test.ts` by switching from `vi.mock` to Bun's `mock.module` for module mocking.
+- Updated test mocking to use a dynamic implementation pattern compatible with Bun's test runner.
+- All tests now pass with Bun, and linter errors related to mocking are resolved.
 
 ### Improved
 - Refactored tools display code to use emoji constants from DISPLAY.EMOJIS instead of hardcoded values
