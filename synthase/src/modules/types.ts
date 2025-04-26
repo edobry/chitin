@@ -1,4 +1,37 @@
 /**
+ * Module configuration value types
+ */
+export type ModuleConfigValue = 
+  | string 
+  | number 
+  | boolean 
+  | null 
+  | ModuleConfigValue[] 
+  | { [key: string]: ModuleConfigValue };
+
+/**
+ * Module configuration type
+ */
+export type ModuleConfig = Record<string, ModuleConfigValue>;
+
+/**
+ * Module data value types
+ */
+export type ModuleDataValue = 
+  | string 
+  | number 
+  | boolean 
+  | null 
+  | Date 
+  | ModuleDataValue[] 
+  | { [key: string]: ModuleDataValue };
+
+/**
+ * Module data type
+ */
+export type ModuleData = Record<string, ModuleDataValue>;
+
+/**
  * Module interface that represents a loadable Chitin module
  */
 export interface Module {
@@ -13,7 +46,7 @@ export interface Module {
   /** Module metadata */
   metadata: ModuleMetadata;
   /** Module configuration */
-  config?: Record<string, any>;
+  config?: ModuleConfig;
 }
 
 /**
@@ -35,15 +68,15 @@ export interface ModuleMetadata {
 }
 
 /**
- * Module dependency that defines a relationship between modules
+ * Module dependency
  */
 export interface ModuleDependency {
-  /** Module ID that is depended on */
+  /** Module ID */
   moduleId: string;
-  /** Whether the dependency is optional */
-  optional?: boolean;
-  /** Condition that needs to be satisfied for the dependency to be active */
-  condition?: string;
+  /** Whether this is a required dependency */
+  required: boolean;
+  /** Dependency type */
+  type: 'fiber' | 'chain' | 'tool';
 }
 
 /**
@@ -59,7 +92,7 @@ export interface ModuleState {
   /** Last error if any occurred during loading */
   lastError?: string;
   /** Additional data stored by the module */
-  data?: Record<string, any>;
+  data?: ModuleData;
 }
 
 /**
@@ -108,6 +141,8 @@ export interface ModuleDiscoveryOptions {
 export interface ModuleDiscoveryResult {
   /** Discovered modules */
   modules: Module[];
+  /** Paths that were scanned */
+  scannedPaths: string[];
   /** Errors encountered during discovery */
   errors: string[];
 }

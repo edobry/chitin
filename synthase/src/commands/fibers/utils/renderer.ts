@@ -3,9 +3,9 @@
  * @description Rendering functions for the fiber command refactoring
  */
 
-import { ProcessedFiberData, FiberDisplayModel, ChainDisplayModel } from './models';
-import { EMOJI } from '../../constants';
-import { serializeToYaml } from '../../utils';
+import { ProcessedFiberData, FiberDisplayModel, ChainDisplayModel } from '../types';
+import { EMOJI } from '../../../constants';
+import { serializeToYaml } from '../../../utils/yaml';
 
 /**
  * Rendering options for the fiber command

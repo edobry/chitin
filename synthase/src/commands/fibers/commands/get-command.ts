@@ -7,8 +7,8 @@
 
 import { Command } from 'commander';
 import { loadConfigAndModules } from '../utils/config-loader';
-import { processFibers } from '../processor';
-import { renderFibers } from '../renderer';
+import { processFibers } from '../utils/processor';
+import { renderFibers } from '../utils/renderer';
 import { FiberCommandOptions } from '../types';
 import { areFiberDependenciesSatisfied } from '../../../fiber';
 

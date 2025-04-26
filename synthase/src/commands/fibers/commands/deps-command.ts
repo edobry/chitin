@@ -12,17 +12,18 @@ import {
   orderChainsByDependencies,
 } from '../../../fiber';
 import {
-  orderFibersByDependencies,
+  orderFibers,
   getDependentFibers,
-  isFiberEnabled,
   getChainDependencies,
-  countDisplayedModules,
   ensureCoreDependencies
-} from '../utils';
+} from '../utils/dependency-utils';
+import {
+  isFiberEnabled,
+  countDisplayedModules
+} from '../utils/fiber-utils';
 import {
   associateChainsByFiber,
-  filterDisabledFibers,
-  orderFibersByConfigAndName
+  filterDisabledFibers
 } from '../organization';
 import { join } from 'path';
 import fs from 'fs';
@@ -31,6 +32,8 @@ import { FIBER_NAMES } from '../../../fiber/types';
 import { CONFIG_FIELDS, FILE_NAMES } from '../../../config/types';
 import { EMOJI } from '../../../constants';
 import { loadConfigAndModules } from '../utils/config-loader';
+import { printDependencyNode } from '../utils/dependency-display';
+import { DEPENDENCY_DISPLAY } from '../../../fiber/constants';
 
 // Import generateFiberDependencyGraph from fiber/graph.ts
 import { generateFiberDependencyGraph } from '../../../fiber/graph';
@@ -98,10 +101,12 @@ export function createDepsCommand(): Command {
         }
         
         // Sort fibers alphabetically for flat display, with core first
-        const sortedFibers = [...fibersToShow].sort((a: string, b: string) => {
-          if (a === FIBER_NAMES.CORE) return -1;
-          if (b === FIBER_NAMES.CORE) return 1;
-          return a.localeCompare(b);
+        const sortedFibers = orderFibers(fibersToShow, config, moduleResult.modules, {
+          sortAlphabetically: true,
+          handleSpecialFibers: true,
+          includeDiscovered: false,
+          hideDisabled: options.hideDisabled,
+          reverse: options.reverse
         });
         
         if (options.flat) {
@@ -164,9 +169,6 @@ export function createDepsCommand(): Command {
           console.log('Fiber Dependency Diagram:');
           console.log('─────────────────────────');
           
-          // In the original format, we want to show the true dependency structure:
-          // core -> dev -> cloud -> others
-          
           // We'll build a tree in the correct orientation
           const processedFibers = new Set<string>();
           
@@ -220,7 +222,7 @@ export function createDepsCommand(): Command {
             // Sort dependents in each entry putting dev first for core, etc.
             for (const [fiberId, dependents] of displayMap.entries()) {
               dependents.sort((a, b) => {
-                if (fiberId === 'core') {
+                if (fiberId === FIBER_NAMES.CORE) {
                   if (a === 'dev') return -1;
                   if (b === 'dev') return 1;
                   
@@ -233,7 +235,7 @@ export function createDepsCommand(): Command {
           }
           
           // Function to print a node and its dependents
-          function printDependencyNode(
+          function printDependencyTree(
             fiberId: string,
             prefix = '',
             isLast = true,
@@ -247,48 +249,34 @@ export function createDepsCommand(): Command {
             // Mark as processed
             processedFibers.add(fiberId);
             
-            // Get enabled status
-            const isCore = fiberId === FIBER_NAMES.CORE;
-            const isEnabled = isCore || isFiberEnabled(fiberId, config);
-            const statusSymbol = isEnabled ? EMOJI.ACTIVE : EMOJI.DISABLED;
+            // Print this node and its dependencies
+            printDependencyNode(
+              config,
+              fiberId,
+              prefix,
+              isLast,
+              options.detailed ? detectionInfo : null,
+              fibersToShow
+            );
             
-            // Print the node
-            const connector = isLast ? '└── ' : '├── ';
-            console.log(`${prefix}${connector}${statusSymbol} ${fiberId}`);
-            
-            // Show detailed info if requested
-            if (options.detailed && detectionInfo) {
-              const sources = detectionInfo.get(fiberId) || [];
-              if (sources.length > 0) {
-                const detailPrefix = `${prefix}${isLast ? '    ' : '│   '}`;
-                for (const source of sources) {
-                  console.log(`${detailPrefix}     Source: ${source.source}`);
-                  console.log(`${detailPrefix}     Dependencies: ${source.deps.join(', ')}`);
-                }
-              }
-            }
-            
-            // Get dependents for this fiber
+            // Get and print dependents
             const dependents = displayMap.get(fiberId) || [];
-            
-            // Calculate new prefix for children
-            const newPrefix = `${prefix}${isLast ? '    ' : '│   '}`;
+            const newPrefix = `${prefix}${isLast ? DEPENDENCY_DISPLAY.TREE_INDENT : DEPENDENCY_DISPLAY.TREE_VERTICAL}`;
             
             // Print each dependent
             for (let i = 0; i < dependents.length; i++) {
-              const isLastChild = i === dependents.length - 1;
-              printDependencyNode(
+              printDependencyTree(
                 dependents[i],
                 newPrefix,
-                isLastChild,
+                i === dependents.length - 1,
                 depth + 1
               );
             }
           }
           
           // Start with core as the root in normal mode
-          if (fibersToShow.includes('core')) {
-            printDependencyNode('core');
+          if (fibersToShow.includes(FIBER_NAMES.CORE)) {
+            printDependencyTree(FIBER_NAMES.CORE);
           } else {
             // If core isn't available, find roots by dependency analysis
             const roots = options.reverse ?
@@ -302,7 +290,7 @@ export function createDepsCommand(): Command {
             
             // Print each root
             for (let i = 0; i < sortedRoots.length; i++) {
-              printDependencyNode(sortedRoots[i], '', i === sortedRoots.length - 1);
+              printDependencyTree(sortedRoots[i], '', i === sortedRoots.length - 1);
             }
           }
         }

@@ -1,9 +1,9 @@
 import { describe, test, expect } from 'bun:test';
-import { orderFibersByDependencies } from '../../../src/commands/fibers/utils';
-import { Module } from '../../../src/types';
+import { orderFibers } from '../../../src/commands/fibers/utils/dependency-utils';
+import { Module } from '../../../src/modules/types';
 
 describe('Fiber Utils', () => {
-  test('orderFibersByDependencies should place core first', () => {
+  test('orderFibers should place core first', () => {
     const fibers = ['dev', 'core', 'dotfiles'];
     const config = {
       dev: { fiberDeps: ['dotfiles', 'core'] },
@@ -11,7 +11,9 @@ describe('Fiber Utils', () => {
       core: {}
     };
     
-    const ordered = orderFibersByDependencies(fibers, config);
+    const ordered = orderFibers(fibers, config, [], {
+      handleSpecialFibers: true
+    });
     
     // Core should always be first
     expect(ordered[0]).toBe('core');
@@ -19,7 +21,7 @@ describe('Fiber Utils', () => {
     expect(ordered[1]).toBe('dotfiles');
   });
   
-  test('orderFibersByDependencies should place dotfiles immediately after core', () => {
+  test('orderFibers should place dotfiles immediately after core', () => {
     const fibers = ['dev', 'cloud', 'core', 'dotfiles'];
     const config = {
       dev: { fiberDeps: ['cloud'] },
@@ -28,7 +30,9 @@ describe('Fiber Utils', () => {
       core: {}
     };
     
-    const ordered = orderFibersByDependencies(fibers, config);
+    const ordered = orderFibers(fibers, config, [], {
+      handleSpecialFibers: true
+    });
     
     // Core should be first, dotfiles second
     expect(ordered[0]).toBe('core');
@@ -39,7 +43,7 @@ describe('Fiber Utils', () => {
     expect(ordered.indexOf('cloud')).toBeLessThan(ordered.indexOf('dev'));
   });
   
-  test('orderFibersByDependencies should place dotfiles after core even if other fibers depend on core', () => {
+  test('orderFibers should place dotfiles after core even if other fibers depend on core', () => {
     const fibers = ['dev', 'core', 'dotfiles', 'external'];
     const config = {
       dev: { fiberDeps: ['core'] }, // dev depends on core, but should still come after dotfiles
@@ -48,14 +52,16 @@ describe('Fiber Utils', () => {
       core: {}
     };
     
-    const ordered = orderFibersByDependencies(fibers, config);
+    const ordered = orderFibers(fibers, config, [], {
+      handleSpecialFibers: true
+    });
     
     // Core should be first, dotfiles second
     expect(ordered[0]).toBe('core');
     expect(ordered[1]).toBe('dotfiles');
   });
   
-  test('orderFibersByDependencies should place dependencies before dependents', () => {
+  test('orderFibers should place dependencies before dependents', () => {
     const fibers = ['chainalysis', 'cloud', 'dev', 'dotfiles'];
     const config = {
       chainalysis: { fiberDeps: ['cloud'] },
@@ -64,7 +70,9 @@ describe('Fiber Utils', () => {
       dotfiles: {}
     };
     
-    const ordered = orderFibersByDependencies(fibers, config);
+    const ordered = orderFibers(fibers, config, [], {
+      handleSpecialFibers: true
+    });
     
     // Dependencies before dependents
     expect(ordered.indexOf('dotfiles')).toBeLessThan(ordered.indexOf('dev'));
@@ -72,7 +80,7 @@ describe('Fiber Utils', () => {
     expect(ordered.indexOf('cloud')).toBeLessThan(ordered.indexOf('chainalysis'));
   });
   
-  test('orderFibersByDependencies should use module metadata if available', () => {
+  test('orderFibers should use module metadata if available', () => {
     const fibers = ['chainalysis', 'cloud', 'dev'];
     const config = {
       chainalysis: {},
@@ -111,14 +119,16 @@ describe('Fiber Utils', () => {
       }
     ];
     
-    const ordered = orderFibersByDependencies(fibers, config, modules);
+    const ordered = orderFibers(fibers, config, modules, {
+      handleSpecialFibers: true
+    });
     
     // Dependencies before dependents, even when using module metadata
     expect(ordered.indexOf('dev')).toBeLessThan(ordered.indexOf('cloud'));
     expect(ordered.indexOf('cloud')).toBeLessThan(ordered.indexOf('chainalysis'));
   });
   
-  test('orderFibersByDependencies should handle circular dependencies', () => {
+  test('orderFibers should handle circular dependencies', () => {
     const fibers = ['a', 'b', 'c'];
     const config = {
       a: { fiberDeps: ['c'] },
@@ -127,12 +137,88 @@ describe('Fiber Utils', () => {
     };
     
     // This should not throw an error, even with circular dependencies
-    const ordered = orderFibersByDependencies(fibers, config);
+    const ordered = orderFibers(fibers, config, [], {
+      handleSpecialFibers: true
+    });
     
     // All fibers should still be in the result
     expect(ordered.length).toBe(3);
     expect(ordered).toContain('a');
     expect(ordered).toContain('b');
     expect(ordered).toContain('c');
+  });
+  
+  test('orderFibers should prioritize configured fibers', () => {
+    const fibers = ['core', 'dev', 'cloud'];
+    const config = {
+      core: {},
+      dev: { fiberDeps: ['core'] },
+      cloud: { fiberDeps: ['dev'] }
+    };
+    
+    // Add some discovered fibers through modules
+    const modules: Module[] = [
+      {
+        id: 'utils',
+        name: 'utils',
+        path: '/test/utils',
+        type: 'fiber',
+        metadata: {
+          dependencies: [{ moduleId: 'core' }]
+        }
+      },
+      {
+        id: 'tools',
+        name: 'tools',
+        path: '/test/tools',
+        type: 'fiber',
+        metadata: {
+          dependencies: [{ moduleId: 'utils' }]
+        }
+      }
+    ];
+    
+    const ordered = orderFibers(fibers, config, modules, {
+      handleSpecialFibers: true,
+      prioritizeConfigured: true,
+      includeDiscovered: true
+    });
+    
+    // Configured fibers should come before discovered ones
+    const configuredFibers = new Set(fibers);
+    let lastConfiguredIndex = -1;
+    let firstDiscoveredIndex = ordered.length;
+    
+    ordered.forEach((fiberId, index) => {
+      if (configuredFibers.has(fiberId)) {
+        lastConfiguredIndex = Math.max(lastConfiguredIndex, index);
+      } else {
+        firstDiscoveredIndex = Math.min(firstDiscoveredIndex, index);
+      }
+    });
+    
+    expect(lastConfiguredIndex).toBeLessThan(firstDiscoveredIndex);
+  });
+  
+  test('orderFibers should handle disabled fibers', () => {
+    const fibers = ['core', 'dev', 'cloud', 'disabled'];
+    const config = {
+      core: { enabled: true },
+      dev: { enabled: true, fiberDeps: ['core'] },
+      cloud: { enabled: true, fiberDeps: ['dev'] },
+      disabled: { enabled: false, fiberDeps: ['cloud'] }
+    };
+    
+    const ordered = orderFibers(fibers, config, [], {
+      handleSpecialFibers: true,
+      hideDisabled: true
+    });
+    
+    // Should not include disabled fibers
+    expect(ordered).not.toContain('disabled');
+    
+    // Should maintain correct order for enabled fibers
+    expect(ordered[0]).toBe('core');
+    expect(ordered.indexOf('dev')).toBeLessThan(ordered.indexOf('cloud'));
   });
 }); 

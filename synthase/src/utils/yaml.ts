@@ -105,11 +105,11 @@ export async function updateYamlField(
   value: unknown
 ): Promise<void> {
   // Load the YAML file
-  const data = await loadYamlFile(path) || {};
+  const data = (await loadYamlFile(path)) || {} as Record<string, unknown>;
   
   // Update the field
   const fieldParts = fieldPath.split('.');
-  let current = data as Record<string, unknown>;
+  let current = data;
   
   for (let i = 0; i < fieldParts.length - 1; i++) {
     const part = fieldParts[i];
@@ -122,5 +122,5 @@ export async function updateYamlField(
   current[fieldParts[fieldParts.length - 1]] = value;
   
   // Save the updated YAML
-  await saveYamlFile(path, data as Record<string, unknown>);
+  await saveYamlFile(path, data);
 } 

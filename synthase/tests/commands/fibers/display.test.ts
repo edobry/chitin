@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
-import { displayChain, getChainStatus } from '../../../src/commands/fibers/display';
+import { displayChain, getChainStatus } from '../../../src/commands/fibers/utils/display';
 import { UserConfig } from '../../../src/config/types';
 import { Module } from '../../../src/modules/types';
+import { displayDependencyStatus, displayChainDependencyStatus } from '../../../src/commands/fibers/commands/deps-command';
 
 // Extend Module type for testing purposes
 interface TestModule extends Module {

@@ -6,7 +6,7 @@
 // Re-export functions from the dependency utils module
 export {
   ensureCoreDependencies,
-  orderFibersByDependencies,
+  orderFibers as orderFibersByDependencies,
   getDependentFibers,
   getChainDependencies,
   processDependency

@@ -1,5 +1,24 @@
-import { describe, test, expect, beforeEach } from 'bun:test';
+/// <reference types="bun-types" />
+import { describe, test, expect } from 'bun:test';
 import { createFiberManager, createFiberFilter } from '../../src/fiber';
+import { 
+  FiberManager, 
+  FiberState,
+  ModuleFilter
+} from '../../src/types/fiber';
+import { ModuleDependency } from '../../src/types/module';
+import { orderFibers } from '../../src/commands/fibers/utils/dependency-utils';
+import { 
+  getFiberIds,
+  getLoadableFibers,
+  isFiberEnabled,
+  areFiberDependenciesSatisfied,
+  getChainIds,
+  getChainDependencies,
+  orderChainsByDependencies,
+  createChainFilter
+} from "../../src/fiber/manager";
+import { Module } from '../../src/modules/types';
 
 describe('Fiber Manager', () => {
   test('should register and retrieve fibers', () => {
@@ -79,4 +98,64 @@ describe('Fiber Manager', () => {
     expect(inclusiveFilter('module3', fiberStates)).toBe(true); // In inactive fiber
     expect(inclusiveFilter('module5', fiberStates)).toBe(false); // Not in any fiber
   });
+
+  test('orderFibers should order fibers by dependencies', () => {
+    const modules: Module[] = [
+      {
+        id: 'fiber1',
+        name: 'Fiber 1',
+        path: '/path/to/fiber1',
+        type: 'fiber',
+        metadata: {
+          dependencies: [
+            {
+              moduleId: 'fiber2',
+              required: true,
+              type: 'fiber'
+            }
+          ]
+        },
+        config: {}
+      },
+      {
+        id: 'fiber2',
+        name: 'Fiber 2',
+        path: '/path/to/fiber2',
+        type: 'fiber',
+        metadata: {
+          dependencies: []
+        },
+        config: {}
+      }
+    ];
+
+    const config = {};
+    const fiberIds = modules.map(m => m.id);
+
+    const orderedFibers = orderFibers(fiberIds, config, modules);
+    expect(orderedFibers[0]).toBe('fiber2');
+    expect(orderedFibers[1]).toBe('fiber1');
+  });
+});
+
+describe('fiber manager', () => {
+    test('placeholder test', () => {
+        const testModule: Module = {
+            id: 'test',
+            name: 'test',
+            path: '/test',
+            type: 'fiber',
+            metadata: { dependencies: [] },
+            config: {}
+        };
+        expect(testModule.id).toBe('test');
+    });
+
+    test('orderFibers should order modules by dependencies', () => {
+        const fibers: string[] = [];
+        const config: Record<string, any> = {};
+        const modules: Module[] = [];
+        const result = orderFibers(fibers, config, modules);
+        expect(result).toEqual([]);
+    });
 }); 

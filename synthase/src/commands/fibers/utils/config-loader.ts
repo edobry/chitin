@@ -1,40 +1,40 @@
-import { loadAndValidateConfig } from '../../utils';
+/**
+ * @file config-loader.ts
+ * @description Functions for loading and processing fiber configuration
+ */
+
+import { loadAndValidateConfig, ConfigResult } from '../../utils';
 import { discoverModulesFromConfig } from '../../../modules/discovery';
 import { validateModulesAgainstConfig } from '../../../modules/validator';
-import { Module } from '../../../modules/types';
-import { 
-  getLoadableFibers, 
-  getFiberIds,
-  getChainIds,
-  createChainFilter,
-  orderChainsByDependencies
-} from '../../../fiber';
-
-import {
-  orderFibersByDependencies,
-  getDependentFibers,
-  getChainDependencies,
-  ensureCoreDependencies
-} from './dependency-utils';
-
-import { 
-  isFiberEnabled,
-  countDisplayedModules
-} from './fiber-utils';
-
-import {
-  associateChainsByFiber,
-  filterDisabledFibers
-} from '../organization';
-
-import { FiberCommandOptions, ConfigAndModulesResult } from '../types';
+import { getFiberIds, getLoadableFibers, getChainIds, createChainFilter, orderChainsByDependencies } from '../../../fiber';
+import { orderFibers } from './dependency-utils';
+import { Module, ModuleDiscoveryResult } from '../../../modules/types';
+import { UserConfig } from '../../../config/types';
+import { buildFiberDependencyGraph, FiberDependencyGraph, FiberEnvironment } from '../../../fiber/dependency-graph';
+import { associateChainsByFiber, filterDisabledFibers } from './organization';
 
 /**
- * Shared function to load config and discover modules
- * @param options Command options
- * @returns Loaded configuration and module data
+ * Load configuration and discover modules
  */
-export async function loadConfigAndModules(options: FiberCommandOptions): Promise<ConfigAndModulesResult> {
+export async function loadConfigAndModules(options: any): Promise<{
+  config: UserConfig;
+  validation: any;
+  moduleResult: ModuleDiscoveryResult;
+  validationResults: any;
+  allFibers: string[];
+  loadableFibers: string[];
+  displayFiberIds: string[];
+  discoveredFiberModules: Module[];
+  discoveredFiberMap: Map<string, Module>;
+  discoveredChainModules: Module[];
+  discoveredChainMap: Map<string, Module>;
+  orderedFibers: string[];
+  orderedChains: string[];
+  fiberChainMap: Map<string, string[]>;
+  loadableChains: string[];
+  dependencyChecker: (tool: string) => boolean;
+  dependencyGraph: FiberDependencyGraph;
+}> {
   // Load and validate configuration
   const { config, validation } = await loadAndValidateConfig({
     userConfigPath: options.path,
@@ -80,9 +80,6 @@ export async function loadConfigAndModules(options: FiberCommandOptions): Promis
     getLoadableFibers(config, dependencyChecker) :
     allFibers;
   
-  // Order fibers by dependency (foundational first, dependent last)
-  const orderedFibers = orderFibersByDependencies(loadableFibers, config, moduleResult.modules);
-  
   // Get all chains from all fibers
   const allChainIds = getChainIds(config);
   
@@ -117,15 +114,38 @@ export async function loadConfigAndModules(options: FiberCommandOptions): Promis
     ...discoveredFiberModules.map((m: Module) => m.id)
   ]);
   
-  // Create a list of all fiber IDs to display ensuring proper dependency order
-  // First, use the orderedFibers array to maintain dependency relationships
-  let displayFiberIds = [...orderedFibers];
+  // Create a list of all fiber IDs to display
+  let displayFiberIds = [...allFibers];
   
-  // Add any discovered fibers that weren't in the ordered list
+  // Add any discovered fibers that weren't in the list
   Array.from(allFiberModuleIds)
     .filter(id => !displayFiberIds.includes(id))
     .sort((a, b) => a.localeCompare(b))
     .forEach(id => displayFiberIds.push(id));
+  
+  // Build the fiber dependency graph with advanced detection logic
+  const environment: FiberEnvironment = {
+    config,
+    moduleResult,
+    displayFiberIds,
+    orderedFibers: loadableFibers // Initial ordering, will be improved by graph
+  };
+  
+  const dependencyGraph = buildFiberDependencyGraph(
+    environment,
+    { 
+      hideDisabled: options.hideDisabled,
+      reverse: false
+    }
+  );
+  
+  // Use the unified orderFibers function to create a properly ordered list of fibers
+  const orderedFibers = orderFibers(dependencyGraph.fibersToShow, config, moduleResult.modules, {
+    handleSpecialFibers: true,
+    includeDiscovered: false,
+    hideDisabled: options.hideDisabled,
+    reverse: false
+  });
   
   // Apply hide-disabled option if selected
   if (options.hideDisabled) {
@@ -140,25 +160,6 @@ export async function loadConfigAndModules(options: FiberCommandOptions): Promis
     discoveredFiberMap,
     moduleResult
   );
-  
-  // Generate dependency maps for fibers
-  const dependencyMap = new Map<string, string[]>();
-  const detectionInfo = new Map<string, Array<{source: string, deps: string[]}>>();
-  
-  // Initialize for each fiber
-  for (const fiberId of displayFiberIds) {
-    dependencyMap.set(fiberId, getDependentFibers(fiberId, config) || []);
-    detectionInfo.set(fiberId, [{
-      source: 'config',
-      deps: getDependentFibers(fiberId, config) || []
-    }]);
-  }
-  
-  // Create a simple dependency graph
-  const dependencyGraph = {
-    dependencyMap,
-    detectionInfo
-  };
   
   return {
     config,

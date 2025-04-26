@@ -1,111 +1,55 @@
-/**
- * Base configuration interface for all configuration types
- */
-export interface BaseConfig {
-  enabled?: boolean;
-}
+import { FiberConfig, FiberConfigValue } from './fiber';
+import { ChainConfig } from './chain';
+import { ToolConfig } from './tool';
 
-/**
- * Tool configuration interface
- */
-export interface ToolConfig {
-  // Presence check methods
-  checkCommand?: string | boolean;
-  checkBrew?: boolean;
-  checkPath?: string;
-  checkEval?: string;
-  
-  // Version management
-  version?: string;
-  versionCommand?: string;
-  
-  // Installation method
-  brew?: boolean | {
-    name?: string;
-    cask?: boolean | string;
-    tap?: string;
-    tapUrl?: string;
-    formula?: string;
-  };
-  git?: {
-    url: string;
-    target: string;
-  } | string;
-  script?: string;
-  artifact?: {
-    url: string;
-    target: string;
-    appendFilename?: boolean;
-  };
-  command?: string;
-  
-  // Additional installation methods
-  npm?: string | boolean | { package?: string; global?: boolean };
-  pip?: string | boolean | { package?: string; user?: boolean };
-  pipx?: string | boolean;
-  curl?: string | { url: string; target?: string };
-  
-  // Check methods
-  checkPipx?: boolean;
-  
-  // Alternative identification methods
-  tool?: string | boolean; // Tool name to check in PATH
-  app?: string | boolean;  // macOS app bundle to check
-  
-  // Dependencies and relationships
-  deps?: string[];
-  provides?: string[];
-  
-  // Additional configuration
-  optional?: boolean;
-  postInstall?: string;
-}
+export { ChainConfig };
+export { ToolConfig };
 
 /**
  * Core configuration interface
  */
-export interface CoreConfig extends BaseConfig {
+export interface CoreConfig {
+  /** Project directory */
   projectDir?: string;
+  /** Dotfiles directory */
   dotfilesDir?: string;
+  /** Whether to check tool dependencies */
   checkTools?: boolean;
+  /** Whether to install tool dependencies */
   installToolDeps?: boolean;
+  /** Whether to disable auto-initialization */
   autoInitDisabled?: boolean;
+  /** Whether to fail on error */
   failOnError?: boolean;
+  /** Whether to load modules in parallel */
   loadParallel?: boolean;
+  /** Module configuration */
   moduleConfig?: Record<string, ChainConfig>;
-}
-
-/**
- * Chain configuration interface
- */
-export interface ChainConfig extends BaseConfig {
-  tools?: Record<string, ToolConfig>;
-  toolDeps?: string[];
-}
-
-/**
- * Fiber configuration interface
- */
-export interface FiberConfig extends BaseConfig {
-  fiberDeps?: string[];
-  moduleConfig?: Record<string, ChainConfig>;
-  tools?: Record<string, ToolConfig>;
-  toolDeps?: string[];
 }
 
 /**
  * User configuration interface
  */
 export interface UserConfig {
+  /** Core configuration */
   core: CoreConfig;
-  [fiberName: string]: FiberConfig | CoreConfig | Record<string, any>;
+  /** Fiber configurations */
+  fibers?: Record<string, FiberConfig>;
+  /** Chain configurations */
+  chains?: Record<string, ChainConfig>;
+  /** Tool configurations */
+  tools?: Record<string, ToolConfig>;
+  /** Additional configuration fields */
+  [key: string]: FiberConfig | CoreConfig | Record<string, FiberConfigValue> | undefined;
 }
 
 /**
  * Configuration merging options
  */
 export interface ConfigMergeOptions {
+  /** Whether to overwrite arrays instead of merging them */
   overwriteArrays?: boolean;
+  /** Whether to perform deep merge */
   deep?: boolean;
 }
 
@@ -113,7 +57,9 @@ export interface ConfigMergeOptions {
  * Path expansion options
  */
 export interface PathExpansionOptions {
+  /** Home directory override */
   homeDir?: string;
+  /** Local share directory override */
   localShareDir?: string;
 }
 
@@ -121,6 +67,10 @@ export interface PathExpansionOptions {
  * Configuration validation result
  */
 export interface ConfigValidationResult {
+  /** Whether the configuration is valid */
   valid: boolean;
+  /** Validation errors */
   errors: string[];
+  /** Validation warnings */
+  warnings?: string[];
 } 

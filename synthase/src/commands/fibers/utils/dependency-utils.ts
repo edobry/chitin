@@ -3,6 +3,7 @@ import { Module, ModuleDependency } from '../../../modules/types';
 import { FIBER_NAMES } from '../../../fiber/types';
 import { CONFIG_FIELDS } from '../../../config/types';
 import { UserConfig } from '../../../types/config';
+import { isFiberEnabled } from '../utils';
 
 /**
  * Ensures all fibers have an implicit dependency on core
@@ -66,83 +67,201 @@ export function ensureCoreDependencies(
 }
 
 /**
- * Orders fibers by their dependencies with foundational fibers first
+ * Options for fiber ordering
+ */
+export interface FiberOrderingOptions {
+  /** Whether to prioritize configured fibers over discovered ones */
+  prioritizeConfigured?: boolean;
+  /** Whether to sort alphabetically after dependency ordering */
+  sortAlphabetically?: boolean;
+  /** Whether to handle special fibers (core, dotfiles) */
+  handleSpecialFibers?: boolean;
+  /** Whether to sort dependents in a special way (e.g., dev first for core) */
+  specialDependentSorting?: boolean;
+  /** Whether to include discovered fibers not in the original list */
+  includeDiscovered?: boolean;
+  /** Whether to filter disabled fibers */
+  hideDisabled?: boolean;
+  /** Whether to reverse the dependency direction */
+  reverse?: boolean;
+}
+
+/**
+ * Unified function to order fibers based on various criteria
  * @param fibers Fiber IDs to order
  * @param config Configuration object
  * @param modules Array of discovered modules
+ * @param options Ordering options
  * @returns Ordered list of fiber IDs
  */
-export function orderFibersByDependencies(
+export function orderFibers(
   fibers: string[], 
   config: Record<string, any>,
-  modules: Module[] = []
+  modules: Module[] = [],
+  options: FiberOrderingOptions = {}
 ): string[] {
+  const {
+    prioritizeConfigured = false,
+    sortAlphabetically = false,
+    handleSpecialFibers = true,
+    specialDependentSorting = false,
+    includeDiscovered = false,
+    hideDisabled = false,
+    reverse = false
+  } = options;
+
   // Create a dependency graph for topological sorting
   const graph = createDependencyGraph<string>();
   
   // Make a copy of fibers to avoid side effects
-  const fibersToSort = [...fibers];
+  let fibersToSort = [...fibers];
+  
+  // Add discovered fibers if requested
+  if (includeDiscovered) {
+    const discoveredFibers = modules
+      .filter(m => m.type === 'fiber')
+      .map(m => m.id)
+      .filter(id => !fibersToSort.includes(id));
+    fibersToSort = [...fibersToSort, ...discoveredFibers];
+  }
+  
+  // Filter disabled fibers if requested
+  if (hideDisabled) {
+    fibersToSort = fibersToSort.filter(fiberId => {
+      const isCore = fiberId === FIBER_NAMES.CORE;
+      return isCore || isFiberEnabled(fiberId, config as UserConfig);
+    });
+  }
   
   // Add all fibers to the graph
   for (const fiberId of fibersToSort) {
     graph.addNode(fiberId, fiberId);
   }
   
+  // Precompute module map for O(1) lookups
+  const moduleMap = new Map<string, Module>();
+  for (const m of modules) {
+    moduleMap.set(m.id, m);
+  }
+  
   // Add dependency relationships
   for (const fiberId of fibersToSort) {
-    // First try to get dependencies from module metadata
-    const fiberModule = modules.find(m => m.id === fiberId && m.type === 'fiber');
+    // Use precomputed module map
+    const fiberModule = moduleMap.get(fiberId);
     let fiberDeps: string[] = [];
-    
     if (fiberModule && fiberModule.metadata && fiberModule.metadata.dependencies) {
       fiberDeps = fiberModule.metadata.dependencies.map(dep => dep.moduleId);
+    } else if (fiberModule && fiberModule.config && fiberModule.config[CONFIG_FIELDS.FIBER_DEPS]) {
+      const val = fiberModule.config[CONFIG_FIELDS.FIBER_DEPS];
+      fiberDeps = Array.isArray(val) ? val as string[] : [];
+    } else if (config[fiberId] && config[fiberId][CONFIG_FIELDS.FIBER_DEPS]) {
+      const val = config[fiberId][CONFIG_FIELDS.FIBER_DEPS];
+      fiberDeps = Array.isArray(val) ? val as string[] : [];
     }
-    // Then try to get dependencies from the module's config 
-    else if (fiberModule && fiberModule.config && fiberModule.config[CONFIG_FIELDS.FIBER_DEPS]) {
-      fiberDeps = fiberModule.config[CONFIG_FIELDS.FIBER_DEPS];
-    } 
-    // Fallback to merged config if needed
-    else if (config[fiberId] && config[fiberId][CONFIG_FIELDS.FIBER_DEPS]) {
-      fiberDeps = config[fiberId][CONFIG_FIELDS.FIBER_DEPS];
-    }
-    
     for (const depId of fiberDeps) {
-      // Only add the dependency if it's in our fiber list
       if (fibersToSort.includes(depId)) {
-        // Add dependency relationship to graph
-        // Important: The dependent should point to its dependency
-        // If A depends on B, then A -> B in the graph
-        graph.addDependency(fiberId, depId);
+        if (reverse) {
+          graph.addDependency(depId, fiberId);
+        } else {
+          graph.addDependency(fiberId, depId);
+        }
       }
     }
   }
   
   // Ensure all fibers have an implicit dependency on core
+  if (handleSpecialFibers) {
   ensureCoreDependencies(fibersToSort, undefined, undefined, undefined, graph);
-  
-  // Get topologically sorted fibers
-  // The result of topological sort gives dependencies first, then dependents
-  let sortedFibers = graph.getTopologicalSort();
-  
-  // Handle special case fibers - core must be first and dotfiles second (depending on core)
-  // Remove core and dotfiles from the sorted list
-  sortedFibers = sortedFibers.filter(id => id !== FIBER_NAMES.CORE && id !== FIBER_NAMES.DOTFILES);
-  
-  // Create the final ordered list with core first, dotfiles second, then the rest 
-  const orderedFibers: string[] = [];
-  
-  // Add core if present in the original list
-  if (fibers.includes(FIBER_NAMES.CORE)) {
-    orderedFibers.push(FIBER_NAMES.CORE);
   }
   
-  // Add dotfiles if present in the original list
-  if (fibers.includes(FIBER_NAMES.DOTFILES)) {
-    orderedFibers.push(FIBER_NAMES.DOTFILES);
+  // Perform topological sort
+  let sorted = graph.getTopologicalSort();
+  
+  // Handle special fibers if requested
+  if (handleSpecialFibers) {
+    const result: string[] = [];
+    
+    // Add core first if it exists
+    if (fibersToSort.includes(FIBER_NAMES.CORE)) {
+      result.push(FIBER_NAMES.CORE);
+    }
+    
+    // Add dotfiles second if it exists
+    if (fibersToSort.includes(FIBER_NAMES.DOTFILES)) {
+      result.push(FIBER_NAMES.DOTFILES);
+    }
+    
+    // Add remaining fibers in topological order, excluding core and dotfiles
+    for (const fiberId of sorted) {
+      if (fiberId !== FIBER_NAMES.CORE && fiberId !== FIBER_NAMES.DOTFILES) {
+        result.push(fiberId);
+      }
+    }
+    
+    sorted = result;
   }
   
-  // Add the remaining sorted fibers
-  return [...orderedFibers, ...sortedFibers];
+  // Prioritize configured fibers if requested
+  if (prioritizeConfigured) {
+    const configuredFibers = fibersToSort.filter(id => fibers.includes(id));
+    const discoveredFibers = fibersToSort.filter(id => !fibers.includes(id));
+    
+    // Sort each group by their position in the topological sort
+    const fiberOrderMap = new Map<string, number>();
+    sorted.forEach((fiberId, index) => {
+      fiberOrderMap.set(fiberId, index);
+    });
+    
+    const sortByTopologicalOrder = (a: string, b: string) => {
+      const aIndex = fiberOrderMap.get(a) ?? -1;
+      const bIndex = fiberOrderMap.get(b) ?? -1;
+      return aIndex - bIndex;
+    };
+    
+    sorted = [
+      ...configuredFibers.sort(sortByTopologicalOrder),
+      ...discoveredFibers.sort(sortByTopologicalOrder)
+    ];
+  }
+  
+  // Apply special dependent sorting if requested
+  if (specialDependentSorting) {
+    const dependencyMap = new Map<string, string[]>();
+    // Cache the topological sort result
+    const topoSort = [...sorted];
+    for (const fiberId of fibersToSort) {
+      // Get all nodes that depend on this fiber
+      const deps = fibersToSort.filter(otherId => {
+        // Use cached topoSort instead of recomputing
+        const otherDeps = topoSort.filter(id => id !== fiberId && id !== otherId);
+        return otherDeps.includes(fiberId);
+      });
+      dependencyMap.set(fiberId, deps);
+    }
+    // Sort dependents in each entry
+    for (const [fiberId, dependents] of dependencyMap.entries()) {
+      dependents.sort((a, b) => {
+        if (fiberId === FIBER_NAMES.CORE) {
+          if (a === 'dev') return -1;
+          if (b === 'dev') return 1;
+          if (a === 'dotfiles') return -1;
+          if (b === 'dotfiles') return 1;
+        }
+        return a.localeCompare(b);
+      });
+    }
+  }
+  
+  // Sort alphabetically if requested
+  if (sortAlphabetically) {
+    sorted.sort((a, b) => {
+      if (a === FIBER_NAMES.CORE) return -1;
+      if (b === FIBER_NAMES.CORE) return 1;
+      return a.localeCompare(b);
+    });
+  }
+  
+  return sorted;
 }
 
 /**

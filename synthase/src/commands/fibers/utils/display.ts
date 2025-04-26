@@ -1,13 +1,14 @@
-import { getCoreConfigValue } from '../../config';
-import { findChitinDir } from '../../utils/path';
-import { areFiberDependenciesSatisfied } from '../../fiber/manager';
-import { UserConfig, ConfigValidationResult, FiberConfig } from '../../types/config';
-import { Module } from '../../types/module';
-import { EMOJI } from '../../constants';
+import { getCoreConfigValue } from '../../../config/loader';
+import { findChitinDir } from '../../../utils/path';
+import { areFiberDependenciesSatisfied } from '../../../fiber/manager';
+import { UserConfig, ConfigValidationResult } from '../../../types/config';
+import { FiberConfig } from '../../../types/fiber';
+import { Module } from '../../../types/module';
+import { EMOJI } from '../../../utils/display';
 
 // Import from the new utility modules
-import { isFiberEnabled } from './utils/fiber-utils';
-import { getChainDependencies, getDependentFibers } from './utils/dependency-utils';
+import { isFiberEnabled } from './fiber-utils';
+import { getChainDependencies, getDependentFibers } from './dependency-utils';
 
 /**
  * Display options for fibers command
@@ -105,11 +106,19 @@ export function getFiberPath(
   config: UserConfig
 ): string {
   if (fiberId === 'dotfiles') {
-    return getCoreConfigValue(config, 'dotfilesDir') || fiberModule?.path || "Unknown";
+    return (getCoreConfigValue(config, 'dotfilesDir') as string) || fiberModule?.path || 'Unknown';
   } else if (fiberId === 'core') {
-    return findChitinDir() || fiberModule?.path || "Unknown";
+    return findChitinDir() || fiberModule?.path || 'Unknown';
   } else {
-    return fiberModule?.path || (config[fiberId] as any)?.path || "Unknown";
+    // Type guard for config[fiberId]
+    const fiberConfig = config[fiberId];
+    if (fiberModule?.path) return fiberModule.path;
+    if (fiberConfig && typeof fiberConfig === 'object' && !Array.isArray(fiberConfig)) {
+      if (typeof (fiberConfig as any).path === 'string') {
+        return (fiberConfig as any).path;
+      }
+    }
+    return 'Unknown';
   }
 }
 
@@ -119,20 +128,17 @@ export function getFiberPath(
  */
 export function displayValidationResults(validationResult: ExtendedValidationResult | undefined): void {
   if (!validationResult) return;
-  
-  if (validationResult.errors.length > 0) {
+  if (validationResult.errors && validationResult.errors.length > 0) {
     console.log(`  Errors:`);
     for (const error of validationResult.errors) {
       console.log(`    ❌ ${error}`);
     }
   }
-  
   if (validationResult.warnings && validationResult.warnings.length > 0) {
     // Filter out warnings about disabled modules
     const filteredWarnings = validationResult.warnings.filter(
       warning => !warning.includes("Module is disabled in user configuration")
     );
-    
     if (filteredWarnings.length > 0) {
       console.log(`  Warnings:`);
       for (const warning of filteredWarnings) {
@@ -205,7 +211,7 @@ export function displayFiberDependencies(
 export function getChainStatus(
   isEnabled: boolean,
   isConfigured: boolean,
-  hideDisabled: boolean = false,
+  _hideDisabled: boolean = false,
   isFiberEnabled: boolean = true,
   isAvailable: boolean = true
 ): string {
@@ -284,7 +290,11 @@ export function displayChain(
   );
   
   // Get dependencies for this chain
-  const dependencies = getChainDependencies(chainId, config[fiberId]?.moduleConfig || {});
+  let dependencies: string[] = [];
+  const fiberConfig = config[fiberId];
+  if (fiberConfig && typeof fiberConfig === 'object' && !Array.isArray(fiberConfig) && fiberConfig.moduleConfig && typeof fiberConfig.moduleConfig === 'object' && !Array.isArray(fiberConfig.moduleConfig)) {
+    dependencies = getChainDependencies(chainId, fiberConfig.moduleConfig as Record<string, any>);
+  }
   
   // Show chain with status indicator before the name, trimming extra space if no status
   const statusPrefix = chainStatus || chainValidation ? `${chainStatus} ${chainValidation ? chainValidation + ' ' : ''}` : '';
@@ -373,8 +383,11 @@ export function displaySummary(
         for (const [fiberId, chains] of fiberChainMap.entries()) {
           if (chains.includes(id)) {
             // Check if chain is enabled in this fiber
-            const chainConfig = config[fiberId]?.moduleConfig?.[id];
-            return chainConfig && chainConfig.enabled !== false;
+            const fiberConfig = config[fiberId];
+            if (fiberConfig && typeof fiberConfig === 'object' && !Array.isArray(fiberConfig) && fiberConfig.moduleConfig && typeof fiberConfig.moduleConfig === 'object' && !Array.isArray(fiberConfig.moduleConfig)) {
+              const chainConfig = (fiberConfig.moduleConfig as Record<string, any>)[id];
+              return chainConfig && chainConfig.enabled !== false;
+            }
           }
         }
         return false;
@@ -386,7 +399,8 @@ export function displaySummary(
   // Add validation summary with explanation of the module count discrepancy if needed
   const totalModules = Object.keys(validationResults).length;
   const validModules = Object.values(validationResults).filter((result) => result.valid).length;
-  const invalidModules = totalModules - validModules;
+  // Removed unused _invalidModules assignment
+  // ...
 
   // Show validation summary
   console.log(`Validation: ${validModules} of ${totalModules} modules valid`);

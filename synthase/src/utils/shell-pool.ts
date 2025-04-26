@@ -97,17 +97,39 @@ export class ShellPool {
         PATH: `/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:${process.env.PATH || ''}`
       };
       
+      debug('Creating shell with environment:', shellEnv);
+      
       // Create a completely non-interactive shell with proper stdio configuration
       const shell = safeExeca('bash', ['--norc', '--noprofile'], {
         // Explicitly redirect stdin to /dev/null and pipe stdout/stderr
         stdio: ['pipe', 'pipe', 'pipe'],
         shell: false,
         env: shellEnv,
-        // Disable input handling
-        input: '',
         // Important: Do not set tty to true
         // This prevents tools from thinking they're in an interactive environment
       });
+
+      debug('Shell process created with PID:', shell.pid);
+
+      // Set up error handler for shell process
+      shell.on('error', (err) => {
+        debug(`Shell process error (PID ${shell.pid}):`, err);
+      });
+
+      shell.on('exit', (code, signal) => {
+        debug(`Shell process exited (PID ${shell.pid}):`, { code, signal });
+      });
+
+      shell.stdout!.on('data', (data) => {
+        debug(`Shell stdout (PID ${shell.pid}):`, data.toString());
+      });
+
+      shell.stderr!.on('data', (data) => {
+        debug(`Shell stderr (PID ${shell.pid}):`, data.toString());
+      });
+
+      // Keep the shell alive by starting a command that waits for input
+      shell.stdin!.write('cat\n');
 
       this.shells.push({
         process: shell,
@@ -216,7 +238,11 @@ export class ShellPool {
     let shellIndex = -1;
     
     try {
+      const getShellStart = Date.now();
       const result = await this.getShell();
+      const getShellEnd = Date.now();
+      const getShellTime = getShellEnd - getShellStart;
+      
       shell = result.process;
       shellIndex = result.index;
       
@@ -272,6 +298,8 @@ export class ShellPool {
         let startSeen = false;
         let stdoutBuffer = '';
         let stderrBuffer = '';
+        let commandStartTime = 0;
+        let writeStartTime = 0;
         
         // Define stdout handler
         const stdoutHandler = (data: Buffer) => {
@@ -283,10 +311,27 @@ export class ShellPool {
           // Check for markers
           if (output.includes(startMarker)) {
             startSeen = true;
+            commandStartTime = Date.now();
             // Reset buffers after start marker
             stdout = '';
             stderr = '';
           } else if (startSeen && output.includes(endMarker)) {
+            const commandEndTime = Date.now();
+            const commandTime = commandEndTime - commandStartTime;
+            const writeTime = commandStartTime - writeStartTime;
+            
+            // Write timing information to a file
+            const fs = require('fs');
+            const timingInfo = {
+              getShellTime,
+              writeTime,
+              commandTime,
+              totalTime: commandEndTime - getShellStart,
+              command,
+              timestamp: new Date().toISOString()
+            };
+            fs.writeFileSync('/tmp/shell-pool-timing.json', JSON.stringify(timingInfo, null, 2));
+            
             // Extract data between markers
             const stdoutLines = stdoutBuffer.split('\n');
             let collectOutput = false;
@@ -352,9 +397,11 @@ ${command}
 EXIT_STATUS=$?
 echo '${exitMarker}'"$EXIT_STATUS"
 echo '${endMarker}'
+\x04
 `;
         
         // Write command to shell stdin
+        writeStartTime = Date.now();
         shell.stdin!.write(wrappedCommand);
       });
     } catch (error) {

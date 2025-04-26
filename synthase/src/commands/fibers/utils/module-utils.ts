@@ -1,34 +1,29 @@
-import { Module } from '../../../modules/types';
+/**
+ * @file module-utils.ts
+ * @description Utility functions for working with modules
+ */
+
+import { Module, ModuleDiscoveryResult } from '../../../modules/types';
 
 /**
- * Find a module in a list of modules by ID and optionally by type
- * @param modules List of modules to search
- * @param id Module ID to find
- * @param type Optional module type filter
- * @returns The found module or undefined
+ * Find a module by ID and optionally type
  */
-export function findModuleById(modules: Module[], id: string, type?: 'fiber' | 'chain'): Module | undefined {
-  return modules.find(module => 
-    module.id === id && (type === undefined || module.type === type)
+export function findModuleById(moduleResult: ModuleDiscoveryResult, id: string, type?: string): Module | undefined {
+  return moduleResult.modules.find(m => 
+    m.id === id && (!type || m.type === type)
   );
 }
 
 /**
- * Get a module from a module map by its ID
- * @param moduleMap Map of modules
- * @param moduleId ID of the module to get
- * @returns The module or undefined
+ * Get a module from a module map by ID
  */
-export function getModuleFromMap(moduleMap: Map<string, Module>, moduleId: string): Module | undefined {
-  return moduleMap.get(moduleId);
+export function getModuleFromMap(moduleMap: Map<string, Module>, id: string): Module | undefined {
+  return moduleMap.get(id);
 }
 
 /**
- * Check if a module exists in the discovered modules
- * @param moduleId ID of the module to check
- * @param moduleMap Map of modules
- * @returns True if the module exists, false otherwise
+ * Check if a module exists in a module map
  */
-export function moduleExists(moduleId: string, moduleMap: Map<string, Module>): boolean {
-  return moduleMap.has(moduleId);
+export function moduleExists(moduleMap: Map<string, Module>, id: string): boolean {
+  return moduleMap.has(id);
 } 

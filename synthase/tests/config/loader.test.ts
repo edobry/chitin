@@ -10,9 +10,10 @@ const TEST_CONFIG_PATH = path.join(TEST_DIR, 'userConfig.yaml');
 
 // Test user config
 const TEST_USER_CONFIG = `
-projectDir: ~/projects
-dotfilesDir: ~/dotfiles
-checkTools: true
+core:
+  projectDir: ~/projects
+  dotfilesDir: ~/dotfiles
+  checkTools: true
 fibers:
   test-fiber:
     enabled: true
@@ -47,8 +48,8 @@ describe('Configuration Loader', () => {
     const defaultConfig = getDefaultConfig();
     
     expect(defaultConfig).toBeDefined();
-    expect(defaultConfig.checkTools).toBe(false);
-    expect(defaultConfig.installToolDeps).toBe(false);
+    expect(defaultConfig.core.checkTools).toBe(false);
+    expect(defaultConfig.core.installToolDeps).toBe(false);
     expect(defaultConfig.fibers).toEqual({});
     expect(defaultConfig.chains).toEqual({});
     expect(defaultConfig.tools).toEqual({});
@@ -60,9 +61,9 @@ describe('Configuration Loader', () => {
     });
     
     expect(userConfig).toBeDefined();
-    expect(userConfig?.projectDir).toContain('/projects');
-    expect(userConfig?.dotfilesDir).toContain('/dotfiles');
-    expect(userConfig?.checkTools).toBe(true);
+    expect(userConfig?.core.projectDir).toContain('/projects');
+    expect(userConfig?.core.dotfilesDir).toContain('/dotfiles');
+    expect(userConfig?.core.checkTools).toBe(true);
     expect(userConfig?.fibers?.['test-fiber']).toBeDefined();
     expect(userConfig?.fibers?.['test-fiber'].fiberDeps).toEqual(['core']);
   });
@@ -75,8 +76,8 @@ describe('Configuration Loader', () => {
     const fullConfig = getFullConfig(userConfig);
     
     expect(fullConfig).toBeDefined();
-    expect(fullConfig.checkTools).toBe(true);
-    expect(fullConfig.installToolDeps).toBe(false); // from default
+    expect(fullConfig.core.checkTools).toBe(true);
+    expect(fullConfig.core.installToolDeps).toBe(false); // from default
     expect(fullConfig.fibers?.['test-fiber']).toBeDefined();
     expect(fullConfig.chains).toEqual({}); // from default
     expect(fullConfig.tools).toEqual({}); // from default
