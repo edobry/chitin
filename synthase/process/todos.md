@@ -46,18 +46,36 @@ This file tracks work items for the Synthase project. Each task follows this for
   - Follow constants-management rule
   - Organize domain-specific constants
   - Update constant references
+  - Extract and centralize constants per domain (merged from #023)
 
+- [ ] Refactor utils/tools.ts into domain-oriented modules [#016](tasks/016-refactor-utils-tools.md)
+- [ ] Refactor modules/discovery.ts into smaller, focused modules [#017](tasks/017-refactor-modules-discovery.md)
+- [ ] Refactor utils/shell-pool.ts for clarity and maintainability [#018](tasks/018-refactor-utils-shell-pool.md)
+- [ ] Modularize utils/homebrew.ts before further growth [#019](tasks/019-modularize-utils-homebrew.md)
+- [ ] Refactor fiber/manager.ts by responsibility [#020](tasks/020-refactor-fiber-manager.md)
+- [ ] Refactor commands/tools/index.ts for CLI maintainability [#021](tasks/021-refactor-commands-tools-index.md)
+- [ ] Audit and reorganize modules by domain [#022](tasks/022-audit-reorganize-modules-domain.md)
+
+- [ ] Add lint/CI checks for file size [#024](tasks/024-add-lint-ci-file-size-checks.md)
+
+### Fiber/Chain Ordering and Dependency
+
+- [ ] Remove --detailed flag from fibers deps command [#010](tasks/010-remove-detailed-flag.md)
+- [ ] Fix --graphviz mode to avoid explicit 'core' dependency arrows from fibers with transitive paths to core [#011](tasks/011-fix-graphviz-core-arrows.md)
+- [ ] Fix fiber order in `fibers get` to respect dependencies [#014](tasks/014-fix-fiber-order-in-fibers-get.md)
 - [ ] Abstract and Refactor Module Ordering (Fibers & Chains) [#008](tasks/008-order-modules-abstraction.md)
-
 - [ ] Refactor Fiber Dependency CLI Tests to Pure Function Unit Tests [#009](tasks/009-refactor-fiber-deps-tests.md)
   - Replace CLI-level tests for createDepsCommand with unit tests for pure functions
   - Extract/ensure pure formatting and graph logic
   - Write/expand tests for buildFiberDependencyGraph, orderFibers, and output formatting
   - Remove unnecessary mocks and CLI parsing from tests
 
-- [ ] Remove --detailed flag from fibers deps command [#010](tasks/010-remove-detailed-flag.md)
+### Post-Refactor Testing and Documentation
 
-- [ ] Fix --graphviz mode to avoid explicit 'core' dependency arrows from fibers with transitive paths to core [#011](tasks/011-fix-graphviz-core-arrows.md)
+- [ ] Add/update tests and documentation for refactored modules [#025](tasks/025-update-tests-docs-refactor.md)
+- [ ] Update project documentation for new structure [#026](tasks/026-update-project-docs-structure.md)
+
+### Other Improvements
 
 - [x] Modularize Fiber Command Structure [#012](tasks/012-fiber-command-modularization.md)
   - Broke up monolithic fibers command into modular subcommands and utilities
@@ -69,20 +87,6 @@ This file tracks work items for the Synthase project. Each task follows this for
   - Introduced display models and pure processing functions
   - Enabled easier testing and future interface expansion
 
-- [ ] Fix fiber order in `fibers get` to respect dependencies [#014](tasks/014-fix-fiber-order-in-fibers-get.md)
+### Final Task
 
-- [ ] Implement tool status checks in `fibers get` [#015](tasks/015-implement-tool-status-checks-in-fibers-get.md)
-
-- [ ] Refactor utils/tools.ts into domain-oriented modules [#016](tasks/016-refactor-utils-tools.md)
-- [ ] Refactor modules/discovery.ts into smaller, focused modules [#017](tasks/017-refactor-modules-discovery.md)
-- [ ] Refactor utils/shell-pool.ts for clarity and maintainability [#018](tasks/018-refactor-utils-shell-pool.md)
-- [ ] Modularize utils/homebrew.ts before further growth [#019](tasks/019-modularize-utils-homebrew.md)
-- [ ] Refactor fiber/manager.ts by responsibility [#020](tasks/020-refactor-fiber-manager.md)
-- [ ] Refactor commands/tools/index.ts for CLI maintainability [#021](tasks/021-refactor-commands-tools-index.md)
-- [ ] Audit and reorganize modules by domain [#022](tasks/022-audit-reorganize-modules-domain.md)
-- [ ] Extract and centralize constants per domain [#023](tasks/023-extract-centralize-constants.md)
-- [ ] Add lint/CI checks for file size [#024](tasks/024-add-lint-ci-file-size-checks.md)
-- [ ] Add/update tests and documentation for refactored modules [#025](tasks/025-update-tests-docs-refactor.md)
-- [ ] Update project documentation for new structure [#026](tasks/026-update-project-docs-structure.md)
-- [ ] Sequence refactors to avoid merge conflicts [#027](tasks/027-sequence-refactors-avoid-conflicts.md)
-- [ ] Create a master tracking task for all refactor TODOs [#028](tasks/028-master-tracking-refactor-tasks.md)
+- [ ] Implement tool status checks in `fibers get` [#015](tasks/015-implement-tool-status-checks.md)
