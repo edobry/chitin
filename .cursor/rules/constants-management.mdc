@@ -1,3 +1,8 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
 # Constants Management
 
 Extract and organize constants systematically to improve maintainability and reduce duplication:
