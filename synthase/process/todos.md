@@ -8,13 +8,6 @@ This file tracks work items for the Synthase project. Each task follows this for
 - [ ] Task Title [#123](tasks/123-task-title.md)
 ```
 
-When working on a task:
-1. Read the full task specification in the linked document
-2. Follow all instructions in the task doc
-3. After completing the task, mark it as done by changing `[ ]` to `[x]`
-4. Update the CHANGELOG.md if required by the task
-5. Create a PR referencing the task number
-
 ## Tasks
 
 ### Fiber Command Modularization
@@ -61,3 +54,21 @@ When working on a task:
   - Extract/ensure pure formatting and graph logic
   - Write/expand tests for buildFiberDependencyGraph, orderFibers, and output formatting
   - Remove unnecessary mocks and CLI parsing from tests
+
+- [ ] Remove --detailed flag from fibers deps command [#010](tasks/010-remove-detailed-flag.md)
+
+- [ ] Fix --graphviz mode to avoid explicit 'core' dependency arrows from fibers with transitive paths to core [#011](tasks/011-fix-graphviz-core-arrows.md)
+
+- [x] Modularize Fiber Command Structure [#012](tasks/012-fiber-command-modularization.md)
+  - Broke up monolithic fibers command into modular subcommands and utilities
+  - Created new directory structure and moved logic into domain-oriented modules
+  - Consolidated display constants and improved maintainability
+
+- [x] Refactor Fiber Command for Separation of Concerns [#013](tasks/013-fiber-command-refactoring.md)
+  - Separated data loading, processing, and rendering for fibers get command
+  - Introduced display models and pure processing functions
+  - Enabled easier testing and future interface expansion
+
+- [ ] Fix fiber order in `fibers get` to respect dependencies [#014](tasks/014-fix-fiber-order-in-fibers-get.md)
+
+- [ ] Implement tool status checks in `fibers get` [#015](tasks/015-implement-tool-status-checks-in-fibers-get.md)

@@ -1,45 +1,36 @@
-# Fiber Command Refactoring Plan
+# Refactor Fiber Command for Separation of Concerns
 
 ## Overview
-
-The current implementation of the `fibers get` command mixes data loading/processing with rendering logic, making it difficult to reuse components across different interfaces or output formats. This document outlines a plan to refactor this command to achieve better separation of concerns.
+The current implementation of the `fibers get` command mixed data loading/processing with rendering logic, making it difficult to reuse components across different interfaces or output formats. This task refactors the command to achieve better separation of concerns and future extensibility.
 
 ## Current Issues
-
 1. **Mixed Concerns**: 
    - The command's action function handles data loading, processing, and rendering
    - Display functions contain business logic for computing dependencies and statuses
    - Direct console output is embedded throughout the codebase
-
 2. **Limited Reusability**:
    - Difficult to reuse logic for new interfaces (API, GUI)
    - Console output is hardcoded, making alternative output formats challenging
    - Processing logic is tightly coupled with Commander and CLI concepts
-
 3. **Testing Challenges**:
    - Difficult to unit test rendering logic separately from data processing
    - Console output prevents easy verification of command results
 
 ## Refactoring Goals
-
 1. Create a clear separation between:
    - Data loading layer (environment preparation)
    - Data processing layer (business logic, filtering, ordering)
    - Rendering layer (formatting and output)
-
 2. Improve reusability across different interfaces
-
 3. Make the code more testable with clear boundaries
 
 ## Implementation Plan
 
 ### Step 1: Create Data Model Interfaces
-
 Create interfaces for data structures that will be passed between layers:
 
 ```typescript
 // src/commands/fibers/models.ts
-
 export interface FiberDisplayModel {
   id: string;
   isCore: boolean;
@@ -53,7 +44,6 @@ export interface FiberDisplayModel {
   };
   chains: ChainDisplayModel[];
 }
-
 export interface ChainDisplayModel {
   id: string;
   isEnabled: boolean;
@@ -68,7 +58,6 @@ export interface ChainDisplayModel {
   toolDependencies?: string[];
   provides?: string[];
 }
-
 export interface FiberSummaryModel {
   displayedFibers: number;
   totalFibers: number;
@@ -79,7 +68,6 @@ export interface FiberSummaryModel {
   validModules: number;
   totalModules: number;
 }
-
 export interface ProcessedFiberData {
   fibers: FiberDisplayModel[];
   summary: FiberSummaryModel;
@@ -87,12 +75,10 @@ export interface ProcessedFiberData {
 ```
 
 ### Step 2: Create Data Processing Layer
-
 Implement pure functions that process the environment data into display models:
 
 ```typescript
 // src/commands/fibers/processor.ts
-
 /**
  * Processes environment data into display models based on command options
  */
@@ -125,7 +111,6 @@ export function processFibers(
     summary
   };
 }
-
 /**
  * Creates a display model for a single fiber with all its metadata
  */
@@ -137,17 +122,14 @@ function createFiberDisplayModel(
   // Implementation that extracts all needed data about a fiber
   // No console output here, just pure data transformation
 }
-
 // Other processing functions for different aspects of the data
 ```
 
 ### Step 3: Create Rendering Layer
-
 Implement functions that render the processed data in different formats:
 
 ```typescript
 // src/commands/fibers/renderer.ts
-
 /**
  * Renders processed fiber data according to the specified format
  */
@@ -171,7 +153,6 @@ export function renderFibers(
       return;
   }
 }
-
 /**
  * Renders fiber data to console output
  */
@@ -189,7 +170,6 @@ function renderToConsole(data: ProcessedFiberData, options: any): void {
     renderSummaryToConsole(data.summary);
   }
 }
-
 /**
  * Renders a single fiber to console
  */
@@ -197,17 +177,14 @@ function renderFiberToConsole(fiber: FiberDisplayModel, options: any): void {
   // Implementation that formats and outputs fiber data
   // This function only deals with presentation, not business logic
 }
-
 // Other rendering functions for different output formats
 ```
 
 ### Step 4: Update Command Implementation
-
 Refactor the command to use the new processing and rendering layers:
 
 ```typescript
 // src/commands/fibers/get-command.ts
-
 export function createGetCommand(): Command {
   return new Command('get')
     .description('Display details for fibers and their modules')
@@ -217,7 +194,6 @@ export function createGetCommand(): Command {
       try {
         // 1. Load data (reuse existing function)
         const environment = await loadConfigAndModules(options);
-        
         // 2. Process data using the new processor
         const processedData = processFibers(environment, { 
           name, 
@@ -226,7 +202,6 @@ export function createGetCommand(): Command {
           detailed: options.detailed,
           // other options...
         });
-        
         // 3. Handle special output formats directly
         if (options.json) {
           console.log(renderFibers(processedData, { format: 'json' }));
@@ -235,7 +210,6 @@ export function createGetCommand(): Command {
           console.log(renderFibers(processedData, { format: 'yaml' }));
           return;
         }
-        
         // 4. Handle regular console output
         renderFibers(processedData, {
           detailed: options.detailed
@@ -249,25 +223,18 @@ export function createGetCommand(): Command {
 ```
 
 ### Step 5: Refactor Display Module
-
 Update the existing display module to use the new display models:
-
 1. Move business logic out of display functions
 2. Make display functions focus only on formatting and output
 3. Keep backward compatibility for other commands that might use these functions
 
 ### Step 6: Write Tests
-
 Create unit tests for:
-
 1. Data processing functions
 2. Rendering functions
 3. End-to-end command functionality
 
 ## Implementation Order
-
-Follow this sequence to minimize disruption:
-
 1. Create model interfaces
 2. Implement processor functions with tests
 3. Implement renderer functions with tests
@@ -276,9 +243,6 @@ Follow this sequence to minimize disruption:
 6. Update any dependent commands to use the new architecture
 
 ## Benefits
-
-This refactoring will:
-
 1. Make the code more modular and easier to maintain
 2. Enable reuse of the same business logic for different interfaces
 3. Allow easier addition of new output formats
@@ -286,9 +250,7 @@ This refactoring will:
 5. Make it easier to extend with new features in the future
 
 ## Future Extensions
-
 Once this architecture is in place, you could easily:
-
 1. Add a web API using the same data processor
 2. Create a GUI that uses the same models
 3. Add more output formats (HTML, SVG, etc.)
@@ -300,13 +262,38 @@ Once this architecture is in place, you could easily:
 // CLI usage
 const data = processFibers(environment, options);
 renderFibers(data, { format: 'console' });
-
 // API usage
 const data = processFibers(environment, options);
 return res.json(data);
-
 // Testing
 const data = processFibers(mockEnvironment, options);
 expect(data.fibers).toHaveLength(5);
 expect(data.fibers[0].id).toBe('core');
-``` 
+```
+
+---
+
+## Required Changes
+- Create data model interfaces for display
+- Implement pure data processing functions
+- Implement rendering functions for different output formats
+- Refactor command to use new layers
+- Update display module to use new models
+- Write unit tests for processing and rendering
+
+## Implementation Steps
+- [x] Create model interfaces
+- [x] Implement processor functions with tests
+- [x] Implement renderer functions with tests
+- [x] Refactor command to use new layers
+- [x] Refactor display module as needed
+- [x] Update dependent commands
+
+## Verification
+- [x] All command outputs match expected results
+- [x] Tests pass for processing and rendering
+- [x] Code is modular and testable
+- [x] Documentation updated
+
+## Notes
+This task was completed prior to the adoption of the todos-process. All context and requirements are now fully captured in this file. 
