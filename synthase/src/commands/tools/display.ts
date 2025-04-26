@@ -4,8 +4,6 @@
 import { ToolConfig } from '../../types/config';
 import { ToolStatus, ToolStatusResult, getToolCheckMethod, getToolInstallMethod } from '../../utils/tools';
 import { EMOJI } from '../../utils/display';
-import { debug } from '../../utils/logger';
-import { shellPool } from '../../utils/shell-pool';
 import { countToolsByStatus } from './status';
 
 /**

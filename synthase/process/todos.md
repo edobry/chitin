@@ -87,6 +87,4 @@ This file tracks work items for the Synthase project. Each task follows this for
   - Introduced display models and pure processing functions
   - Enabled easier testing and future interface expansion
 
-### Final Task
-
 - [ ] Implement tool status checks in `fibers get` [#015](tasks/015-implement-tool-status-checks.md)

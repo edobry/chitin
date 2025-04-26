@@ -1,0 +1,12 @@
+---
+description: Use when running a synthase command
+globs: 
+alwaysApply: false
+---
+To run a `synthase` command, use the following template:
+
+```shell
+bun run src/cli.ts <command, args, options>
+```
+
+Make sure to always run commands from the `synthase` directory.

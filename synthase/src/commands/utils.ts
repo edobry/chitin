@@ -3,7 +3,8 @@ import { loadUserConfig, getFullConfig, validateUserConfig, getCoreConfigValue }
 import { UserConfig, ConfigValidationResult, Module } from '../types';
 import { discoverModulesFromConfig } from '../modules/discovery';
 import { debug, setLogLevel, LogLevel } from '../utils/logger';
-import { shellPool } from '../utils/shell-pool';
+import { config as dotenvConfig } from 'dotenv';
+import { Module as ModuleType } from '../types/module';
 
 /**
  * Removes empty objects from a configuration object
@@ -94,11 +95,11 @@ export function createEnvironmentVariables(
 }
 
 /**
- * Context object returned by withConfig
+ * Context provided to command callbacks
  */
 export interface ConfigContext {
   config: UserConfig;
-  validation: ConfigValidationResult;
+  validation: any;
   modules: Module[];
   moduleErrors: string[];
   options: any;
@@ -114,12 +115,6 @@ export async function withConfig<T>(
   callback: (context: ConfigContext) => Promise<T>,
   options: any = {}
 ): Promise<T> {
-  // Initialize shell pool if needed
-  const useShell = options.useShell !== false;
-  if (useShell) {
-    await shellPool.initialize();
-  }
-  
   try {
     // Set log level from environment
     if (process.env.DEBUG === 'true') {
@@ -159,14 +154,5 @@ export async function withConfig<T>(
     console.error(`Error: ${error instanceof Error ? error.message : String(error)}`);
     process.exit(1);
     throw new Error('Unreachable code - process.exit was called');
-  } finally {
-    // Clean up shell resources
-    if (useShell) {
-      try {
-        await shellPool.shutdown();
-      } catch (err) {
-        debug(`Error shutting down shell pool: ${err}`);
-      }
-    }
   }
 } 

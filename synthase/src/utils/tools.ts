@@ -3,8 +3,8 @@
  */
 import { ToolConfig } from '../types/config';
 import { EMOJI } from './display';
-import { debug, error } from './logger';
-import { shellPool } from './shell-pool';
+import { debug } from './logger';
+import { commandExecutor } from './command-executor';
 import { isBrewPackageInstalled, isToolBrewCask, getToolBrewPackageName, initBrewEnvironment } from './homebrew';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -140,7 +140,7 @@ export function isAppBundleInstalled(appName: string): boolean {
       if (fs.existsSync(appPath)) {
         return true;
       }
-    } catch (err) {
+    } catch {
       // Ignore errors and continue checking
     }
   }
@@ -265,7 +265,9 @@ export async function checkToolStatusWithOptions(
     const duration = performance.now() - startTime;
     return {
       status: ToolStatus.ERROR,
-      message: error instanceof Error ? error.message : String(error),
+      message: error instanceof Error && error.message.includes('timed out')
+        ? `${getRelevantErrorMessage(error)}. You can try increasing the timeout with --timeout <ms>.`
+        : getRelevantErrorMessage(error),
       error: error instanceof Error ? error : new Error(String(error)),
       checkDuration: duration
     };
@@ -327,7 +329,17 @@ async function performToolStatusCheck(
           debug(`Using default check command for ${toolId}: ${commandStr}`);
           
           // For simple command checks, use the shell pool
-          const cmdResult = await shellPool.executeCommand(commandStr, timeoutMs);
+          let cmdResult;
+          try {
+            cmdResult = await commandExecutor.executeCommand(commandStr, timeoutMs);
+          } catch (cmdErr) {
+            return {
+              status: ToolStatus.ERROR,
+              message: `Error executing check command: ${getRelevantErrorMessage(cmdErr)}`,
+              error: cmdErr instanceof Error ? cmdErr : new Error(String(cmdErr)),
+              checkDuration: Date.now() - commandStartTime
+            };
+          }
           const duration = Date.now() - commandStartTime;
           
           // Status is based on exit code, not stderr content
@@ -352,7 +364,17 @@ async function performToolStatusCheck(
             : String(config.checkCommand);
           
           // Execute command via shell pool
-          const cmdResult = await shellPool.executeCommand(commandStr, timeoutMs);
+          let cmdResult;
+          try {
+            cmdResult = await commandExecutor.executeCommand(commandStr, timeoutMs);
+          } catch (cmdErr) {
+            return {
+              status: ToolStatus.ERROR,
+              message: `Error executing check command: ${getRelevantErrorMessage(cmdErr)}`,
+              error: cmdErr instanceof Error ? cmdErr : new Error(String(cmdErr)),
+              checkDuration: Date.now() - commandStartTime
+            };
+          }
           const duration = Date.now() - commandStartTime;
           
           // Status is based on exit code, not stderr content
@@ -374,7 +396,7 @@ async function performToolStatusCheck(
       } catch (err) {
         return {
           status: ToolStatus.ERROR,
-          message: `Error executing check command: ${err instanceof Error ? err.message : String(err)}`,
+          message: `Error executing check command: ${getRelevantErrorMessage(err)}`,
           error: err instanceof Error ? err : new Error(String(err)),
           checkDuration: getCheckDuration()
         };
@@ -415,7 +437,7 @@ async function performToolStatusCheck(
       debug(`Checking ${toolId} with eval: ${config.checkEval}`);
       try {
         const evalCommand = config.checkEval;
-        const evalResult = await shellPool.executeCommand(evalCommand, timeoutMs);
+        const evalResult = await commandExecutor.executeCommand(evalCommand, timeoutMs);
         
         if (evalResult.exitCode === 0) {
           return {
@@ -486,7 +508,7 @@ async function performToolStatusCheck(
       
       try {
         const checkCmd = getCheckCommand(commandToCheck);
-        const cmdResult = await shellPool.executeCommand(checkCmd, timeoutMs);
+        const cmdResult = await commandExecutor.executeCommand(checkCmd, timeoutMs);
         
         if (cmdResult.exitCode === 0) {
           return {
@@ -560,7 +582,7 @@ async function performToolStatusCheck(
         
         try {
           const checkCmd = getCheckCommand(commandToCheck);
-          const cmdResult = await shellPool.executeCommand(checkCmd, timeoutMs);
+          const cmdResult = await commandExecutor.executeCommand(checkCmd, timeoutMs);
           
           if (cmdResult.exitCode === 0) {
             return {
@@ -772,4 +794,19 @@ export async function batchCheckToolStatus(
   
   // Return collected results
   return results;
+}
+
+// Helper to extract a concise error message from ExecaError or generic errors
+function getRelevantErrorMessage(error: unknown): string {
+  if (!error) return '';
+  if (typeof error === 'string') return error;
+  if (error instanceof Error) {
+    // ExecaError has extra fields
+    const anyErr = error as any;
+    if (anyErr.shortMessage) return anyErr.shortMessage;
+    if (anyErr.signalDescription) return anyErr.signalDescription;
+    if (anyErr.message) return anyErr.message.split('\n')[0];
+    return anyErr.message;
+  }
+  return String(error);
 } 

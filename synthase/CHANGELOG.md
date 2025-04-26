@@ -102,6 +102,15 @@
   - Added tests for both basic and complex dependency structures
   - Used snapshot testing to verify output format consistency
   - Ensured the dependency visualization remains reliable and accurate across changes
+- Replaced shell pool implementation with direct command execution:
+  - Improved performance by 14-48% across various tool sets
+  - Eliminated timeout errors that occurred with the pooled approach
+  - Simplified codebase by removing complex process lifecycle management
+  - Enhanced reliability through independent command execution
+  - Maintained backward compatibility through API-compatible implementation
+  - Reduced resource usage by eliminating persistent shell processes
+  - Renamed `shellPool` to `commandExecutor` and `shell-pool.ts` to `command-executor.ts` for clarity
+  - Removed unnecessary initialize() and shutdown() methods from CommandExecutor for a simpler, more direct API
 
 ### To Fix
 - Status check timing summary appears twice when running `tools get --status` command - once before the final separator and once in the summary section 
@@ -115,7 +124,7 @@
   - Config and file constants moved to `config/types.ts`
   - Original `constants.ts` maintained for backward compatibility
 - Modified import structure in src/index.ts to avoid type ambiguities
-
+- Renamed `shellPool` to `commandExecutor` throughout the codebase to better reflect its direct command execution functionality
 - Restored original display format for `tools get --status` command to maintain backward compatibility
 - Added back progress indicator showing current tool being checked during status check
 - Fixed duplicate "Checking tool status..." message

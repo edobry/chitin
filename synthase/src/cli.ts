@@ -15,14 +15,43 @@ const program = createCLI();
 
 debug("Created CLI program, parsing arguments...");
 
-// Parse the command line arguments
-program.parse();
+// Top-level error handling
+(async () => {
+  try {
+    // Parse the command line arguments
+    await program.parseAsync();
+    debug("Parsed arguments, checking command...");
+    // If no arguments provided, show help
+    if (process.argv.length <= 2) {
+      program.help();
+    }
+    debug("CLI execution completed.");
+  } catch (err) {
+    const error = err instanceof Error ? err : new Error(String(err));
+    if (process.env.DEBUG && process.env.DEBUG !== 'false' && process.env.DEBUG !== '0') {
+      console.error(error.stack || error.message);
+    } else {
+      console.error(error.message.split('\n')[0]);
+    }
+    process.exit(1);
+  }
+})();
 
-debug("Parsed arguments, checking command...");
-
-// If no arguments provided, show help
-if (process.argv.length <= 2) {
-  program.help();
-}
-
-debug("CLI execution completed.");
+// Global error handlers to suppress error dumps
+process.on('unhandledRejection', (reason) => {
+  const error = reason instanceof Error ? reason : new Error(String(reason));
+  if (process.env.DEBUG && process.env.DEBUG !== 'false' && process.env.DEBUG !== '0') {
+    console.error(error.stack || error.message);
+  } else {
+    console.error(error.message.split('\n')[0]);
+  }
+  process.exit(1);
+});
+process.on('uncaughtException', (error) => {
+  if (process.env.DEBUG && process.env.DEBUG !== 'false' && process.env.DEBUG !== '0') {
+    console.error(error.stack || error.message);
+  } else {
+    console.error(error.message.split('\n')[0]);
+  }
+  process.exit(1);
+});

@@ -2,47 +2,31 @@
  * Tools command for managing and displaying tool configurations
  */
 import { Command } from 'commander';
-import fs from 'fs';
-import path from 'path';
 import { performance } from 'perf_hooks';
-import { UserConfig } from '../../types/config';
 import { Module } from '../../types/module';
 import { ToolConfig } from '../../types/config';
+import { ToolStatusResult } from '../../utils/tools';
+import { ToolDisplayOptions } from './display';
 import { loadAndValidateConfig } from '../utils';
 import { discoverModulesFromConfig } from '../../modules/discovery';
-
-// Import shared utilities
-import { debug, error, info, setLogLevel, LogLevel } from '../../utils/logger';
+import { debug, setLogLevel, LogLevel } from '../../utils/logger';
 import { setupProcessCleanup } from '../../utils/process';
-import { shellPool } from '../../utils/shell-pool';
-import { ToolStatus, ToolStatusResult } from '../../utils/tools';
-
-// Import domain-specific utilities
 import { loadParentConfig, extractAllTools } from './discovery';
-import { filterTools, ToolFilterOptions } from './filter';
+import { filterTools } from './filter';
 import { 
-  displaySingleTool, 
   displayTools, 
   displayToolsAsJson, 
-  displayToolsAsYaml,
-  displayToolsLegend,
-  ToolDisplayOptions
+  displayToolsAsYaml
 } from './display';
 import {
   checkToolStatuses,
   createConsoleProgressHandler,
-  clearProgressLine,
-  ToolStatusCheckOptions
+  clearProgressLine
 } from './status';
-
-// Import shared constants
 import {
   DEFAULT_TOOL_CONCURRENCY,
   DEFAULT_TOOL_TIMEOUT
 } from './constants';
-
-import { getToolConfig } from '../../utils/tools';
-import { checkToolStatus } from '../../utils/tools';
 
 /**
  * Creates a tools command
@@ -69,6 +53,7 @@ export function createToolsCommand(): Command {
         .option('--cache-max-age <milliseconds>', 'Maximum age for cached status results in milliseconds')
         .option('--skip-tools <toolIds>', 'Comma-separated list of tool IDs to skip checking')
         .option('--debug', 'Show debug timing information')
+        .option('--timeout <ms>', 'Timeout in milliseconds for each tool status check')
         .action(handleToolsCommand)
     )
     .addCommand(
@@ -89,75 +74,6 @@ export function createToolsCommand(): Command {
   setupProcessCleanup();
   
   return cmd;
-}
-
-/**
- * Shared helper function for tool commands to handle common setup and cleanup tasks
- * @param callback Function that will be called with the tools and other context
- * @param options Command options
- */
-async function withToolSetup<T>(
-  callback: (context: { 
-    tools: Map<string, { config: ToolConfig, source: string }>,
-    filteredTools: Map<string, { config: ToolConfig, source: string }>,
-    modules: Module[],
-    options: any
-  }) => Promise<T>,
-  options: any
-): Promise<T> {
-  try {
-    if (process.env.DEBUG === 'true') {
-      setLogLevel(LogLevel.DEBUG);
-    }
-    
-    // Only initialize the shell pool if we need to check status
-    if (options.status) {
-      debug('Initializing shell pool for status checks');
-    await shellPool.initialize();
-    }
-    
-    // Load configuration and validate
-    const { config } = await loadAndValidateConfig();
-    
-    debug('Discovering modules');
-    
-    // Discover modules
-    const discoveryResult = await discoverModulesFromConfig(config);
-    const modules: Module[] = discoveryResult.modules || [];
-    
-    debug(`Found ${modules.length} modules`);
-    
-    // Initialize the parent project configuration
-    // Always try to find the parent first
-    let parentConfig = loadParentConfig(process.cwd());
-    
-    // Extract tools from all sources
-    const tools = extractAllTools(config, modules);
-    
-    // Apply filters
-    const filteredTools = filterTools(tools, {
-      filterSource: options.filterSource,
-      filterCheck: options.filterCheck,
-      filterInstall: options.filterInstall
-    });
-    
-    // Call the specific handler with the prepared context
-    return await callback({ tools, filteredTools, modules, options });
-  } catch (err) {
-    console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
-    process.exit(1);
-    throw new Error('This code is unreachable due to process.exit(1)');
-  } finally {
-    // Only clean up the shell pool if we initialized it
-    if (options.status) {
-    try {
-        debug('Shutting down shell pool');
-      await shellPool.shutdown();
-    } catch (err) {
-      debug(`Error shutting down shell pool: ${err}`);
-      }
-    }
-  }
 }
 
 /**
@@ -194,9 +110,10 @@ async function checkToolStatusesWithProgress(
     concurrency?: number;
     quiet?: boolean;
     debug?: boolean;
+    timeout?: number;
   } = {}
 ): Promise<{ results: Map<string, ToolStatusResult>; duration: number }> {
-  const { concurrency = DEFAULT_TOOL_CONCURRENCY, quiet = false, debug: showDebug = false } = options;
+  const { concurrency = DEFAULT_TOOL_CONCURRENCY, quiet = false, debug: showDebug = false, timeout } = options;
   
   if (tools.size === 0) {
     return { results: new Map(), duration: 0 };
@@ -230,7 +147,7 @@ async function checkToolStatusesWithProgress(
   const startTime = performance.now();
   const statusResults = await checkToolStatuses(tools, {
     concurrency, 
-    timeout: getToolTimeout(),
+    timeout: timeout || getToolTimeout(),
     onProgress: quiet ? undefined : progressHandler,
     ...timeTrackingOptions
   });
@@ -268,6 +185,7 @@ async function handleToolsCommand(toolNames: string[] | undefined, options: any)
     // Parse concurrency option
     const concurrency = parseInt(options.concurrency, 10) || 10;
     const debug = options.debug || false;
+    const timeout = options.timeout ? parseInt(options.timeout, 10) : undefined;
     
     // If specific tools are requested
     if (toolNames && toolNames.length > 0) {
@@ -298,7 +216,8 @@ async function handleToolsCommand(toolNames: string[] | undefined, options: any)
         const result = await checkToolStatusesWithProgress(toolsToDisplay, {
           concurrency,
           quiet: true, // Stay quiet for JSON output
-          debug
+          debug,
+          timeout
         });
         statusResults = result.results;
         duration = result.duration;
@@ -347,7 +266,8 @@ async function handleToolsCommand(toolNames: string[] | undefined, options: any)
       const result = await checkToolStatusesWithProgress(filteredTools, { 
         concurrency,
         quiet: options.json || options.yaml, // Stay quiet for JSON/YAML output
-        debug
+        debug,
+        timeout
       });
       statusResults = result.results;
       duration = result.duration;
@@ -380,4 +300,49 @@ async function handleToolsCommand(toolNames: string[] | undefined, options: any)
     // Display tools with the collected display options
     await displayTools(filteredTools, displayOptions);
   }, options);
+}
+
+// Simplified withToolSetup function
+async function withToolSetup<T>(
+  callback: (context: { 
+    tools: Map<string, { config: ToolConfig, source: string }>,
+    filteredTools: Map<string, { config: ToolConfig, source: string }>,
+    modules: Module[],
+    options: any
+  }) => Promise<T>,
+  options: any
+): Promise<T> {
+  try {
+    if (process.env.DEBUG === 'true') {
+      setLogLevel(LogLevel.DEBUG);
+    }
+    
+    // Load configuration and validate
+    const { config } = await loadAndValidateConfig();
+    debug('Discovering modules');
+    // Discover modules
+    const discoveryResult = await discoverModulesFromConfig(config);
+    const modules: Module[] = discoveryResult.modules || [];
+    debug(`Found ${modules.length} modules`);
+    // Initialize the parent project configuration
+    // Always try to find the parent first
+    loadParentConfig(process.cwd());
+    // Extract tools from all sources
+    const tools = extractAllTools(config, modules);
+    // Apply filters
+    const filteredTools = filterTools(tools, {
+      filterSource: options.filterSource,
+      filterCheck: options.filterCheck,
+      filterInstall: options.filterInstall
+    });
+    // Call the specific handler with the prepared context
+    return await callback({ tools, filteredTools, modules, options });
+  } catch (err) {
+    // Explicitly log the error
+    console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
+    
+    // Re-throw the error instead of calling process.exit
+    // This allows promise rejection to propagate naturally
+    throw err;
+  }
 } 
