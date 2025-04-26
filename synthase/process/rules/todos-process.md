@@ -108,3 +108,55 @@ This rule is enforced through:
 - Automated checks for CHANGELOG updates
 - Task completion verification
 - Documentation reviews 
+
+# TODO/Task Creation Process (Synthase)
+
+## Overview
+All TODOs and work items must be tracked using the canonical process described here. Ad-hoc or freeform TODO files (e.g., TODO.something.md) are NOT permitted. All tasks must be:
+- Listed in `/process/todos.md` as a checklist item
+- Linked to a detailed task spec in `/process/tasks/{id}-{name}.md`
+
+## Step-by-Step Instructions
+
+### 1. Check for Existing Tasks
+- Before starting any new work, check `/process/todos.md` for an existing task that matches your intended work.
+- If a relevant task exists, follow its linked specification.
+
+### 2. Add a New Task
+- If no relevant task exists, add a new checklist item to `/process/todos.md` using the following format:
+  ```markdown
+  - [ ] Task Title [#NNN](tasks/NNN-task-title.md)
+  ```
+  - Use the next available task number (NNN).
+  - The title should be concise but descriptive.
+
+### 3. Create the Task Specification
+- Create a new file in `/process/tasks/` named `{NNN}-task-title.md`.
+- The task spec should include:
+  - **Objective**: What is the goal of the task?
+  - **Task Breakdown**: A checklist of all required steps and substeps.
+  - **Verification**: What must be true for the task to be considered complete?
+- Use checkboxes for all actionable items and sub-items.
+- Include any relevant context, links, or references.
+
+### 4. Working on the Task
+- Follow the task specification exactly.
+- Complete all verification steps before marking the task as done.
+- Update `CHANGELOG.md` if required by the task.
+- Create a PR referencing the task number.
+- Check and respect any task dependencies.
+
+### 5. Marking a Task Complete
+- When all work and verification steps are done:
+  - Change `[ ]` to `[x]` in `/process/todos.md` for the task.
+  - Ensure the PR references the task number.
+
+## Example
+```markdown
+- [ ] Refactor Dependency Graph [#009](tasks/009-refactor-dependency-graph.md)
+```
+
+## Notes
+- The full process documentation is maintained in `/process/rules/todos-process.md`.
+- Never skip verification steps or mark a task complete without meeting all requirements.
+- All code, documentation, and process changes must follow this workflow. 

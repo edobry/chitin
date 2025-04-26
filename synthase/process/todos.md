@@ -52,4 +52,12 @@ When working on a task:
 - [ ] Implement Constants Management [#007](tasks/007-implement-constants-management.md)
   - Follow constants-management rule
   - Organize domain-specific constants
-  - Update constant references 
+  - Update constant references
+
+- [ ] Abstract and Refactor Module Ordering (Fibers & Chains) [#008](tasks/008-order-modules-abstraction.md)
+
+- [ ] Refactor Fiber Dependency CLI Tests to Pure Function Unit Tests [#009](tasks/009-refactor-fiber-deps-tests.md)
+  - Replace CLI-level tests for createDepsCommand with unit tests for pure functions
+  - Extract/ensure pure formatting and graph logic
+  - Write/expand tests for buildFiberDependencyGraph, orderFibers, and output formatting
+  - Remove unnecessary mocks and CLI parsing from tests

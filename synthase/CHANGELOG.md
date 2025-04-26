@@ -561,8 +561,28 @@
   - Maintained all existing functionality while reducing command complexity
 
 ### Changed
-- Modularized the fibers command structure
-  - Separated subcommands into individual files
-  - Extracted utility functions into dedicated modules
-  - Improved type definitions and interfaces
-  - Created clear module boundaries for better organization
+- Modularized fiber command structure:
+  - Moved command implementations to `commands/` directory
+  - Consolidated types in `types/` directory
+  - Organized utilities in `utils/` directory
+  - Removed duplicate files and merged functionality
+  - Improved code organization and maintainability
+
+### Changed
+- Renamed `orderFibersByDependencies` to `orderFibers` in `src/commands/fibers/utils/dependency-utils.ts` for better clarity, maintaining backward compatibility through re-export
+
+### Changed
+- Consolidated all fiber sorting logic into a single unified `orderFibers` function in `src/commands/fibers/utils/dependency-utils.ts`
+  - Added support for various ordering options (prioritizing configured fibers, alphabetical sorting, special fiber handling, etc.)
+  - Removed redundant sorting functions
+  - Improved dependency ordering to ensure correct fiber order in all commands
+- Removed `orderFibersByConfigAndName` from `organization.ts`
+  - Updated `deps-command.ts` and other files to use the new unified function
+  - Added support for various sorting options including:
+    - Prioritizing configured fibers
+    - Alphabetical sorting
+    - Special fiber handling (core, dotfiles)
+    - Special dependent sorting
+    - Including/excluding discovered fibers
+    - Filtering disabled fibers
+    - Reversing dependency direction 
