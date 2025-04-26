@@ -3,18 +3,18 @@ description:
 globs: 
 alwaysApply: true
 ---
-# Todos Process Rule
+# Tasks Process Rule
 
-## Rule Name: todos-process
+## Rule Name: tasks-process
 
 ## Description
 
-This rule defines the mandatory process for working with tasks in the Synthase project. All code changes must follow this process to maintain consistency and quality.
+This rule defines the mandatory process for working with tasks in the project. All code changes must follow this process to maintain consistency and quality.
 
 ## Process
 
-### 1. Check Todos First
-- Before starting any work, check `/process/todos.md` for related tasks
+### 1. Check Tasks First
+- Before starting any work, check `/process/tasks.md` for related tasks
 - If your work relates to an existing task, follow that task's process
 - If no task exists for your work, create one following the task template
 
@@ -31,7 +31,7 @@ This rule defines the mandatory process for working with tasks in the Synthase p
   - All documentation is updated
   - CHANGELOG is updated
   - PR is created with proper references
-- Use `[x]` to mark completed tasks in todos.md
+- Use `[x]` to mark completed tasks in tasks.md
 - Document any incomplete verification steps
 - Never skip verification steps
 
@@ -114,25 +114,25 @@ This rule is enforced through:
 - Task completion verification
 - Documentation reviews 
 
-# TODO/Task Creation Process (Synthase)
+# Task Creation Process
 
 ## Overview
-All TODOs and work items must be tracked using the canonical process described here. Ad-hoc or freeform TODO files (e.g., TODO.something.md) are NOT permitted. All tasks must be:
-- Listed in `/process/todos.md` as a checklist item
+All tasks and work items must be tracked using the canonical process described here. Ad-hoc or freeform task files (e.g., TODO.something.md) are NOT permitted. All tasks must be:
+- Listed in `/process/tasks.md` as a checklist item
 - Linked to a detailed task spec in `/process/tasks/{id}-{name}.md`
 
 ## Step-by-Step Instructions
 
 ### 1. Check for Existing Tasks
-- Before starting any new work, check `/process/todos.md` for an existing task that matches your intended work.
+- Before starting any new work, check `/process/tasks.md` for an existing task that matches your intended work.
 - If a relevant task exists, follow its linked specification.
 
 ### 2. Add a New Task
-- If no relevant task exists, add a new checklist item to `/process/todos.md` using the following format:
+- If no relevant task exists, add a new checklist item to `/process/tasks.md` using the following format:
   ```markdown
-  - [ ] Task Title [#NNN](tasks/NNN-task-title.md)
+  - [ ] Task Title @#NNN
   ```
-  - Use the next available task number (NNN).
+  - Use the nvailable task number (NNN).
   - The title should be concise but descriptive.
 
 ### 3. Create the Task Specification
@@ -153,15 +153,14 @@ All TODOs and work items must be tracked using the canonical process described h
 
 ### 5. Marking a Task Complete
 - When all work and verification steps are done:
-  - Change `[ ]` to `[x]` in `/process/todos.md` for the task.
+  - Change `[ ]` to `[x]` in `/process/tasks.md` for the task.
   - Ensure the PR references the task number.
 
 ## Example
 ```markdown
-- [ ] Refactor Dependency Graph [#009](tasks/009-refactor-dependency-graph.md)
+- [ ] Refactor Dependency Graph @#009
 ```
 
 ## Notes
-- The full process documentation is maintained in `/process/rules/todos-process.md`.
-- Never skip verification steps or mark a task complete without meeting all requirements.
+- Nevip verification steps or mark a task complete without meeting all requirements.
 - All code, documentation, and process changes must follow this workflow. 
