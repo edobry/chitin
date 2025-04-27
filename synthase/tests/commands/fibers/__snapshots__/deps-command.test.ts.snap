@@ -1,0 +1,81 @@
+// Bun Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`deps command basic dependency structure should display tree diagram by default 1`] = `
+"Fiber Dependency Diagram:
+─────────────────────────
+└── 🟢 core
+    ├── 🟢 dev
+    │   └── 🟢 app
+    │       └── ⚫ plugin
+    └── 🟢 utils"
+`;
+
+exports[`deps command basic dependency structure should output JSON when --json flag is used 1`] = `
+"Fiber Dependency Diagram:
+─────────────────────────
+└── 🟢 core
+    ├── 🟢 dev
+    │   └── 🟢 app
+    │       └── ⚫ plugin
+    └── 🟢 utils"
+`;
+
+exports[`deps command basic dependency structure should hide disabled fibers when --hide-disabled flag is used 1`] = `
+"Fiber Dependency Diagram:
+─────────────────────────
+└── 🟢 core
+    ├── 🟢 dev
+    │   └── 🟢 app
+    │       └── ⚫ plugin
+    └── 🟢 utils"
+`;
+
+exports[`deps command basic dependency structure should show flat list when --flat flag is used 1`] = `
+"Fiber Dependency Diagram:
+─────────────────────────
+└── 🟢 core
+    ├── 🟢 dev
+    │   └── 🟢 app
+    │       └── ⚫ plugin
+    └── 🟢 utils"
+`;
+
+exports[`deps command complex dependency structure should show reverse dependencies when --reverse flag is used 1`] = `
+"Fiber Dependency Diagram:
+─────────────────────────
+└── 🟢 core
+    └── 🟢 dev
+        └── 🟢 ui
+            └── 🟢 api
+                └── ⚫ data"
+`;
+
+exports[`deps command complex dependency structure should show detailed information when --detailed flag is used 1`] = `
+"Fiber Dependency Diagram:
+─────────────────────────
+└── 🟢 core
+    └── 🟢 dev
+        └── 🟢 ui
+            └── 🟢 api
+                └── ⚫ data"
+`;
+
+exports[`deps command complex dependency structure should output GraphViz format when --graphviz flag is used 1`] = `
+"Fiber Dependency Diagram:
+─────────────────────────
+└── 🟢 core
+    └── 🟢 dev
+        └── 🟢 ui
+            └── 🟢 api
+                └── ⚫ data"
+`;
+
+exports[`deps command complex dependency structure should handle multiple flags together 1`] = `
+"Fiber dependencies:
+
+🟢 core: required by api, data, dev, ui
+🟢 api: required by core, data
+⚫ data: required by core
+🟢 dev: required by core, api, ui
+🟢 ui: required by core, api, data"
+`;

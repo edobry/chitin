@@ -1,0 +1,51 @@
+
+## AI Coding Assistant Rules File
+
+This file defines all project rules, coding standards, workflow guidelines, references, documentation structures, and best practices.  It is a living document and will evolve with the project.
+
+## TECH STACK
+
+- TypeScript
+- Node.js
+- Yarn
+
+## PROJECT DOCUMENTATION & CONTEXT SYSTEM
+
+- All documentation should follow the Markdown format.
+-  Use SpecStory for issue tracking and documentation generation.
+
+## CODING STANDARDS
+
+- Maintain consistent indentation (2 spaces).
+- Follow TypeScript type annotations consistently.
+- Commit messages should be clear, concise, and descriptive.
+
+## WORKFLOW & RELEASE RULES
+
+- All code changes must be reviewed before merging.
+-  New features must be thoroughly tested before release.
+
+
+## DEBUGGING
+
+- Utilize the debugger effectively for troubleshooting.
+- Log relevant information for debugging purposes.
+
+
+## FIBER SORTING
+
+- All fiber sorting logic should be consolidated into a single function: `orderFibers`. This function should support various ordering options including:
+    - Prioritizing configured fibers.
+    - Alphabetical sorting.
+    - Special handling of core and dotfiles fibers.
+    - Special dependent sorting (e.g., 'dev' first for 'core').
+    - Including or excluding discovered fibers.
+    - Filtering disabled fibers.
+    - Reversing the dependency direction.
+- The `orderFibers` function is located in `src/commands/fibers/dependency-utils.ts`.
+-  The function signature should include an `options` object to control the sorting behavior.
+
+
+## KNOWN CONFLICTS
+
+- There was a conflict between multiple fiber sorting functions. This has been resolved by merging all sorting logic into a single, unified function (`orderFibers`).

@@ -1,0 +1,140 @@
+# Proper Process Management
+
+Ensure that all child processes are properly managed and cleaned up:
+
+## Key Principles
+
+1. **Process Registration**: Track all child processes in a central registry:
+   ```typescript
+   // Process registry example
+   export const processRegistry = {
+     processes: new Set<ChildProcess>(),
+     
+     register(process: ChildProcess) {
+       this.processes.add(process);
+       // Auto-remove on completion
+       process.once('exit', () => this.processes.delete(process));
+       return process;
+     },
+     
+     killAll() {
+       for (const process of this.processes) {
+         try {
+           process.kill();
+         } catch (err) {
+           console.error(`Error killing process: ${err}`);
+         }
+       }
+       this.processes.clear();
+     }
+   };
+   ```
+
+2. **Graceful Termination**: Implement multi-stage shutdown with increasing levels of force:
+   ```typescript
+   async function terminateProcess(proc: ChildProcess, timeoutMs: number = 5000): Promise<void> {
+     if (!proc.pid) return;
+     
+     // Try SIGTERM first
+     proc.kill('SIGTERM');
+     
+     // Wait for graceful exit
+     const exitPromise = new Promise<void>(resolve => {
+       proc.once('exit', () => resolve());
+     });
+     
+     // Set up timeout
+     const timeoutPromise = new Promise<void>((_, reject) => {
+       setTimeout(() => reject(new Error('Process termination timeout')), timeoutMs);
+     });
+     
+     try {
+       // Wait for graceful exit with timeout
+       await Promise.race([exitPromise, timeoutPromise]);
+     } catch (err) {
+       // If timed out, force kill
+       proc.kill('SIGKILL');
+     }
+   }
+   ```
+
+3. **Non-interactive Shells**: Avoid interactive shells for automation:
+   ```typescript
+   // AVOID
+   const shell = execa('bash', ['-i'], { /* options */ });
+   
+   // PREFER
+   const shell = execa('bash', [], {
+     env: {
+       ...process.env,
+       BASH_SILENCE_DEPRECATION_WARNING: '1',
+     }
+   });
+   ```
+
+4. **Signal Handling**: Set up proper signal handlers for the main process:
+   ```typescript
+   process.on('SIGINT', () => {
+     console.log('Received SIGINT, shutting down...');
+     processRegistry.killAll();
+     process.exit(0);
+   });
+   
+   process.on('SIGTERM', () => {
+     console.log('Received SIGTERM, shutting down...');
+     processRegistry.killAll();
+     process.exit(0);
+   });
+   
+   // Even handle normal exit
+   process.on('exit', () => {
+     processRegistry.killAll();
+   });
+   ```
+
+5. **Timeout Management**: Always set timeouts for potentially long-running operations:
+   ```typescript
+   function executeCommand(command: string, timeoutMs: number = 5000): Promise<CommandResult> {
+     // Set up a timeout controller
+     const controller = new AbortController();
+     const { signal } = controller;
+     
+     const timeoutId = setTimeout(() => {
+       controller.abort(new Error(`Command timed out after ${timeoutMs}ms: ${command}`));
+     }, timeoutMs);
+     
+     try {
+       // Execute with timeout signal
+       return execa(command, { shell: true, signal });
+     } finally {
+       clearTimeout(timeoutId);
+     }
+   }
+   ```
+
+6. **Environment Setup**: Ensure child processes have the correct environment:
+   ```typescript
+   // Set up proper environment for child processes
+   const childEnv = {
+     ...process.env,
+     PATH: `/opt/homebrew/bin:/opt/homebrew/sbin:${process.env.PATH || ''}`,
+     // Add application-specific environment variables
+     APP_MODE: 'production',
+   };
+   
+   const child = execa('command', [], { env: childEnv });
+   ```
+
+## Benefits
+
+- **Prevents Zombie Processes**: Ensures all processes are properly terminated
+- **Improves Resource Management**: Avoids resource leaks from orphaned processes
+- **Enhances Application Stability**: Graceful handling of process termination
+- **Simplifies Debugging**: Clear tracking of all spawned processes
+
+## Anti-patterns to Avoid
+
+- **Interactive Shells**: Avoid the -i flag for bash/shell processes in automated contexts
+- **Orphaned Processes**: Never spawn processes without tracking them
+- **Missing Timeouts**: All process execution should have appropriate timeouts
+- **Ignoring Exit Codes**: Always check and handle process exit codes 

@@ -1,0 +1,66 @@
+core:
+  projectDir: ~/Projects
+  dotfilesDir: localshare/chezmoi
+  checkTools: false
+  installToolDeps: false
+  loadParallel: true
+  moduleConfig:
+    secret:
+      tool: pass
+
+# Add fiberDeps to show dependency information
+dev:
+  fiberDeps:
+    - dotfiles
+    - core
+  moduleConfig:
+    docker:
+      enabled: false
+
+dotfiles:
+  fiberDeps:
+    - core
+  moduleConfig:
+    auth:
+      credsDir: /Users/edobry/.ssh/global
+      keyName: gpg-eugene@dobry.me
+    ntfy:
+      secretName: ntfy/token/linkslate-cli
+      tokenSecret: ntfy/token/linkslate-cli
+
+cloud:
+  fiberDeps:
+    - dev
+  moduleConfig:
+    aws:
+      enabled: false
+    ansible:
+      enabled: false
+    kafka:
+      enabled: false
+    gcloud:
+      enabled: false
+    platform:
+      default: local
+
+chezmoi:
+  enabled: false
+  fiberDeps:
+    - dotfiles
+
+chitin:
+  enabled: false
+  fiberDeps:
+    - core
+    - dev
+
+oplabs:
+  enabled: false
+  fiberDeps:
+    - cloud
+    - dev
+
+chainalysis:
+  enabled: false
+  fiberDeps:
+    - cloud 
