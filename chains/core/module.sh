@@ -54,10 +54,17 @@ function chiFiberLoadExternal() {
         chiFiberLoad "$CHI_DOTFILES_DIR"
     fi
 
-    IFS=$'\n' fibers=($(find "$CHI_PROJECT_DIR" -maxdepth 1 -type d -not -path "$CHI_PROJECT_DIR" -name 'chitin-*'))
+    # read the sibling list line by line. The previous prefix assignment on a plain
+    # array assignment (`IFS=$'\n' fibers=(...)`) left IFS changed for the whole shell,
+    # and the array leaked as a global (audit defect B23)
+    local fibers=()
+    local fiber
+    while IFS= read -r fiber; do
+        [[ -n "$fiber" ]] && fibers+=("$fiber")
+    done < <(find "$CHI_PROJECT_DIR" -maxdepth 1 -type d -not -path "$CHI_PROJECT_DIR" -name 'chitin-*')
     [[ ${#fibers[@]} -gt 0 ]] || return 0
-    
-    chiFiberLoadExternalLoop $*"${fibers[@]}"
+
+    chiFiberLoadExternalLoop "${fibers[@]}"
 }
 
 function chiFiberLoadExternalLoop() {
@@ -65,22 +72,47 @@ function chiFiberLoadExternalLoop() {
 
     local fibers=("$@")
     local retryList=()
+    local fiber
 
     for fiber in "${fibers[@]}"; do
-        # echo "loading fiber: $fiber"
         if ! chiFiberLoad "$fiber"; then
-        # echo "loading fiber failed, retrying"
             retryList+=("$fiber")
-        else
-            # echo "fiber loaded: $fiber"
         fi
     done
 
-    # if not all fibers loaded, retry
-    if [[ ${#retryList[@]} -gt 0 ]]; then
-        # echo "retrying: ${retryList[@]}"
-        chiFiberLoadExternalLoop "${retryList[@]}"
+    [[ ${#retryList[@]} -gt 0 ]] || return 0
+
+    # a fiber that failed only because a dependency had not loaded yet succeeds on a
+    # later pass. One whose dependency can never load (missing, disabled, misspelled)
+    # used to make this recurse forever and hang shell login; stop once a pass loads
+    # nothing, say why, and let the shell finish starting without those fibers
+    if [[ ${#retryList[@]} -eq ${#fibers[@]} ]]; then
+        for fiber in "${retryList[@]}"; do
+            local unmetDeps="$(chiFiberGetUnmetDeps "$fiber" | tr '\n' ' ')"
+            local reason="see errors above"
+            [[ -n "$unmetDeps" ]] && reason="unmet fiberDeps: ${unmetDeps% }"
+            chiLogError "giving up on fiber: $reason" "$(chiFiberPathToName "$fiber")"
+        done
+        # the errors above are the outcome; the shell must still finish starting, also
+        # when CHI_FAIL_ON_ERROR has set -e in effect
+        return 0
     fi
+
+    chiFiberLoadExternalLoop "${retryList[@]}"
+}
+
+# prints the fiberDeps of the given fiber that are not loaded, one per line
+function chiFiberGetUnmetDeps() {
+    requireArg "a fiber path" "$1" || return 1
+
+    local config="$(chiConfigGetVariableValue "$(chiFiberPathToName "$1")")"
+    [[ -z "$config" ]] && return 0
+
+    local dep
+    while IFS= read -r dep; do
+        [[ -z "$dep" ]] && continue
+        [[ -z $(chiModuleGetDynamicVariable "$CHI_MODULE_LOADED_PREFIX" "$dep") ]] && echo "$dep"
+    done <<< "$(jsonRead "$config" '(.fiberDeps // [])[]')"
 }
 
 export CHI_MODULE_NAME_PREFIX="CHI_MODULE_NAME"
