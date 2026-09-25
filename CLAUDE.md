@@ -13,13 +13,14 @@ umbrella task mt#5205; follow the session workflow in `.claude/rules/`.
 
 ## Working on the bash framework
 
-- **It is zsh-only in practice.** Test in zsh. `just check` runs `zsh -n` over every shell file.
+- **It is zsh-only in practice.** Test in zsh. `just check` (root justfile, from mt#5207) runs
+  `zsh -n` over every shell file.
   `bash -n` fails on `chains/core/module.sh` for a pre-existing reason (audit defect B1).
 - `export CHI_AUTOINIT_DISABLED=true` while developing, then load deliberately with `chiShell`
   (`chiShellDebug` adds per-line timings). It is also the recovery path when the loader breaks:
   set it, open a shell, fix, unset.
-- Point `XDG_CONFIG_HOME` at a scratch directory before testing module loading. Startup can write
-  to the real `~/.config/chitin/userConfig.yaml` when a module ships a userConfig template.
+- Point `XDG_CONFIG_HOME` at a scratch directory before testing module loading, so experiments
+  never touch the real `~/.config/chitin/userConfig.yaml`.
 - Real behaviour needs real fibers: `chitin-*` siblings in `~/Projects` and a populated
   userConfig. A bare clone exercises about a third of the loader. Some meta functions assume the
   checkout is named `chitin` (defect B15).
