@@ -7,3 +7,9 @@ bench *ARGS:
 # Syntax-check every shell file with zsh -n; run shellcheck when installed.
 check:
     scripts/check.zsh
+
+# Dump a fresh shell's observable state (CHI_* env, functions, aliases, PATH, fpath) to FILE.
+# `just state-dump a.txt --cold` then `just state-dump b.txt` and `diff a.txt b.txt` is the
+# parity check for loader and snapshot changes. See scripts/state-dump.zsh --help.
+state-dump FILE *ARGS:
+    scripts/state-dump.zsh {{FILE}} {{ARGS}}
