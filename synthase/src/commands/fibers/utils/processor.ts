@@ -3,7 +3,7 @@
  * @description Data processing functions for the fiber command refactoring
  */
 
-import { FiberEnvironment, FiberCommandOptions, ProcessedFiberData, FiberDisplayModel, ChainDisplayModel, FiberSummaryModel } from './models';
+import { FiberEnvironment, FiberCommandOptions, ProcessedFiberData, FiberDisplayModel, ChainDisplayModel, FiberSummaryModel } from '../types';
 import { areFiberDependenciesSatisfied } from '../../../fiber';
 import { FIBER_NAMES } from '../../../fiber/types';
 
