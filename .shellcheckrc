@@ -1,0 +1,9 @@
+# shellcheck configuration for the chitin bash framework.
+# The framework is zsh-first; these exclusions cover constructs it relies on.
+shell=bash
+disable=SC1090   # non-constant source paths (module loader)
+disable=SC1091   # sourced files not followed
+disable=SC2086   # unquoted expansions are used deliberately for word splitting
+disable=SC2155   # `local x=$(cmd)` is pervasive (see audit: exit-code trap)
+disable=SC2296   # zsh parameter expansion forms
+disable=SC2154   # variables set dynamically via export "$(name)=..."
