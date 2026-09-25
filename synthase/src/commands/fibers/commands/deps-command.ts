@@ -24,7 +24,7 @@ import {
 import {
   associateChainsByFiber,
   filterDisabledFibers
-} from '../organization';
+} from '../utils/organization';
 import { join } from 'path';
 import fs from 'fs';
 import yaml from 'js-yaml';
