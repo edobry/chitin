@@ -94,18 +94,19 @@ function chiModuleUserConfigMergeFromFile() {
     done
 
     # a module's userConfig.yaml is a template of defaults. When the user's config has no
-    # section for the module, apply the defaults in memory: under the user's config, so
-    # chiConfigUserRead sees them, and into the module's own config variable. Startup used
-    # to write the template into ~/.config/chitin/userConfig.yaml and reload everything;
-    # starting a shell must never modify the user's files (audit risk #7)
+    # section for the module, apply the defaults in memory under the user's config, so
+    # chiConfigUserRead sees them exactly as it did when the template had been written to
+    # the file. Only the user config is touched: the module's own config variable keeps
+    # coming from config.yaml, as before. Startup used to write the template into
+    # ~/.config/chitin/userConfig.yaml and reload everything; starting a shell must never
+    # modify the user's files (audit risk #7)
     local existingModuleConfig="$(jsonReadPath "$CHI_CONFIG_USER" "${moduleConfigPath[@]}" 2>/dev/null)"
     [[ -n "$existingModuleConfig" && "$existingModuleConfig" != "null" ]] && return 0
 
     chiLogDebug "applying default user config for module '$moduleName'" meta config user
 
     local defaults="$(jq -nc --argjson config "$userConfig" 'setpath($ARGS.positional; $config)' --args "${moduleConfigPath[@]}")"
-    export CHI_CONFIG_USER="$(jsonMergeDeep "$defaults" "$CHI_CONFIG_USER")"
-    chiConfigMergeVariableValue "$moduleName" "$userConfig"
+    export CHI_CONFIG_USER="$(jsonMergeDeep "$defaults" "${CHI_CONFIG_USER:-"{}"}")"
 }
 
 function chiConfigUserModify() {
