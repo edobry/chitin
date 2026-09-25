@@ -103,7 +103,7 @@ function chiToolsLoad() {
         # if it has evalCommand set, run it and pass the output to eval
         local evalCommand="$(jsonReadPath "$toolConfig" $CHI_META_TOOLS_CONFIG_EVALCOMMAND_KEY 2>/dev/null)"
         if [[ -n "$evalCommand" ]]; then
-            eval "$(eval $evalCommand)"
+            eval "$(eval "$evalCommand")"
             chiSnapshotRecordEval "$evalCommand"
         fi
     done

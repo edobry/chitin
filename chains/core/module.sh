@@ -92,6 +92,7 @@ function chiFiberLoad() {
     chiSnapshotRecordInput f "$1/$CHI_CONFIG_MODULE_FILE_NAME"
     chiSnapshotRecordInput f "$1/$CHI_CONFIG_USER_FILE_NAME"
     chiSnapshotRecordInput f "$1/chains"
+    chiSnapshotRecordRepoHead "$1"
 
     local fiberName="${2:-$(chiFiberPathToName "$1")}"
 
@@ -205,20 +206,30 @@ function chiChainLoad() {
 
     if $isNestedChain; then
         local chainInitScriptPath="$chainPath/$chainName-init.sh"
+        local chainInitScript=""
         if [[ -f "$chainInitScriptPath" ]]; then
+            chainInitScript="$chainInitScriptPath"
             source "$chainInitScriptPath" "$moduleName"
-            local initStatus=$?
-            chiSnapshotRecordSource "$chainInitScriptPath" "$moduleName"
-            [[ $initStatus -eq 0 ]] || return 0
+            if [[ $? -ne 0 ]]; then
+                # recorded on its own: replay re-runs the init script and, like here,
+                # loads nothing else from this chain
+                chiSnapshotRecordChain "$chainInitScript" "$moduleName"
+                return 0
+            fi
         fi
 
-        # load all scripts in chain directory
-        chiLoadDir $(find "$chainPath" -type f -name '*.sh' -not -path "$chainInitScriptPath")
-      
-        # zsh chains only loaded on zsh shells
+        # load all scripts in chain directory; zsh chains only on zsh shells. The
+        # chain is recorded as one replay unit (see chiSnapshotLoadChain), so the
+        # per-file recording in chiLoadDir is suppressed here
+        local chainFiles=($(find "$chainPath" -type f -name '*.sh' -not -path "$chainInitScriptPath"))
         if [[ -n "$ZSH_VERSION" ]]; then
-            chiLoadDir $(find "$chainPath" -type f -name '*.zsh' -not -path "$chainInitScriptPath")
+            chainFiles+=($(find "$chainPath" -type f -name '*.zsh' -not -path "$chainInitScriptPath"))
         fi
+
+        CHI_SNAPSHOT_GROUPING=true
+        chiLoadDir "${chainFiles[@]}"
+        CHI_SNAPSHOT_GROUPING=false
+        chiSnapshotRecordChain "$chainInitScript" "$moduleName" "${chainFiles[@]}"
     else
         chiLoadDir "$chainPath"
     fi

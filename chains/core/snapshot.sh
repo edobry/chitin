@@ -21,10 +21,13 @@
 # reloads; chiSnapshotStatus says whether the snapshot is valid and, if not,
 # which input changed.
 #
-# Known limits: replay re-sources chain files without the positional
-# parameters chiLoadDir happened to have, and a new file inside a nested chain
-# subdirectory is not detected until something else changes (run
-# chiShellRebuild). zsh only: under bash every load is cold.
+# Invalidation: every config file read, every directory that contained a sourced
+# file, every fiber's git HEAD (via .git/HEAD, the ref it points to, and
+# packed-refs), and the existence of every sourced file are stamped, so editing
+# config, adding or removing chain files, or moving HEAD all force a full load.
+#
+# Known limit: replay re-sources chain files without the positional parameters
+# chiLoadDir happened to have. zsh only: under bash every load is cold.
 
 if [[ -n "$ZSH_VERSION" ]]; then
     zmodload -F zsh/stat b:zstat
@@ -34,14 +37,18 @@ fi
 
 function chiSnapshotEnabled() {
     [[ -n "$ZSH_VERSION" ]] || return 1
-    [[ "$CHI_SNAPSHOT_DISABLED" != "true" ]] || return 1
+    case "$CHI_SNAPSHOT_DISABLED" in
+        true|TRUE|1|yes|YES) return 1 ;;
+    esac
     return 0
 }
 
-# CHI_DIR is encoded into the path so two checkouts (~/Projects/chitin and a
-# Minsky session clone, say) never share a snapshot
+# CHI_DIR is encoded into the directory name so two checkouts (~/Projects/chitin
+# and a Minsky session clone, say) never share a snapshot. '%' is doubled before
+# '/' becomes '%', so distinct paths never encode to the same name
 function chiSnapshotSetDir() {
-    CHI_SNAPSHOT_DIR="$CHI_CACHE/snapshot/${CHI_DIR//\//_}"
+    local encoded="${CHI_DIR//\%/%%}"
+    CHI_SNAPSHOT_DIR="$CHI_CACHE/snapshot/${encoded//\//%}"
 }
 
 # args: "kind|path" entries; result in REPLY, one line per entry, no trailing newline
@@ -152,8 +159,65 @@ function chiSnapshotRecordLine() {
 # args: file [args passed to source]
 function chiSnapshotRecordSource() {
     [[ -n "$CHI_SNAPSHOT_RECORDING" ]] || return 0
+    chiSnapshotRecordSourceInputs "$1"
+    chiSnapshotRecordLine "source ${(j: :)${(qq)@}}"
+}
+
+# a sourced file is stamped by existence (its content is re-read on replay anyway)
+# and its directory by mtime, so files added next to it invalidate the snapshot
+function chiSnapshotRecordSourceInputs() {
     chiSnapshotRecordInput e "$1"
-    chiSnapshotRecordLine "source ${(qq)@}"
+    chiSnapshotRecordInput f "${1%/*}"
+}
+
+# args: init script (or ''), module name, chain files...
+# A nested chain replays as one unit so that, exactly as in chiChainLoad, a
+# failing init script skips the chain's files
+function chiSnapshotRecordChain() {
+    [[ -n "$CHI_SNAPSHOT_RECORDING" ]] || return 0
+    local file
+    for file in "${@:3}"; do
+        chiSnapshotRecordSourceInputs "$file"
+    done
+    [[ -n "$1" ]] && chiSnapshotRecordSourceInputs "$1"
+    chiSnapshotRecordLine "chiSnapshotLoadChain ${(j: :)${(qq)@}}"
+}
+
+function chiSnapshotLoadChain() {
+    local initScript="$1" moduleName="$2"
+    shift 2
+
+    if [[ -n "$initScript" ]]; then
+        source "$initScript" "$moduleName" || return 0
+    fi
+
+    local file
+    for file in "$@"; do
+        source "$file"
+    done
+}
+
+# args: repository directory. Stamps the files that change when HEAD moves:
+# .git/HEAD, the ref it names, and packed-refs. Worktrees (.git as a file) are
+# followed. No git process is involved
+function chiSnapshotRecordRepoHead() {
+    [[ -n "$CHI_SNAPSHOT_RECORDING" ]] || return 0
+
+    local gitDir="$1/.git"
+    if [[ -f "$gitDir" ]]; then
+        local pointer="$(<"$gitDir")"
+        pointer="${pointer#gitdir: }"
+        [[ "$pointer" == /* ]] || pointer="$1/$pointer"
+        gitDir="$pointer"
+    fi
+    [[ -f "$gitDir/HEAD" ]] || return 0
+
+    chiSnapshotRecordInput f "$gitDir/HEAD"
+    local head="$(<"$gitDir/HEAD")"
+    if [[ "$head" == ref:\ * ]]; then
+        chiSnapshotRecordInput f "$gitDir/${head#ref: }"
+    fi
+    chiSnapshotRecordInput f "$gitDir/packed-refs"
 }
 
 # args: already-expanded directory
@@ -174,9 +238,9 @@ function chiSnapshotRecordEval() {
     chiSnapshotRecordLine "chiSnapshotEval ${(qq)1}"
 }
 
-# mirrors chiToolsLoad's `eval "$(eval $evalCommand)"`
+# mirrors chiToolsLoad's `eval "$(eval "$evalCommand")"`
 function chiSnapshotEval() {
-    eval "$(eval $1)"
+    eval "$(eval "$1")"
 }
 
 function chiSnapshotRecordEnd() {

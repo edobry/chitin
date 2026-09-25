@@ -20,7 +20,7 @@ function chiLoadDir() {
     for file in "$@"; do
         source "$file"
         rc=$?
-        [[ -n "$CHI_SNAPSHOT_RECORDING" ]] && chiSnapshotRecordSource "$file"
+        [[ -n "$CHI_SNAPSHOT_RECORDING" && "$CHI_SNAPSHOT_GROUPING" != true ]] && chiSnapshotRecordSource "$file"
     done
     return $rc
 }
