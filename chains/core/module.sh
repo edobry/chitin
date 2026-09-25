@@ -184,7 +184,7 @@ function chiChainLoad() {
         chiModuleUserConfigMergeFromFile "$chainPath" "$fiberName" "$chainName"
     fi
 
-    local chainConfig="$($isNested && chiConfigModuleReadFromFile "$chainPath" 2>/dev/null || echo "{}")"
+    local chainConfig="$($isNestedChain && chiConfigModuleReadFromFile "$chainPath" 2>/dev/null || echo "{}")"
     if [[ -n "$chainConfig" ]]; then
         chiConfigMergeVariableValue "$moduleName" "$chainConfig"
     fi
