@@ -1,7 +1,8 @@
 /**
  * Command handlers for tools commands
  */
-import { performance } from 'perf_hooks';
+import { performance } from 'node:perf_hooks';
+import { createInterface } from 'node:readline';
 import { ToolConfig } from '../../types/config';
 import { ToolStatusResult, ToolStatus } from '../../utils/tools';
 import { ToolDisplayOptions } from './display';
@@ -195,6 +196,7 @@ export async function handleToolsCommand(toolNames: string[] | undefined, option
 
       let statusResults: Map<string, ToolStatusResult> | undefined;
       let duration: number | undefined;
+      let toolsToShow = filteredTools;
 
       if (options.status) {
         // Confirm if checking many tools without -y option
@@ -202,7 +204,7 @@ export async function handleToolsCommand(toolNames: string[] | undefined, option
           console.log(`⚠️ Checking status for ${filteredTools.size} tools may take a while.`);
           console.log(`Use -y or --yes to skip this confirmation next time.`);
           
-          const readline = require('readline').createInterface({
+          const readline = createInterface({
             input: process.stdin,
             output: process.stdout
           });
@@ -257,18 +259,18 @@ export async function handleToolsCommand(toolNames: string[] | undefined, option
             return;
           }
           
-          // Update the filtered tools to only show missing ones
-          filteredTools = missingTools;
+          // Only the missing tools are shown from here on
+          toolsToShow = missingTools;
         }
       }
       
       if (options.json) {
-        displayToolsAsJson(filteredTools, statusResults, { missing: options.missing });
+        displayToolsAsJson(toolsToShow, statusResults, { missing: options.missing });
         return;
       }
       
       if (options.yaml) {
-        displayToolsAsYaml(filteredTools, statusResults, { missing: options.missing });
+        displayToolsAsYaml(toolsToShow, statusResults, { missing: options.missing });
         return;
       }
       
@@ -285,7 +287,7 @@ export async function handleToolsCommand(toolNames: string[] | undefined, option
         wallClockDuration: duration
       };
       
-      await displayTools(filteredTools, displayOptions);
+      await displayTools(toolsToShow, displayOptions);
     }
   }, options);
 }
