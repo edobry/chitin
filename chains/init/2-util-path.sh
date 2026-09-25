@@ -52,7 +52,11 @@ function showPathVar() {
 function chiToolsAddDirToPath() {
     requireDirectoryArg "directory" "$1" || return 1
 
-    chiAddToPathVar PATH "$(chiExpandPath "$1")"
+    local dir="$(chiExpandPath "$1")"
+    chiAddToPathVar PATH "$dir"
+    local rc=$?
+    [[ -n "$CHI_SNAPSHOT_RECORDING" ]] && chiSnapshotRecordPath "$dir"
+    return $rc
 }
 
 function chiToolsRemoveDirFromPath() {
