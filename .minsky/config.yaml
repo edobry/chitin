@@ -14,3 +14,8 @@ repository:
     repo: chitin
 project:
   slug: edobry/chitin
+rules:
+  presets: []
+  enabled: []
+  disabled:
+    - subagent-dispatch-cadence
