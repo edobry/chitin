@@ -48,6 +48,8 @@ function chiFiberPathToName() {
 }
 
 function chiFiberLoadExternal() {
+    chiSnapshotRecordInput f "$CHI_PROJECT_DIR"
+
     if [[ -n "$CHI_DOTFILES_DIR" ]]; then
         chiFiberLoad "$CHI_DOTFILES_DIR"
     fi
@@ -116,6 +118,12 @@ export CHI_MODULE_NAME_PREFIX="CHI_MODULE_NAME"
 function chiFiberLoad() {
     requireDirectoryArg "fiber directory" "$1" || return 1
 
+    chiSnapshotRecordInput f "$1"
+    chiSnapshotRecordInput f "$1/$CHI_CONFIG_MODULE_FILE_NAME"
+    chiSnapshotRecordInput f "$1/$CHI_CONFIG_USER_FILE_NAME"
+    chiSnapshotRecordInput f "$1/chains"
+    chiSnapshotRecordRepoHead "$1"
+
     local fiberName="${2:-$(chiFiberPathToName "$1")}"
 
     chiLogDebug "loading fiber..." "$fiberName"
@@ -182,6 +190,14 @@ function chiChainLoad() {
     local chainPath="$2"
     local isNestedChain=$3
 
+    if $isNestedChain; then
+        chiSnapshotRecordInput f "$chainPath"
+        chiSnapshotRecordInput f "$chainPath/$CHI_CONFIG_MODULE_FILE_NAME"
+        chiSnapshotRecordInput f "$chainPath/$CHI_CONFIG_USER_FILE_NAME"
+    else
+        chiSnapshotRecordInput e "$chainPath"
+    fi
+
     local chainName="$($isNestedChain && basename "$chainPath" || fileStripExtension $(basename "$2"))"
     local moduleName="$fiberName:$chainName"
 
@@ -198,7 +214,7 @@ function chiChainLoad() {
         chiModuleUserConfigMergeFromFile "$chainPath" "$fiberName" "$chainName"
     fi
 
-    local chainConfig="$($isNested && chiConfigModuleReadFromFile "$chainPath" 2>/dev/null || echo "{}")"
+    local chainConfig="$($isNestedChain && chiConfigModuleReadFromFile "$chainPath" 2>/dev/null || echo "{}")"
     if [[ -n "$chainConfig" ]]; then
         chiConfigMergeVariableValue "$moduleName" "$chainConfig"
     fi
@@ -220,18 +236,30 @@ function chiChainLoad() {
 
     if $isNestedChain; then
         local chainInitScriptPath="$chainPath/$chainName-init.sh"
+        local chainInitScript=""
         if [[ -f "$chainInitScriptPath" ]]; then
+            chainInitScript="$chainInitScriptPath"
             source "$chainInitScriptPath" "$moduleName"
-            [[ $? -eq 0 ]] || return 0
+            if [[ $? -ne 0 ]]; then
+                # recorded on its own: replay re-runs the init script and, like here,
+                # loads nothing else from this chain
+                chiSnapshotRecordChain "$chainInitScript" "$moduleName"
+                return 0
+            fi
         fi
 
-        # load all scripts in chain directory
-        chiLoadDir $(find "$chainPath" -type f -name '*.sh' -not -path "$chainInitScriptPath")
-      
-        # zsh chains only loaded on zsh shells
+        # load all scripts in chain directory; zsh chains only on zsh shells. The
+        # chain is recorded as one replay unit (see chiSnapshotLoadChain), so the
+        # per-file recording in chiLoadDir is suppressed here
+        local chainFiles=($(find "$chainPath" -type f -name '*.sh' -not -path "$chainInitScriptPath"))
         if [[ -n "$ZSH_VERSION" ]]; then
-            chiLoadDir $(find "$chainPath" -type f -name '*.zsh' -not -path "$chainInitScriptPath")
+            chainFiles+=($(find "$chainPath" -type f -name '*.zsh' -not -path "$chainInitScriptPath"))
         fi
+
+        CHI_SNAPSHOT_GROUPING=true
+        chiLoadDir "${chainFiles[@]}"
+        CHI_SNAPSHOT_GROUPING=false
+        chiSnapshotRecordChain "$chainInitScript" "$moduleName" "${chainFiles[@]}"
     else
         chiLoadDir "$chainPath"
     fi
