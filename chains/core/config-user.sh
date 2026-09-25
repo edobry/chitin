@@ -93,13 +93,15 @@ function chiModuleUserConfigMergeFromFile() {
         shift
     done
 
-    # a module's userConfig.yaml is a template of defaults. When the user's config has no
-    # section for the module, apply the defaults in memory under the user's config, so
-    # chiConfigUserRead sees them exactly as it did when the template had been written to
-    # the file. Only the user config is touched: the module's own config variable keeps
-    # coming from config.yaml, as before. Startup used to write the template into
-    # ~/.config/chitin/userConfig.yaml and reload everything; starting a shell must never
-    # modify the user's files (audit risk #7)
+    # a module's userConfig.yaml is a template of defaults. Contract, unchanged from the
+    # original: when the user's config already has a section for the module, nothing
+    # happens (the early return below predates this change); otherwise the defaults are
+    # applied so that chiConfigUserRead sees them. What changed is how: the template used
+    # to be written into ~/.config/chitin/userConfig.yaml and the whole user config
+    # reloaded from disk, and the reload's only lasting effect was the new section in
+    # CHI_CONFIG_USER. That merge now happens in memory. Only the user config is touched:
+    # the module's own config variable keeps coming from config.yaml, as before, and
+    # starting a shell never modifies the user's files (audit risk #7)
     local existingModuleConfig="$(jsonReadPath "$CHI_CONFIG_USER" "${moduleConfigPath[@]}" 2>/dev/null)"
     [[ -n "$existingModuleConfig" && "$existingModuleConfig" != "null" ]] && return 0
 
