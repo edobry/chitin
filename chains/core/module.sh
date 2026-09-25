@@ -43,7 +43,10 @@ function chiFiberPathToName() {
     elif [[ "$1" == "$CHI_DOTFILES_DIR" ]]; then
         echo "dotfiles"
     else
-        local dirName="${1##*/}"
+        # like basename: ignore trailing slashes, then take the last segment
+        local dirName="$1"
+        while [[ "$dirName" == */ && "$dirName" != / ]]; do dirName="${dirName%/}"; done
+        dirName="${dirName##*/}"
         echo "${dirName#chitin-}"
     fi
 }
@@ -169,7 +172,8 @@ function chiChainLoad() {
         chiSnapshotRecordInput e "$chainPath"
     fi
 
-    local chainName="${chainPath##*/}"
+    local chainName="${chainPath%/}"
+    chainName="${chainName##*/}"
     $isNestedChain || chainName="${chainName%.*}"
     local moduleName="$fiberName:$chainName"
 

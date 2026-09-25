@@ -77,8 +77,13 @@ function joinWith() {
 
     local delimiter="$1"; shift
 
-    local IFS="$delimiter"
-    echo "$*"
+    # the delimiter is used whole, however long, unlike paste -d which cycles its characters
+    local joined="$1"; shift
+    local item
+    for item in "$@"; do
+        joined+="$delimiter$item"
+    done
+    echo "$joined"
 }
 
 function sedStripRef() {
