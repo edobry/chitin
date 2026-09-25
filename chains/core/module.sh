@@ -93,7 +93,9 @@ function chiFiberLoadExternalLoop() {
             [[ -n "$unmetDeps" ]] && reason="unmet fiberDeps: ${unmetDeps% }"
             chiLogError "giving up on fiber: $reason" "$(chiFiberPathToName "$fiber")"
         done
-        return 1
+        # the errors above are the outcome; the shell must still finish starting, also
+        # when CHI_FAIL_ON_ERROR has set -e in effect
+        return 0
     fi
 
     chiFiberLoadExternalLoop "${retryList[@]}"
