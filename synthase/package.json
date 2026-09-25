@@ -8,7 +8,7 @@
     "start": "bun run src/cli.ts",
     "dev": "bun --watch src/index.ts",
     "build": "bun build src/index.ts --outdir dist --target node",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "bun test",
     "lint": "eslint . --ext .ts,.tsx",
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
     "format": "prettier --write \"src/**/*.ts\""
@@ -16,10 +16,17 @@
   "bin": {
     "synthase": "./src/cli.ts"
   },
-  "keywords": ["configuration", "shell", "environment", "typescript", "bun"],
+  "keywords": [
+    "configuration",
+    "shell",
+    "environment",
+    "typescript",
+    "bun"
+  ],
   "dependencies": {
     "@types/glob": "^8.1.0",
     "commander": "^13.1.0",
+    "dotenv": "^18.0.3",
     "execa": "^9.5.2",
     "glob": "^11.0.1",
     "globals": "^16.0.0",

@@ -53,7 +53,7 @@ This file tracks work items for the project. Each task follows this format:
 - [ ] Refactor utils/shell-pool.ts for clarity and maintainability [#018](tasks/018-refactor-utils-shell-pool.md)
 - [ ] Modularize utils/homebrew.ts before further growth [#019](tasks/019-modularize-utils-homebrew.md)
 - [ ] Refactor fiber/manager.ts by responsibility [#020](tasks/020-refactor-fiber-manager.md)
-- [ ] Refactor commands/tools/index.ts for CLI maintainability [#021](tasks/021-refactor-commands-tools-index.md)
+- [x] Refactor commands/tools/index.ts for CLI maintainability [#021](tasks/021-refactor-commands-tools-index.md)
 - [ ] Audit and reorganize modules by domain [#022](tasks/022-audit-reorganize-modules-domain.md)
 
 - [ ] Add lint/CI checks for file size [#024](tasks/024-add-lint-ci-file-size-checks.md)
