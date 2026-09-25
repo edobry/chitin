@@ -11,7 +11,9 @@
 #               with a fresh computation on startup. kind f: mtime and size
 #               matter (config files, directories whose listing matters);
 #               kind e: only existence matters (files that get re-sourced
-#               anyway, so their content is always fresh)
+#               anyway, so their content is always fresh); kind u: the
+#               location the user config resolves to right now, so a shell
+#               started with another XDG_CONFIG_HOME never replays this one
 #   env.zsh     export lines for every CHI_* variable the cold load produced
 #   replay.zsh  what the cold load did after the config step, in order: files
 #               sourced, PATH dirs added, tool env exported, evalCommands run
@@ -66,6 +68,9 @@ function chiSnapshotStamp() {
             else
                 out+="e|$path|absent"$'\n'
             fi
+        elif [[ "$kind" == "u" ]]; then
+            # inlined chiConfigUserGetPath, so validation stays fork-free
+            out+="u|$path|${XDG_CONFIG_HOME:-$HOME/.config}/chitin/$CHI_CONFIG_USER_FILE_NAME"$'\n'
         elif zstat -H st -- "$path" 2>/dev/null; then
             out+="f|$path|${st[mtime]}.${st[size]}"$'\n'
         else
@@ -138,6 +143,7 @@ function chiSnapshotRecordBegin() {
     CHI_SNAPSHOT_RECORDING="$CHI_SNAPSHOT_DIR/replay.zsh.tmp"
     : > "$CHI_SNAPSHOT_RECORDING"
 
+    chiSnapshotRecordInput u user-config
     chiSnapshotRecordInput f "$(chiConfigUserGetPath)"
     chiSnapshotRecordInput f "$CHI_CACHE_TOOLS"
 }
