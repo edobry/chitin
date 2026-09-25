@@ -41,11 +41,14 @@ while (( $# )); do
 done
 (( runs > 0 )) || { print -u2 "--runs must be positive"; exit 2 }
 
-# Bypass the lite-mode guard and drop inherited chitin state. env(1) stops
-# parsing options at the first NAME=VALUE, so every -u must come before them.
+# Bypass the lite-mode guard and drop inherited chitin state. The guard in
+# ~/.zshenv fires when stdin is not a TTY, when VSCODE_PID is set, or when
+# TERM_PROGRAM is vscode, cursor or zed; a pty plus these overrides clears all
+# three. env(1) stops parsing options at the first NAME=VALUE, so every -u must
+# come before them.
 typeset -a clean_env
 clean_env=(env -u LITE_MODE -u VSCODE_PID)
-local v
+typeset v
 for v in ${(k)parameters[(I)CHI_*]}; do clean_env+=(-u "$v"); done
 clean_env+=(TERM_PROGRAM=iTerm.app)
 
@@ -63,6 +66,7 @@ if [[ -n $init_path ]]; then
 fi
 
 # run_shell CMD - an interactive zsh under a pty running CMD; output on stdout.
+# This is the BSD/macOS form of script(1); util-linux wants `script -q -c CMD /dev/null`.
 run_shell() {
   "${clean_env[@]}" script -q /dev/null zsh -ic "$1" </dev/null 2>&1 | tr -d '\r'
 }
@@ -70,7 +74,7 @@ run_shell() {
 typeset -a samples
 typeset -F start elapsed
 typeset first_output=''
-local i
+typeset i
 for (( i = 1; i <= runs; i++ )); do
   start=$EPOCHREALTIME
   if (( i == 1 )); then
@@ -90,25 +94,30 @@ done
 
 typeset -a sorted
 sorted=(${(on)samples})
-typeset -F mn=${sorted[1]} mx=${sorted[-1]} md=${sorted[(runs + 1) / 2]}
+typeset -F mn=${sorted[1]} mx=${sorted[-1]} md
+if (( runs % 2 )); then
+  md=${sorted[(runs + 1) / 2]}
+else
+  md=$(( (sorted[runs / 2] + sorted[runs / 2 + 1]) / 2.0 ))
+fi
 printf 'chitin startup: min %.2fs  median %.2fs  max %.2fs  (%d runs, target %s)\n' \
   "$mn" "$md" "$mx" "$runs" "$target_label"
 
 if (( ! quiet )); then
-  local reported
+  typeset reported
   reported=$(print -r -- "$first_output" | grep -o 'initialized in [0-9]* seconds' | tail -1)
   [[ -n $reported ]] && print "chitin reported: $reported"
 fi
 
 if (( do_profile )); then
   print
-  print '=== zprof: top 25 by self time (ms) ==='
-  run_shell zprof | sed -n '/^num  calls/,$p' | head -27
+  print '=== zprof: top 20 by self time (ms) ==='
+  run_shell zprof | sed -n '/^num  calls/,$p' | head -22
 fi
 
 if (( do_trace )); then
   command -v python3 >/dev/null || { print -u2 "--trace needs python3"; exit 1 }
-  local tracefile
+  typeset tracefile
   tracefile=$(mktemp "${TMPDIR:-/tmp}/chitin-trace.XXXXXX")
   "${clean_env[@]}" PS4='+%D{%s.%.} %N:%i> ' script -q /dev/null zsh -xic exit </dev/null >"$tracefile" 2>&1
   print

@@ -179,7 +179,7 @@ just bench                 # 3 timed startups of ~/.zshrc under a pseudo-termina
 just bench --profile       # plus zprof's top functions by self time
 just bench --trace         # plus the slowest call sites and external-command counts
 just bench --init ./init.sh   # measure this checkout instead of ~/Projects/chitin
-just check                 # zsh -n on every shell file; shellcheck when installed
+just check                 # zsh -n on every shell file; shellcheck on *.sh when installed
 ```
 
 Baseline recorded 2026-09-25 on an M-series MacBook with the core, dev, cloud and dotfiles
