@@ -170,6 +170,27 @@ Functions:
 
 - `chiSecretGet`: retrieves a secret with the given name from the secret store
 
+## Startup performance
+
+Chitin loads in every interactive shell, so its startup cost is the shell's startup cost.
+Measure it with the benchmark, never with `time zsh -i -c exit`: a non-TTY shell trips the
+lite-mode guard in `~/.zshenv` and skips chitin entirely, reporting ~0.03s.
+
+```sh
+just bench                 # 3 timed startups of ~/.zshrc under a pseudo-terminal
+just bench --profile       # plus zprof's top functions by self time
+just bench --trace         # plus the slowest call sites and external-command counts
+just bench --init ./init.sh   # measure this checkout instead of ~/Projects/chitin
+just check                 # zsh -n on every shell file; shellcheck on *.sh when installed
+```
+
+Baseline recorded 2026-09-25 on an M-series MacBook with the core, dev, cloud and dotfiles
+fibers enabled and tool checks off: **~20s per shell** (21.8 / 20.0 / 19.6s). About 17.6s is
+the loader's config plumbing: 47 chain loads at ~320ms each and roughly 2,900 external
+commands per startup (`just bench --trace`: sed 1,708, jq 487, paste 447, envsubst 155, yq 16
+at 150 to 400ms each) plus thousands of command-substitution subshells. Sourcing the 94 chain
+files without the loader takes ~130ms, which is the floor a startup cache can reach.
+
 ## Used By
 
 This project is used by:
