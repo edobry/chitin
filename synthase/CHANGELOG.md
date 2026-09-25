@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Fixed
+- Finished task #021: `commands/tools/index.ts` is command registration only (57 lines); the handlers live in `handlers.ts` and the shared setup in `helpers.ts`. Behavioural review of the two implementations that had coexisted: kept the "No tools found matching the criteria" message, kept `--missing` implying `--status` and the confirmation prompt before checking more than 10 tools, made that prompt the single warning (the display-layer warning no longer repeats it), and dropped the rule that skipped status checks whenever a `--filter-*` option was present, since filters exist to narrow the check, not to disable it
 - Fixed issue where the base `tools get` command without `--status` hangs for a few seconds at the end by conditionally initializing the shell pool only when needed for status checks
 - Fixed issue where warning about checking many tools is displayed twice in `tools get --status` command
 - Fixed duplicate implementation of `_checkToolStatus` function that was causing type errors and inconsistent behavior
