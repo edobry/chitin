@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Fixed
+- Removed `src/types.ts` and `src/constants.ts`, single-file shadows of the `src/types/` and `src/constants/` directories that made every `from '../types'` import resolve to an 8-line stub (31 type errors); `types/index.ts` now re-exports all six type modules. Fixed the `./models` and `../organization` import paths, added the missing `dotenv` dependency, and pointed `bun run test` at `bun test` instead of a hardcoded failure. `tsc --noEmit` goes from 73 errors to 27; the rest are genuine type mismatches, mostly in `commands/fibers/utils/config-loader.ts` (two competing `UserConfig` types) and implicit `any` in tests
 - Finished task #021: `commands/tools/index.ts` is command registration only (57 lines); the handlers live in `handlers.ts` and the shared setup in `helpers.ts`. Behavioural review of the two implementations that had coexisted: kept the "No tools found matching the criteria" message, kept `--missing` implying `--status` and the confirmation prompt before checking more than 10 tools, made that prompt the single warning (the display-layer warning no longer repeats it), and dropped the rule that skipped status checks whenever a `--filter-*` option was present, since filters exist to narrow the check, not to disable it
 - Fixed issue where the base `tools get` command without `--status` hangs for a few seconds at the end by conditionally initializing the shell pool only when needed for status checks
 - Fixed issue where warning about checking many tools is displayed twice in `tools get --status` command
