@@ -94,12 +94,21 @@ function chiExpandPathSegmentStart() {
 function chiExpandPath() {
     requireArg "a path" "$1" || return 1
 
-    local localShare="localshare"
-    local xdgHome="xdghome"
-    
-    local expandedPath="$(chiExpandHome "$(echo $1 | envsubst)")"
-    expandedPath="$(chiExpandPathSegmentStart "$xdgHome" "$(xdgHome)" "$expandedPath")"
-    expandedPath="$(chiExpandPathSegmentStart "$localShare" "$(xdgData)" "$expandedPath")"
+    # this used to run envsubst plus four sed processes per call, and it runs inside
+    # every requireFileArg/requireDirectoryArg; parameter expansion does the same work.
+    # Environment references are the one part that needs a process, so envsubst runs
+    # only when the path contains a '$'
+    local expandedPath="$1"
+    [[ "$expandedPath" == *'$'* ]] && expandedPath="$(printf '%s' "$expandedPath" | envsubst)"
+
+    # the two token expansions are exactly what xdgHome and xdgData above return
+    # (xdgHome is keyed on XDG_DATA_HOME, a pre-existing quirk kept for parity);
+    # they are inlined rather than called so that no subshell is forked
+    local xdgHomeDir="${XDG_DATA_HOME:-${HOME}}"
+    local xdgDataDir="$xdgHomeDir/.local/share"
+    expandedPath="${expandedPath/#\~/$HOME}"
+    expandedPath="${expandedPath/#xdghome/$xdgHomeDir}"
+    expandedPath="${expandedPath/#localshare/$xdgDataDir}"
 
     echo "$expandedPath"
 }

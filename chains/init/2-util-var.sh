@@ -1,14 +1,18 @@
 function chiEncodeVariableName() {
     requireArg "a module name" "$1" || return 1
 
-    sed 's/[:\-]/_/g' <<< "$1"
+    local name="$1"
+    name="${name//:/_}"
+    name="${name//-/_}"
+    echo "$name"
 }
 
 function chiMakeDynamicVariableName() {
     requireArg "a variable prefix" "$1" || return 1
     requireArg "at least one variable name segment" "$2" || return 1
-    
-    chiEncodeVariableName "$(joinWith '_' $@)"
+
+    local IFS='_'
+    chiEncodeVariableName "$*"
 }
 
 function chiReadDynamicVariable() {

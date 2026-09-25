@@ -77,7 +77,14 @@ function joinWith() {
 
     local delimiter="$1"; shift
 
-    printf "%s\n" "$@" | paste -sd "$delimiter" -
+    # the delimiter is used whole, however long, unlike paste -d which cycles its characters
+    [[ $# -eq 0 ]] && return 0
+    local joined="$1"; shift
+    local item
+    for item in "$@"; do
+        joined+="$delimiter$item"
+    done
+    echo "$joined"
 }
 
 function sedStripRef() {
