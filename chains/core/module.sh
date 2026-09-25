@@ -47,6 +47,7 @@ function chiFiberPathToName() {
         local dirName="$1"
         while [[ "$dirName" == */ && "$dirName" != / ]]; do dirName="${dirName%/}"; done
         dirName="${dirName##*/}"
+        [[ -z "$dirName" ]] && dirName="/"
         echo "${dirName#chitin-}"
     fi
 }

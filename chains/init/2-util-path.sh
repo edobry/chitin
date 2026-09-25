@@ -104,9 +104,11 @@ function chiExpandPath() {
     # the two token expansions are exactly what xdgHome and xdgData above return
     # (xdgHome is keyed on XDG_DATA_HOME, a pre-existing quirk kept for parity);
     # they are inlined rather than called so that no subshell is forked
+    local xdgHomeDir="${XDG_DATA_HOME:-${HOME}}"
+    local xdgDataDir="$xdgHomeDir/.local/share"
     expandedPath="${expandedPath/#\~/$HOME}"
-    expandedPath="${expandedPath/#xdghome/${XDG_DATA_HOME:-${HOME}}}"
-    expandedPath="${expandedPath/#localshare/${XDG_DATA_HOME:-${HOME}}/.local/share}"
+    expandedPath="${expandedPath/#xdghome/$xdgHomeDir}"
+    expandedPath="${expandedPath/#localshare/$xdgDataDir}"
 
     echo "$expandedPath"
 }
