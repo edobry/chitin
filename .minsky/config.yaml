@@ -1,0 +1,16 @@
+tasks:
+  backend: minsky
+persistence:
+  backend: postgres
+logger:
+  mode: auto
+  level: info
+  enableAgentLogs: false
+repository:
+  backend: github
+  url: git@github.com:edobry/chitin.git
+  github:
+    owner: edobry
+    repo: chitin
+project:
+  slug: edobry/chitin

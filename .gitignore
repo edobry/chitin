@@ -1,3 +1,7 @@
 .DS_Store
 dependencies.json
 config.json
+# SpecStory explanation file
+.specstory/.what-is-this.md
+.minsky/config.local.yaml
+.claude/settings.local.json
