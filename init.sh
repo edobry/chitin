@@ -16,9 +16,13 @@ if [[ -z "$IS_DOCKER" ]]; then
 fi
 
 function chiLoadDir() {
+    local rc=0
     for file in "$@"; do
         source "$file"
+        rc=$?
+        [[ -n "$CHI_SNAPSHOT_RECORDING" ]] && chiSnapshotRecordSource "$file"
     done
+    return $rc
 }
 
 function autoinitChi() {
@@ -39,6 +43,7 @@ function autoinitChi() {
 
 function chiShell() {
     local startTime=$(date +%s)
+    local inlineConfig="$1"
     # reset envvars if reloading, besides CHI_DIR and CHI_LOG_LEVEL
     if [[ ! -z "$CHI_ENV_INITIALIZED" ]]; then
         local chiDir=$CHI_DIR
@@ -54,7 +59,21 @@ function chiShell() {
 
     # load core chain
     chiLoadDir $CHI_DIR/chains/core/**/*.sh
-    chiConfigUserLoad "$1"
+
+    # a valid snapshot replaces the config merge and fiber loading below with a
+    # replay of their recorded results (chains/core/snapshot.sh)
+    local snapshotRestored=false
+    if [[ -z "$inlineConfig" ]] && chiSnapshotIsValid; then
+        snapshotRestored=true
+        chiLogDebug "restoring from snapshot" init snapshot
+        chiSnapshotRestore
+    else
+        case "$CHI_SNAPSHOT_STATE" in
+            missing) chiLogInfo "no startup snapshot yet, doing a full load..." init snapshot ;;
+            stale) chiLogInfo "'$CHI_SNAPSHOT_STALE_PATH' changed, doing a full load..." init snapshot ;;
+        esac
+        chiConfigUserLoad "$inlineConfig"
+    fi
 
     if [[ -z "$IS_DOCKER" ]]; then
         local checkTools="$(chiConfigUserRead core checkTools)"
@@ -70,9 +89,15 @@ function chiShell() {
     fi
 
     # load fibers
-    chiFiberLoad "$CHI_DIR"
-    chiFiberLoadExternal
-    
+    if $snapshotRestored; then
+        chiSnapshotReplay
+    else
+        [[ -z "$inlineConfig" ]] && chiSnapshotRecordBegin
+        chiFiberLoad "$CHI_DIR"
+        chiFiberLoadExternal
+        chiSnapshotRecordEnd
+    fi
+
     export CHI_ENV_INITIALIZED=true
     unset CHI_CACHE_TOOLS_REBUILD
 

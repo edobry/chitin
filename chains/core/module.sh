@@ -48,6 +48,8 @@ function chiFiberPathToName() {
 }
 
 function chiFiberLoadExternal() {
+    chiSnapshotRecordInput f "$CHI_PROJECT_DIR"
+
     if [[ -n "$CHI_DOTFILES_DIR" ]]; then
         chiFiberLoad "$CHI_DOTFILES_DIR"
     fi
@@ -85,6 +87,11 @@ export CHI_MODULE_NAME_PREFIX="CHI_MODULE_NAME"
 
 function chiFiberLoad() {
     requireDirectoryArg "fiber directory" "$1" || return 1
+
+    chiSnapshotRecordInput f "$1"
+    chiSnapshotRecordInput f "$1/$CHI_CONFIG_MODULE_FILE_NAME"
+    chiSnapshotRecordInput f "$1/$CHI_CONFIG_USER_FILE_NAME"
+    chiSnapshotRecordInput f "$1/chains"
 
     local fiberName="${2:-$(chiFiberPathToName "$1")}"
 
@@ -152,6 +159,14 @@ function chiChainLoad() {
     local chainPath="$2"
     local isNestedChain=$3
 
+    if $isNestedChain; then
+        chiSnapshotRecordInput f "$chainPath"
+        chiSnapshotRecordInput f "$chainPath/$CHI_CONFIG_MODULE_FILE_NAME"
+        chiSnapshotRecordInput f "$chainPath/$CHI_CONFIG_USER_FILE_NAME"
+    else
+        chiSnapshotRecordInput e "$chainPath"
+    fi
+
     local chainName="$($isNestedChain && basename "$chainPath" || fileStripExtension $(basename "$2"))"
     local moduleName="$fiberName:$chainName"
 
@@ -192,7 +207,9 @@ function chiChainLoad() {
         local chainInitScriptPath="$chainPath/$chainName-init.sh"
         if [[ -f "$chainInitScriptPath" ]]; then
             source "$chainInitScriptPath" "$moduleName"
-            [[ $? -eq 0 ]] || return 0
+            local initStatus=$?
+            chiSnapshotRecordSource "$chainInitScriptPath" "$moduleName"
+            [[ $initStatus -eq 0 ]] || return 0
         fi
 
         # load all scripts in chain directory

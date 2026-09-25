@@ -80,6 +80,7 @@ function chiToolsLoad() {
                 chiLogDebug "setting env: $envName=$envValue" "$moduleName"
 
                 export "$envName=$envValue"
+                chiSnapshotRecordExport "$envName" "$envValue"
             done
         fi
 
@@ -96,12 +97,14 @@ function chiToolsLoad() {
         local sourceScript="$(jsonReadPath "$toolConfig" $CHI_META_TOOLS_CONFIG_SOURCESCRIPT_KEY 2>/dev/null)"
         if [[ -n "$sourceScript" ]]; then
             source "$targetDir/$sourceScript"
+            chiSnapshotRecordSource "$targetDir/$sourceScript"
         fi
 
         # if it has evalCommand set, run it and pass the output to eval
         local evalCommand="$(jsonReadPath "$toolConfig" $CHI_META_TOOLS_CONFIG_EVALCOMMAND_KEY 2>/dev/null)"
         if [[ -n "$evalCommand" ]]; then
             eval "$(eval $evalCommand)"
+            chiSnapshotRecordEval "$evalCommand"
         fi
     done
 
