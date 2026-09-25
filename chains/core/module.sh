@@ -43,7 +43,8 @@ function chiFiberPathToName() {
     elif [[ "$1" == "$CHI_DOTFILES_DIR" ]]; then
         echo "dotfiles"
     else
-        echo "${$(basename "$1")#chitin-}"
+        local dirName="${1##*/}"
+        echo "${dirName#chitin-}"
     fi
 }
 
@@ -152,10 +153,13 @@ function chiChainLoad() {
     local chainPath="$2"
     local isNestedChain=$3
 
-    local chainName="$($isNestedChain && basename "$chainPath" || fileStripExtension $(basename "$2"))"
+    local chainName="${chainPath##*/}"
+    $isNestedChain || chainName="${chainName%.*}"
     local moduleName="$fiberName:$chainName"
 
-    chiLogDebug "loading $($isNestedChain && echo "nested " || echo '')chain..." "$moduleName"
+    local chainKind=""
+    $isNestedChain && chainKind="nested "
+    chiLogDebug "loading ${chainKind}chain..." "$moduleName"
 
     chiSetDynamicVariable "$moduleName" "$CHI_MODULE_NAME_PREFIX" "$fiberName" "$chainName"
 
@@ -168,7 +172,7 @@ function chiChainLoad() {
         chiModuleUserConfigMergeFromFile "$chainPath" "$fiberName" "$chainName"
     fi
 
-    local chainConfig="$($isNested && chiConfigModuleReadFromFile "$chainPath" 2>/dev/null || echo "{}")"
+    local chainConfig="$($isNestedChain && chiConfigModuleReadFromFile "$chainPath" 2>/dev/null || echo "{}")"
     if [[ -n "$chainConfig" ]]; then
         chiConfigMergeVariableValue "$moduleName" "$chainConfig"
     fi

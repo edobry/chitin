@@ -90,12 +90,16 @@ function chiExpandPathSegmentStart() {
 function chiExpandPath() {
     requireArg "a path" "$1" || return 1
 
-    local localShare="localshare"
-    local xdgHome="xdghome"
-    
-    local expandedPath="$(chiExpandHome "$(echo $1 | envsubst)")"
-    expandedPath="$(chiExpandPathSegmentStart "$xdgHome" "$(xdgHome)" "$expandedPath")"
-    expandedPath="$(chiExpandPathSegmentStart "$localShare" "$(xdgData)" "$expandedPath")"
+    # this used to run envsubst plus four sed processes per call, and it runs inside
+    # every requireFileArg/requireDirectoryArg; parameter expansion does the same work.
+    # Environment references are the one part that needs a process, so envsubst runs
+    # only when the path contains a '$'
+    local expandedPath="$1"
+    [[ "$expandedPath" == *'$'* ]] && expandedPath="$(echo $expandedPath | envsubst)"
+
+    expandedPath="${expandedPath/#\~/$HOME}"
+    expandedPath="${expandedPath/#xdghome/${XDG_DATA_HOME:-${HOME}}}"
+    expandedPath="${expandedPath/#localshare/${XDG_DATA_HOME:-${HOME}}/.local/share}"
 
     echo "$expandedPath"
 }

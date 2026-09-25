@@ -9,6 +9,9 @@ function checkNumeric() {
 function checkFileExists() {
     requireArg "a filepath" "$1" || return 1
 
+    # the literal path is the common case; expand only when it does not exist as given
+    [[ -e "$1" ]] && return 0
+
     if [[ ! -e "$(chiExpandPath "$1")" ]]; then
         chiLogErrorRequire "No file or directory exists at the given path '$1'!"
         return 1
@@ -17,6 +20,8 @@ function checkFileExists() {
 
 function checkDirectoryExists() {
     requireArg "a filepath" "$1" || return 1
+
+    [[ -d "$1" ]] && return 0
 
     if [[ ! -d "$(chiExpandPath "$1")" ]]; then
         chiLogErrorRequire "No directory exists at the given path '$1'!"

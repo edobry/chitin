@@ -77,7 +77,8 @@ function joinWith() {
 
     local delimiter="$1"; shift
 
-    printf "%s\n" "$@" | paste -sd "$delimiter" -
+    local IFS="$delimiter"
+    echo "$*"
 }
 
 function sedStripRef() {

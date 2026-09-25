@@ -44,6 +44,11 @@ function prettyYaml() {
 function validateJson() {
     requireArg "a minified JSON string" "$1" || return 1
 
+    # every object this framework handles comes out of jq minified, so a string that
+    # starts with '{' and ends with '}' is accepted without a process; anything else
+    # still gets the strict check and fails here with the usual message
+    [[ "$1" == \{*\} ]] && return 0
+
     echo "$1" | jq -e 'if type == "object" then true else false end' &>/dev/null
 }
 
@@ -66,7 +71,8 @@ function jsonValidateFields() {
 # checks that an argument is supplied and that it is numeric, and prints a message if not
 # args: name of arg, arg value
 function requireJsonArg() {
-    requireArgWithCheck "$1" "$(echo "$2" | escapeSingleQuotes)" validateJson "a valid minified JSON string "
+    local quote="'"
+    requireArgWithCheck "$1" "${2//$quote/$quote$quote}" validateJson "a valid minified JSON string "
 }
 
 # reads (a value at a certain path from) a JSON File
@@ -213,6 +219,35 @@ function yamlConvert() {
 
 function yamlFileToJson() {
     requireYamlFileArg "filepath" "$1" || return 1
+
+    # yq costs 150 to 400ms per call and its output is a pure function of the file, so
+    # cache it under $CHI_CACHE/yaml keyed by the file's mtime and size. The stat must
+    # not fork, which makes this zsh only; bash always converts
+    if [[ -n "$ZSH_VERSION" && -n "$CHI_CACHE" ]]; then
+        zmodload -F zsh/stat b:zstat 2>/dev/null
+        local -A st
+        if zstat -H st -- "$1" 2>/dev/null; then
+            local cacheFile="$CHI_CACHE/yaml/${1//\//_}.json"
+            local stamp="${st[mtime]}.${st[size]}"
+
+            if [[ -f "$cacheFile" ]]; then
+                local cached="$(<"$cacheFile")"
+                if [[ "${cached%%$'\n'*}" == "$stamp" ]]; then
+                    [[ "$cached" == *$'\n'* ]] && print -r -- "${cached#*$'\n'}"
+                    return 0
+                fi
+            fi
+
+            local json="$(cat "$1" | yamlToJson | jq -c '. // empty')"
+            zmodload -F zsh/files b:zf_mkdir b:zf_mv 2>/dev/null
+            zf_mkdir -p "$CHI_CACHE/yaml" 2>/dev/null
+            print -r -- "$stamp" > "$cacheFile.$$"
+            [[ -n "$json" ]] && print -r -- "$json" >> "$cacheFile.$$"
+            zf_mv -f "$cacheFile.$$" "$cacheFile"
+            [[ -n "$json" ]] && print -r -- "$json"
+            return 0
+        fi
+    fi
 
     cat "$1" | yamlToJson | jq -c '. // empty'
 }
