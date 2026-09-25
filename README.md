@@ -42,6 +42,8 @@ chitin-core
 
 > Note: if you would prefer to not automatically load fibers (such as for performance reasons), set `CHI_AUTOINIT_DISABLED=true`, and use the command `chiShell` when you want to load them on-demand
 
+> Recovery: a fiber whose `fiberDeps` cannot be satisfied (misspelled, not cloned, or disabled in your userConfig) is reported with `giving up on fiber` and skipped; the shell still starts. If startup itself breaks, `export CHI_AUTOINIT_DISABLED=true` in the terminal before opening a new shell, fix the problem, then run `chiShell`.
+
 ## Configuration
 
 The framework can be configured at three levels: `user`, `fiber`, and `chain`.
