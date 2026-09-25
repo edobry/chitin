@@ -184,9 +184,10 @@ just check                 # zsh -n on every shell file; shellcheck when install
 
 Baseline recorded 2026-09-25 on an M-series MacBook with the core, dev, cloud and dotfiles
 fibers enabled and tool checks off: **~20s per shell** (21.8 / 20.0 / 19.6s). About 17.6s is
-the loader's config plumbing: 47 chain loads at ~320ms each, ~700 external forks (sed 401,
-jq 104, paste 96, envsubst 38, yq ~17 at 150 to 400ms each) and ~2,000 subshells. Sourcing the
-94 chain files without the loader takes ~130ms, which is the floor a startup cache can reach.
+the loader's config plumbing: 47 chain loads at ~320ms each and roughly 2,900 external
+commands per startup (`just bench --trace`: sed 1,708, jq 487, paste 447, envsubst 155, yq 16
+at 150 to 400ms each) plus thousands of command-substitution subshells. Sourcing the 94 chain
+files without the loader takes ~130ms, which is the floor a startup cache can reach.
 
 ## Used By
 
