@@ -189,6 +189,23 @@ commands per startup (`just bench --trace`: sed 1,708, jq 487, paste 447, envsub
 at 150 to 400ms each) plus thousands of command-substitution subshells. Sourcing the 94 chain
 files without the loader takes ~130ms, which is the floor a startup cache can reach.
 
+### Startup snapshot
+
+The config-merge work above is a pure function of about 30 YAML files that rarely change, so
+after a full ("cold") load chitin persists its results under `~/.cache/chitin/snapshot/<checkout>/`
+and replays them on the next startup when none of those files changed: a warm shell starts in
+about 2 seconds instead of 20. The check itself is fork-free (zsh's builtin stat), and the
+snapshot is keyed by checkout path, so a session clone never shares one with `~/Projects/chitin`.
+
+- `chiSnapshotStatus` says whether the current snapshot is valid and, if not, which file changed.
+- `chiShellRebuild` clears it and does a full load; `chiSnapshotClear` only clears.
+- `CHI_SNAPSHOT_DISABLED=true` forces a full load and writes nothing.
+- A stale snapshot logs which input changed and rebuilds on its own; a missing one says so.
+
+Known limits: replay re-sources chain files without the positional parameters `chiLoadDir`
+happened to have, and a new file inside a nested chain subdirectory is only picked up once
+something else changes (or on `chiShellRebuild`). zsh only; under bash every load is cold.
+
 ## Used By
 
 This project is used by:
